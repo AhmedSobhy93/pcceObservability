@@ -1,0 +1,334 @@
+{
+  "groups": [
+    {
+      "name": "pcce",
+      "type": "com.example.pcceobservability.config.PcceProperties",
+      "sourceType": "com.example.pcceobservability.config.PcceProperties"
+    },
+    {
+      "name": "pcce.datasources.aw",
+      "type": "org.springframework.boot.autoconfigure.jdbc.DataSourceProperties",
+      "sourceType": "com.example.pcceobservability.config.DataSourceConfig",
+      "sourceMethod": "awDataSourceProperties()"
+    },
+    {
+      "name": "pcce.datasources.aw.hikari",
+      "type": "javax.sql.DataSource",
+      "sourceType": "com.example.pcceobservability.config.DataSourceConfig",
+      "sourceMethod": "awDataSource()"
+    },
+    {
+      "name": "pcce.datasources.aw.xa",
+      "type": "org.springframework.boot.autoconfigure.jdbc.DataSourceProperties$Xa",
+      "sourceType": "org.springframework.boot.autoconfigure.jdbc.DataSourceProperties",
+      "sourceMethod": "getXa()"
+    },
+    {
+      "name": "pcce.datasources.cvp-reporting",
+      "type": "org.springframework.boot.autoconfigure.jdbc.DataSourceProperties",
+      "sourceType": "com.example.pcceobservability.config.DataSourceConfig",
+      "sourceMethod": "cvpReportingDataSourceProperties()"
+    },
+    {
+      "name": "pcce.datasources.cvp-reporting.hikari",
+      "type": "javax.sql.DataSource",
+      "sourceType": "com.example.pcceobservability.config.DataSourceConfig",
+      "sourceMethod": "cvpReportingDataSource()"
+    },
+    {
+      "name": "pcce.datasources.cvp-reporting.xa",
+      "type": "org.springframework.boot.autoconfigure.jdbc.DataSourceProperties$Xa",
+      "sourceType": "org.springframework.boot.autoconfigure.jdbc.DataSourceProperties",
+      "sourceMethod": "getXa()"
+    },
+    {
+      "name": "pcce.datasources.hds",
+      "type": "org.springframework.boot.autoconfigure.jdbc.DataSourceProperties",
+      "sourceType": "com.example.pcceobservability.config.DataSourceConfig",
+      "sourceMethod": "hdsDataSourceProperties()"
+    },
+    {
+      "name": "pcce.datasources.hds.hikari",
+      "type": "javax.sql.DataSource",
+      "sourceType": "com.example.pcceobservability.config.DataSourceConfig",
+      "sourceMethod": "hdsDataSource()"
+    },
+    {
+      "name": "pcce.datasources.hds.xa",
+      "type": "org.springframework.boot.autoconfigure.jdbc.DataSourceProperties$Xa",
+      "sourceType": "org.springframework.boot.autoconfigure.jdbc.DataSourceProperties",
+      "sourceMethod": "getXa()"
+    },
+    {
+      "name": "pcce.operations",
+      "type": "com.example.pcceobservability.config.PcceProperties$Operations",
+      "sourceType": "com.example.pcceobservability.config.PcceProperties",
+      "sourceMethod": "getOperations()"
+    },
+    {
+      "name": "pcce.queries",
+      "type": "com.example.pcceobservability.config.PcceProperties$Queries",
+      "sourceType": "com.example.pcceobservability.config.PcceProperties",
+      "sourceMethod": "getQueries()"
+    },
+    {
+      "name": "pcce.security",
+      "type": "com.example.pcceobservability.config.PcceProperties$Security",
+      "sourceType": "com.example.pcceobservability.config.PcceProperties",
+      "sourceMethod": "getSecurity()"
+    }
+  ],
+  "properties": [
+    {
+      "name": "pcce.components",
+      "type": "java.util.List<com.example.pcceobservability.config.PcceProperties$ComponentTarget>",
+      "sourceType": "com.example.pcceobservability.config.PcceProperties"
+    },
+    {
+      "name": "pcce.datasources.aw.driver-class-name",
+      "type": "java.lang.String",
+      "sourceType": "org.springframework.boot.autoconfigure.jdbc.DataSourceProperties"
+    },
+    {
+      "name": "pcce.datasources.aw.embedded-database-connection",
+      "type": "org.springframework.boot.jdbc.EmbeddedDatabaseConnection",
+      "sourceType": "org.springframework.boot.autoconfigure.jdbc.DataSourceProperties"
+    },
+    {
+      "name": "pcce.datasources.aw.generate-unique-name",
+      "type": "java.lang.Boolean",
+      "sourceType": "org.springframework.boot.autoconfigure.jdbc.DataSourceProperties"
+    },
+    {
+      "name": "pcce.datasources.aw.jndi-name",
+      "type": "java.lang.String",
+      "sourceType": "org.springframework.boot.autoconfigure.jdbc.DataSourceProperties"
+    },
+    {
+      "name": "pcce.datasources.aw.name",
+      "type": "java.lang.String",
+      "sourceType": "org.springframework.boot.autoconfigure.jdbc.DataSourceProperties"
+    },
+    {
+      "name": "pcce.datasources.aw.password",
+      "type": "java.lang.String",
+      "sourceType": "org.springframework.boot.autoconfigure.jdbc.DataSourceProperties"
+    },
+    {
+      "name": "pcce.datasources.aw.type",
+      "type": "java.lang.Class<? extends javax.sql.DataSource>",
+      "sourceType": "org.springframework.boot.autoconfigure.jdbc.DataSourceProperties"
+    },
+    {
+      "name": "pcce.datasources.aw.url",
+      "type": "java.lang.String",
+      "sourceType": "org.springframework.boot.autoconfigure.jdbc.DataSourceProperties"
+    },
+    {
+      "name": "pcce.datasources.aw.username",
+      "type": "java.lang.String",
+      "sourceType": "org.springframework.boot.autoconfigure.jdbc.DataSourceProperties"
+    },
+    {
+      "name": "pcce.datasources.aw.xa.data-source-class-name",
+      "type": "java.lang.String",
+      "sourceType": "org.springframework.boot.autoconfigure.jdbc.DataSourceProperties$Xa"
+    },
+    {
+      "name": "pcce.datasources.aw.xa.properties",
+      "type": "java.util.Map<java.lang.String,java.lang.String>",
+      "sourceType": "org.springframework.boot.autoconfigure.jdbc.DataSourceProperties$Xa"
+    },
+    {
+      "name": "pcce.datasources.cvp-reporting.driver-class-name",
+      "type": "java.lang.String",
+      "sourceType": "org.springframework.boot.autoconfigure.jdbc.DataSourceProperties"
+    },
+    {
+      "name": "pcce.datasources.cvp-reporting.embedded-database-connection",
+      "type": "org.springframework.boot.jdbc.EmbeddedDatabaseConnection",
+      "sourceType": "org.springframework.boot.autoconfigure.jdbc.DataSourceProperties"
+    },
+    {
+      "name": "pcce.datasources.cvp-reporting.generate-unique-name",
+      "type": "java.lang.Boolean",
+      "sourceType": "org.springframework.boot.autoconfigure.jdbc.DataSourceProperties"
+    },
+    {
+      "name": "pcce.datasources.cvp-reporting.jndi-name",
+      "type": "java.lang.String",
+      "sourceType": "org.springframework.boot.autoconfigure.jdbc.DataSourceProperties"
+    },
+    {
+      "name": "pcce.datasources.cvp-reporting.name",
+      "type": "java.lang.String",
+      "sourceType": "org.springframework.boot.autoconfigure.jdbc.DataSourceProperties"
+    },
+    {
+      "name": "pcce.datasources.cvp-reporting.password",
+      "type": "java.lang.String",
+      "sourceType": "org.springframework.boot.autoconfigure.jdbc.DataSourceProperties"
+    },
+    {
+      "name": "pcce.datasources.cvp-reporting.type",
+      "type": "java.lang.Class<? extends javax.sql.DataSource>",
+      "sourceType": "org.springframework.boot.autoconfigure.jdbc.DataSourceProperties"
+    },
+    {
+      "name": "pcce.datasources.cvp-reporting.url",
+      "type": "java.lang.String",
+      "sourceType": "org.springframework.boot.autoconfigure.jdbc.DataSourceProperties"
+    },
+    {
+      "name": "pcce.datasources.cvp-reporting.username",
+      "type": "java.lang.String",
+      "sourceType": "org.springframework.boot.autoconfigure.jdbc.DataSourceProperties"
+    },
+    {
+      "name": "pcce.datasources.cvp-reporting.xa.data-source-class-name",
+      "type": "java.lang.String",
+      "sourceType": "org.springframework.boot.autoconfigure.jdbc.DataSourceProperties$Xa"
+    },
+    {
+      "name": "pcce.datasources.cvp-reporting.xa.properties",
+      "type": "java.util.Map<java.lang.String,java.lang.String>",
+      "sourceType": "org.springframework.boot.autoconfigure.jdbc.DataSourceProperties$Xa"
+    },
+    {
+      "name": "pcce.datasources.hds.driver-class-name",
+      "type": "java.lang.String",
+      "sourceType": "org.springframework.boot.autoconfigure.jdbc.DataSourceProperties"
+    },
+    {
+      "name": "pcce.datasources.hds.embedded-database-connection",
+      "type": "org.springframework.boot.jdbc.EmbeddedDatabaseConnection",
+      "sourceType": "org.springframework.boot.autoconfigure.jdbc.DataSourceProperties"
+    },
+    {
+      "name": "pcce.datasources.hds.generate-unique-name",
+      "type": "java.lang.Boolean",
+      "sourceType": "org.springframework.boot.autoconfigure.jdbc.DataSourceProperties"
+    },
+    {
+      "name": "pcce.datasources.hds.jndi-name",
+      "type": "java.lang.String",
+      "sourceType": "org.springframework.boot.autoconfigure.jdbc.DataSourceProperties"
+    },
+    {
+      "name": "pcce.datasources.hds.name",
+      "type": "java.lang.String",
+      "sourceType": "org.springframework.boot.autoconfigure.jdbc.DataSourceProperties"
+    },
+    {
+      "name": "pcce.datasources.hds.password",
+      "type": "java.lang.String",
+      "sourceType": "org.springframework.boot.autoconfigure.jdbc.DataSourceProperties"
+    },
+    {
+      "name": "pcce.datasources.hds.type",
+      "type": "java.lang.Class<? extends javax.sql.DataSource>",
+      "sourceType": "org.springframework.boot.autoconfigure.jdbc.DataSourceProperties"
+    },
+    {
+      "name": "pcce.datasources.hds.url",
+      "type": "java.lang.String",
+      "sourceType": "org.springframework.boot.autoconfigure.jdbc.DataSourceProperties"
+    },
+    {
+      "name": "pcce.datasources.hds.username",
+      "type": "java.lang.String",
+      "sourceType": "org.springframework.boot.autoconfigure.jdbc.DataSourceProperties"
+    },
+    {
+      "name": "pcce.datasources.hds.xa.data-source-class-name",
+      "type": "java.lang.String",
+      "sourceType": "org.springframework.boot.autoconfigure.jdbc.DataSourceProperties$Xa"
+    },
+    {
+      "name": "pcce.datasources.hds.xa.properties",
+      "type": "java.util.Map<java.lang.String,java.lang.String>",
+      "sourceType": "org.springframework.boot.autoconfigure.jdbc.DataSourceProperties$Xa"
+    },
+    {
+      "name": "pcce.operations.assessment-fixed-delay-ms",
+      "type": "java.lang.Long",
+      "sourceType": "com.example.pcceobservability.config.PcceProperties$Operations"
+    },
+    {
+      "name": "pcce.operations.audit-retention",
+      "type": "java.lang.Integer",
+      "sourceType": "com.example.pcceobservability.config.PcceProperties$Operations"
+    },
+    {
+      "name": "pcce.operations.component-latency-critical-ms",
+      "type": "java.lang.Integer",
+      "sourceType": "com.example.pcceobservability.config.PcceProperties$Operations"
+    },
+    {
+      "name": "pcce.operations.component-latency-warning-ms",
+      "type": "java.lang.Integer",
+      "sourceType": "com.example.pcceobservability.config.PcceProperties$Operations"
+    },
+    {
+      "name": "pcce.operations.dropped-calls-critical-threshold",
+      "type": "java.lang.Integer",
+      "sourceType": "com.example.pcceobservability.config.PcceProperties$Operations"
+    },
+    {
+      "name": "pcce.operations.dropped-calls-warning-threshold",
+      "type": "java.lang.Integer",
+      "sourceType": "com.example.pcceobservability.config.PcceProperties$Operations"
+    },
+    {
+      "name": "pcce.operations.maintenance-mode",
+      "type": "java.lang.Boolean",
+      "sourceType": "com.example.pcceobservability.config.PcceProperties$Operations"
+    },
+    {
+      "name": "pcce.operations.maintenance-reason",
+      "type": "java.lang.String",
+      "sourceType": "com.example.pcceobservability.config.PcceProperties$Operations"
+    },
+    {
+      "name": "pcce.operations.scheduled-assessment-enabled",
+      "type": "java.lang.Boolean",
+      "sourceType": "com.example.pcceobservability.config.PcceProperties$Operations"
+    },
+    {
+      "name": "pcce.operations.service-level-critical-pct",
+      "type": "java.lang.Double",
+      "sourceType": "com.example.pcceobservability.config.PcceProperties$Operations"
+    },
+    {
+      "name": "pcce.operations.service-level-warning-pct",
+      "type": "java.lang.Double",
+      "sourceType": "com.example.pcceobservability.config.PcceProperties$Operations"
+    },
+    {
+      "name": "pcce.queries.agent-stats",
+      "type": "java.lang.String",
+      "sourceType": "com.example.pcceobservability.config.PcceProperties$Queries"
+    },
+    {
+      "name": "pcce.queries.call-metrics",
+      "type": "java.lang.String",
+      "sourceType": "com.example.pcceobservability.config.PcceProperties$Queries"
+    },
+    {
+      "name": "pcce.queries.dropped-calls",
+      "type": "java.lang.String",
+      "sourceType": "com.example.pcceobservability.config.PcceProperties$Queries"
+    },
+    {
+      "name": "pcce.queries.ivr-containment",
+      "type": "java.lang.String",
+      "sourceType": "com.example.pcceobservability.config.PcceProperties$Queries"
+    },
+    {
+      "name": "pcce.security.users",
+      "type": "java.util.List<com.example.pcceobservability.config.PcceProperties$AppUser>",
+      "sourceType": "com.example.pcceobservability.config.PcceProperties$Security"
+    }
+  ],
+  "hints": []
+}

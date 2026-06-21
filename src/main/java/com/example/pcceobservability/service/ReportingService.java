@@ -1,0 +1,233 @@
+package com.example.pcceobservability.service;
+
+import com.example.pcceobservability.config.PcceProperties;
+import com.example.pcceobservability.model.AgentStat;
+import com.example.pcceobservability.model.AgentStatus;
+import com.example.pcceobservability.model.CallMetric;
+import com.example.pcceobservability.model.ContactCenterSummary;
+import com.example.pcceobservability.model.DroppedCallMetric;
+import com.example.pcceobservability.security.AccessControlService;
+import java.math.BigDecimal;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Timestamp;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.List;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
+
+@Service
+public class ReportingService {
+
+    private final JdbcTemplate hdsJdbcTemplate;
+    private final JdbcTemplate cvpReportingJdbcTemplate;
+    private final PcceProperties pcceProperties;
+    private final ComponentStatusService componentStatusService;
+    private final AccessControlService accessControlService;
+
+    public ReportingService(
+            @Qualifier("hdsJdbcTemplate") JdbcTemplate hdsJdbcTemplate,
+            @Qualifier("cvpReportingJdbcTemplate") JdbcTemplate cvpReportingJdbcTemplate,
+            PcceProperties pcceProperties,
+            ComponentStatusService componentStatusService,
+            AccessControlService accessControlService) {
+        this.hdsJdbcTemplate = hdsJdbcTemplate;
+        this.cvpReportingJdbcTemplate = cvpReportingJdbcTemplate;
+        this.pcceProperties = pcceProperties;
+        this.componentStatusService = componentStatusService;
+        this.accessControlService = accessControlService;
+    }
+
+    public List<CallMetric> callMetrics(LocalDate from, LocalDate to, String skillGroup) {
+        validateDateRange(from, to);
+        String normalizedSkillGroup = blankToNull(skillGroup);
+        return hdsJdbcTemplate.query(
+                pcceProperties.getQueries().getCallMetrics(),
+                this::mapCallMetric,
+                start(from),
+                exclusiveEnd(to),
+                normalizedSkillGroup,
+                normalizedSkillGroup);
+    }
+
+    public List<AgentStat> agentStats(LocalDate from, LocalDate to, String agentId, String team) {
+        validateDateRange(from, to);
+        String normalizedAgentId = blankToNull(accessControlService.scopedAgentId(agentId));
+        String normalizedTeam = blankToNull(accessControlService.scopedTeam(team));
+        return hdsJdbcTemplate.query(
+                pcceProperties.getQueries().getAgentStats(),
+                this::mapAgentStat,
+                start(from),
+                exclusiveEnd(to),
+                normalizedAgentId,
+                normalizedAgentId,
+                normalizedTeam,
+                normalizedTeam);
+    }
+
+    public List<DroppedCallMetric> droppedCalls(LocalDate from, LocalDate to, String skillGroup) {
+        validateDateRange(from, to);
+        String normalizedSkillGroup = blankToNull(skillGroup);
+        return hdsJdbcTemplate.query(
+                pcceProperties.getQueries().getDroppedCalls(),
+                this::mapDroppedCallMetric,
+                start(from),
+                exclusiveEnd(to),
+                normalizedSkillGroup,
+                normalizedSkillGroup);
+    }
+
+    public List<IvrContainmentMetric> ivrContainment(LocalDate from, LocalDate to) {
+        validateDateRange(from, to);
+        return cvpReportingJdbcTemplate.query(
+                pcceProperties.getQueries().getIvrContainment(),
+                (rs, rowNum) -> new IvrContainmentMetric(
+                        rs.getObject("date", LocalDate.class),
+                        rs.getInt("hour"),
+                        rs.getBigDecimal("ivr_containment_rate")),
+                start(from),
+                exclusiveEnd(to));
+    }
+
+    public ContactCenterSummary summary(LocalDate from, LocalDate to) {
+        List<CallMetric> calls = callMetrics(from, to, null);
+        List<DroppedCallMetric> drops = droppedCalls(from, to, null);
+
+        long offered = calls.stream().mapToLong(metric -> nullToZero(metric.callsOffered())).sum();
+        long handled = calls.stream().mapToLong(metric -> nullToZero(metric.callsHandled())).sum();
+        long abandoned = calls.stream().mapToLong(metric -> nullToZero(metric.callsAbandoned())).sum();
+        long dropped = drops.stream().mapToLong(metric -> nullToZero(metric.droppedCalls())).sum();
+
+        return new ContactCenterSummary(
+                offered,
+                handled,
+                abandoned,
+                dropped,
+                weightedAverage(calls, offered, MetricValue.SERVICE_LEVEL),
+                weightedAverage(calls, handled, MetricValue.AHT),
+                weightedAverage(calls, handled, MetricValue.ASA),
+                componentStatusService.status());
+    }
+
+    private CallMetric mapCallMetric(ResultSet rs, int rowNum) throws SQLException {
+        return new CallMetric(
+                rs.getObject("date", LocalDate.class),
+                rs.getInt("hour"),
+                rs.getString("skill_group"),
+                rs.getLong("calls_offered"),
+                rs.getLong("calls_handled"),
+                rs.getLong("calls_abandoned"),
+                rs.getBigDecimal("service_level_pct"),
+                rs.getBigDecimal("avg_handle_time"),
+                rs.getBigDecimal("avg_talk_time"),
+                rs.getBigDecimal("avg_hold_time"),
+                rs.getBigDecimal("avg_wrap_time"),
+                rs.getBigDecimal("avg_speed_answer"),
+                rs.getBigDecimal("avg_queue_time"),
+                rs.getBigDecimal("max_queue_time"),
+                rs.getBigDecimal("transfer_rate"),
+                rs.getBigDecimal("first_call_resolution"),
+                rs.getBigDecimal("ivr_containment_rate"),
+                rs.getBigDecimal("csat_score"));
+    }
+
+    private AgentStat mapAgentStat(ResultSet rs, int rowNum) throws SQLException {
+        return new AgentStat(
+                rs.getObject("date", LocalDate.class),
+                rs.getString("agent_name"),
+                rs.getString("agent_id"),
+                rs.getString("team"),
+                rs.getString("skill_group"),
+                AgentStatus.valueOf(rs.getString("status")),
+                rs.getLong("calls_handled"),
+                rs.getBigDecimal("avg_handle_time"),
+                rs.getBigDecimal("avg_talk_time"),
+                rs.getBigDecimal("avg_hold_time"),
+                rs.getBigDecimal("avg_wrap_time"),
+                rs.getBigDecimal("occupancy_pct"),
+                rs.getBigDecimal("adherence_pct"),
+                rs.getLong("transfers"),
+                rs.getBigDecimal("login_duration_min"),
+                rs.getBigDecimal("not_ready_time_min"));
+    }
+
+    private DroppedCallMetric mapDroppedCallMetric(ResultSet rs, int rowNum) throws SQLException {
+        Timestamp lastDropTime = rs.getTimestamp("last_drop_time");
+        return new DroppedCallMetric(
+                rs.getObject("date", LocalDate.class),
+                rs.getInt("hour"),
+                rs.getString("skill_group"),
+                rs.getLong("dropped_calls"),
+                lastDropTime == null ? null : lastDropTime.toLocalDateTime());
+    }
+
+    private LocalDateTime start(LocalDate date) {
+        return date.atStartOfDay();
+    }
+
+    private LocalDateTime exclusiveEnd(LocalDate date) {
+        return date.plusDays(1).atStartOfDay();
+    }
+
+    private String blankToNull(String value) {
+        return StringUtils.hasText(value) ? value : null;
+    }
+
+    private void validateDateRange(LocalDate from, LocalDate to) {
+        if (to.isBefore(from)) {
+            throw new IllegalArgumentException("to date must be on or after from date");
+        }
+    }
+
+    private long nullToZero(Long value) {
+        return value == null ? 0 : value;
+    }
+
+    private BigDecimal weightedAverage(List<CallMetric> calls, long denominator, MetricValue value) {
+        if (denominator == 0) {
+            return BigDecimal.ZERO;
+        }
+        BigDecimal total = calls.stream()
+                .map(metric -> value.extract(metric).multiply(BigDecimal.valueOf(value.weight(metric))))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        return total.divide(BigDecimal.valueOf(denominator), 2, java.math.RoundingMode.HALF_UP);
+    }
+
+    private enum MetricValue {
+        SERVICE_LEVEL {
+            @Override
+            BigDecimal extract(CallMetric metric) {
+                return metric.serviceLevelPct() == null ? BigDecimal.ZERO : metric.serviceLevelPct();
+            }
+
+            @Override
+            long weight(CallMetric metric) {
+                return metric.callsOffered() == null ? 0 : metric.callsOffered();
+            }
+        },
+        AHT {
+            @Override
+            BigDecimal extract(CallMetric metric) {
+                return metric.avgHandleTime() == null ? BigDecimal.ZERO : metric.avgHandleTime();
+            }
+        },
+        ASA {
+            @Override
+            BigDecimal extract(CallMetric metric) {
+                return metric.avgSpeedAnswer() == null ? BigDecimal.ZERO : metric.avgSpeedAnswer();
+            }
+        };
+
+        abstract BigDecimal extract(CallMetric metric);
+
+        long weight(CallMetric metric) {
+            return metric.callsHandled() == null ? 0 : metric.callsHandled();
+        }
+    }
+
+    public record IvrContainmentMetric(LocalDate date, Integer hour, BigDecimal ivrContainmentRate) {
+    }
+}

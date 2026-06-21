@@ -1,0 +1,127 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: pcce-observability
+  jackson:
+    property-naming-strategy: SNAKE_CASE
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+
+pcce:
+  operations:
+    scheduled-assessment-enabled: true
+    assessment-fixed-delay-ms: 300000
+    component-latency-warning-ms: 1500
+    component-latency-critical-ms: 5000
+    dropped-calls-warning-threshold: 10
+    dropped-calls-critical-threshold: 25
+    service-level-warning-pct: 80
+    service-level-critical-pct: 70
+    maintenance-mode: false
+    maintenance-reason:
+    audit-retention: 500
+
+  security:
+    users:
+      - username: admin
+        password: ${PCCE_ADMIN_PASSWORD:{noop}change-me}
+        display-name: Solution Administrator
+        enabled: true
+        roles:
+          - ADMIN
+      - username: workforce.manager
+        password: ${PCCE_WFM_PASSWORD:{noop}change-me}
+        display-name: Workforce Manager
+        enabled: true
+        roles:
+          - WORKFORCE_MANAGER
+        allowed-teams:
+          - Sales
+          - Support
+      - username: supervisor.sales
+        password: ${PCCE_SUPERVISOR_PASSWORD:{noop}change-me}
+        display-name: Sales Supervisor
+        enabled: true
+        roles:
+          - SUPERVISOR
+        allowed-teams:
+          - Sales
+      - username: agent.1001
+        password: ${PCCE_AGENT_PASSWORD:{noop}change-me}
+        display-name: Agent 1001
+        enabled: true
+        agent-id: "1001"
+        roles:
+          - AGENT
+
+  datasources:
+    aw:
+      url: ${PCCE_AW_JDBC_URL:jdbc:sqlserver://aw-host:1433;databaseName=awdb;encrypt=true;trustServerCertificate=true}
+      username: ${PCCE_AW_USERNAME:pcce_reader}
+      password: ${PCCE_AW_PASSWORD:change-me}
+      driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
+    hds:
+      url: ${PCCE_HDS_JDBC_URL:jdbc:sqlserver://hds-host:1433;databaseName=ucce_hds;encrypt=true;trustServerCertificate=true}
+      username: ${PCCE_HDS_USERNAME:pcce_reader}
+      password: ${PCCE_HDS_PASSWORD:change-me}
+      driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
+    cvp-reporting:
+      url: ${CVP_REPORTING_JDBC_URL:jdbc:informix-sqli://cvp-reporting-host:1526/cvp_data:INFORMIXSERVER=cvp_report;DELIMIDENT=y;}
+      username: ${CVP_REPORTING_USERNAME:cvp_reader}
+      password: ${CVP_REPORTING_PASSWORD:change-me}
+      driver-class-name: com.informix.jdbc.IfxDriver
+
+  components:
+    - name: ICM_Router
+      enabled: false
+      probe: TCP
+      host: router-a.example.local
+      port: 4000
+    - name: ICM_Logger
+      enabled: false
+      probe: JDBC_AW
+    - name: CVP_CallServer
+      enabled: false
+      probe: HTTP
+      url: https://cvp-callserver.example.local:8000/cvp/diag
+    - name: CVP_ReportingServer
+      enabled: false
+      probe: JDBC_CVP_REPORTING
+    - name: CTI_Server
+      enabled: false
+      probe: TCP
+      host: ctisvr-a.example.local
+      port: 42027
+    - name: PG_CUCM
+      enabled: false
+      probe: TCP
+      host: pg-cucm-a.example.local
+      port: 42028
+    - name: PG_CVP
+      enabled: false
+      probe: TCP
+      host: pg-cvp-a.example.local
+      port: 42029
+    - name: VoIP_Gateway
+      enabled: false
+      probe: TCP
+      host: voice-gw.example.local
+      port: 5060
+    - name: Finesse
+      enabled: false
+      probe: HTTP
+      url: https://finesse.example.local/desktop
+    - name: MediaSense
+      enabled: false
+      probe: HTTP
+      url: https://mediasense.example.local
+    - name: CUIC
+      enabled: false
+      probe: HTTP
+      url: https://cuic.example.local/cuic
