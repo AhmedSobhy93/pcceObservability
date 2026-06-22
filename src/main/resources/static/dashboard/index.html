@@ -23,6 +23,8 @@
         <button class="nav-item" data-view="calls"><span class="icon">CA</span>Call Analytics</button>
         <button class="nav-item" data-view="system"><span class="icon">SH</span>System Health</button>
         <button class="nav-item" data-view="integration"><span class="icon">PI</span>PCCE Integration</button>
+        <button class="nav-item" data-view="smtp"><span class="icon">EM</span>SMTP Alerts</button>
+        <button class="nav-item" data-view="spog"><span class="icon">SP</span>SPOG Ops</button>
         <button class="nav-item" data-view="app"><span class="icon">SB</span>Spring Boot App</button>
         <button class="nav-item" data-view="plan"><span class="icon">PL</span>Project Plan</button>
     </nav>
@@ -156,6 +158,24 @@
             <article class="panel wide"><h2>Query Performance</h2><div class="metric-list" id="queryPerformanceList"></div></article>
             <article class="panel"><h2>Recent App Logs</h2><pre class="log-box" id="logBox"></pre></article>
         </div>
+    </section>
+
+    <section class="view" id="view-smtp">
+        <div class="content-grid">
+            <article class="panel wide"><h2>SMTP Alert Capabilities</h2><div class="metric-list" id="smtpCapabilityList"></div></article>
+            <article class="panel"><h2>SMTP Status</h2><div class="metric-list" id="smtpStatusList"></div></article>
+        </div>
+    </section>
+
+    <section class="view" id="view-spog">
+        <div class="content-grid">
+            <article class="panel wide"><h2>SPOG Operational Capabilities</h2><div class="metric-list" id="spogOpsList"></div></article>
+            <article class="panel"><h2>Graceful Operations</h2><div class="metric-list" id="gracefulOpsList"></div></article>
+        </div>
+        <article class="panel full api-functions-panel">
+            <div class="panel-head"><h2>Server Log Collection Targets</h2><span>Configure collection method before enabling</span></div>
+            <div class="table-wrap"><table><thead><tr><th>Component</th><th>Host</th><th>Log Scope</th><th>Method</th><th>Status</th></tr></thead><tbody id="serverLogTargetsTable"></tbody></table></div>
+        </article>
     </section>
 
     <section class="view" id="view-plan">

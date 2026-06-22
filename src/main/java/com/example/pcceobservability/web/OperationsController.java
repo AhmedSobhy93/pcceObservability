@@ -4,8 +4,11 @@ import com.example.pcceobservability.config.PcceProperties;
 import com.example.pcceobservability.model.AuditEvent;
 import com.example.pcceobservability.model.MaintenanceModeRequest;
 import com.example.pcceobservability.model.ProductionAssessment;
+import com.example.pcceobservability.model.ServerLogTarget;
+import com.example.pcceobservability.model.SupportCapability;
 import com.example.pcceobservability.service.AuditService;
 import com.example.pcceobservability.service.OperationsService;
+import com.example.pcceobservability.service.SupportCapabilityService;
 import jakarta.validation.constraints.NotNull;
 import java.time.LocalDate;
 import java.util.List;
@@ -26,14 +29,17 @@ public class OperationsController {
     private final OperationsService operationsService;
     private final AuditService auditService;
     private final PcceProperties pcceProperties;
+    private final SupportCapabilityService supportCapabilityService;
 
     public OperationsController(
             OperationsService operationsService,
             AuditService auditService,
-            PcceProperties pcceProperties) {
+            PcceProperties pcceProperties,
+            SupportCapabilityService supportCapabilityService) {
         this.operationsService = operationsService;
         this.auditService = auditService;
         this.pcceProperties = pcceProperties;
+        this.supportCapabilityService = supportCapabilityService;
     }
 
     @GetMapping("/assessment")
@@ -72,5 +78,23 @@ public class OperationsController {
                 "maintenanceReason", pcceProperties.getOperations().getMaintenanceReason() == null
                         ? ""
                         : pcceProperties.getOperations().getMaintenanceReason());
+    }
+
+    @GetMapping("/smtp-capabilities")
+    @PreAuthorize("hasAuthority('PERM_OPERATIONS_READ')")
+    public List<SupportCapability> smtpCapabilities() {
+        return supportCapabilityService.smtpCapabilities();
+    }
+
+    @GetMapping("/spog-capabilities")
+    @PreAuthorize("hasAuthority('PERM_OPERATIONS_READ')")
+    public List<SupportCapability> spogCapabilities() {
+        return supportCapabilityService.spogCapabilities();
+    }
+
+    @GetMapping("/server-log-targets")
+    @PreAuthorize("hasAuthority('PERM_OPERATIONS_READ')")
+    public List<ServerLogTarget> serverLogTargets() {
+        return supportCapabilityService.serverLogTargets();
     }
 }

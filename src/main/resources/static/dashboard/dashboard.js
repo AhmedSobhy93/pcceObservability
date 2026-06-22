@@ -15,7 +15,10 @@ const state = {
     pcceFunctions: [],
     pcceActions: [],
     rtmtCapabilities: [],
-    spogCapabilities: []
+    spogCapabilities: [],
+    smtpCapabilities: [],
+    spogOps: [],
+    serverLogTargets: []
 };
 
 const pages = {
@@ -25,6 +28,8 @@ const pages = {
     calls: ["Call Analytics", "Dropped calls, queue behavior, and skill group distribution"],
     system: ["System Health", "PCCE, CVP, CUIC, Finesse, PG, CTI, and gateway status"],
     integration: ["PCCE Integration", "AW/HDS SQL Server and CVP Informix connectivity"],
+    smtp: ["SMTP Alerts", "Email alerting, escalation, and notification readiness"],
+    spog: ["SPOG Operations", "Single pane operations, graceful actions, and log collection"],
     app: ["Spring Boot App", "Operational alerts, readiness checks, and support status"],
     plan: ["Project Plan", "Production hardening and banking support checklist"]
 };
@@ -134,7 +139,10 @@ async function refresh() {
         safeLoad("pcceFunctions", "/api/v1/pcce-api/functions", []),
         safeLoad("pcceActions", "/api/v1/pcce-api/actions", []),
         safeLoad("rtmtCapabilities", "/api/v1/pcce-api/rtmt-capabilities", []),
-        safeLoad("spogCapabilities", "/api/v1/pcce-api/spog-capabilities", [])
+        safeLoad("spogCapabilities", "/api/v1/pcce-api/spog-capabilities", []),
+        safeLoad("smtpCapabilities", "/api/v1/operations/smtp-capabilities", []),
+        safeLoad("spogOps", "/api/v1/operations/spog-capabilities", []),
+        safeLoad("serverLogTargets", "/api/v1/operations/server-log-targets", [])
     ];
     const results = await Promise.all(supportLoads);
     errors.push(...results.filter(Boolean));
@@ -160,6 +168,8 @@ function renderAll(errors) {
     renderCallTypes();
     renderComponents();
     renderIntegration();
+    renderSmtp();
+    renderSpog();
     renderOperations();
     renderSupport();
     renderPlan();
@@ -168,6 +178,9 @@ function renderAll(errors) {
     const alertCount = pick(state.assessment, "alerts")?.length || 0;
     const items = [];
     items.push({ text: errors.length ? `${errors.length} data warnings` : "Live data loaded", level: errors.length ? "warn" : "good" });
+    if (state.calls.some(row => (pick(row, "skill_group", "skillGroup") || "UNKNOWN") === "UNKNOWN")) {
+        items.push({ text: "CUIC alignment needed: skill/call filters not mapped", level: "warn" });
+    }
     items.push({ text: `${componentDown} components down`, level: componentDown ? "bad" : "good" });
     items.push({ text: `${alertCount} operational alerts`, level: alertCount ? "warn" : "good" });
     if (errors[0]) items.push({ text: errors[0], level: "warn" });
@@ -370,6 +383,37 @@ function renderIntegration() {
     qs("#spogCapabilityList").innerHTML = state.spogCapabilities.map(item =>
         metricRow(`${pick(item, "area")}`, `${pick(item, "capability")} - ${pick(item, "integration_method", "integrationMethod")}`)
     ).join("");
+}
+
+function renderSmtp() {
+    qs("#smtpCapabilityList").innerHTML = state.smtpCapabilities.map(item =>
+        metricRow(`${pick(item, "area")} - ${pick(item, "capability")}`, `${pick(item, "status")} | ${pick(item, "action")}`)
+    ).join("") || metricRow("SMTP", "Capabilities unavailable");
+    qs("#smtpStatusList").innerHTML = [
+        metricRow("Alert Webhook", "Configured in pcce.notifications"),
+        metricRow("SMTP Relay", "Configure approved bank SMTP relay"),
+        metricRow("Recipients", "Configure operations/support distribution lists"),
+        metricRow("Minimum Severity", "CRITICAL recommended for production")
+    ].join("");
+}
+
+function renderSpog() {
+    qs("#spogOpsList").innerHTML = state.spogOps.map(item =>
+        metricRow(`${pick(item, "area")} - ${pick(item, "capability")}`, `${pick(item, "status")} | ${pick(item, "action")}`)
+    ).join("") || metricRow("SPOG", "Capabilities unavailable");
+    qs("#gracefulOpsList").innerHTML = [
+        metricRow("Maintenance Mode", pick(state.assessment, "maintenance_mode", "maintenanceMode") ? "Enabled" : "Disabled"),
+        metricRow("Alert Suppression", "Available through maintenance mode"),
+        metricRow("Graceful App Shutdown", "Admin gated; enable only during approved window"),
+        metricRow("Remote Cisco Service Actions", "Requires approved automation account and runbook")
+    ].join("");
+    qs("#serverLogTargetsTable").innerHTML = state.serverLogTargets.map(item => `<tr>
+        <td>${escapeHtml(pick(item, "component") || "")}</td>
+        <td>${escapeHtml(pick(item, "host") || "")}</td>
+        <td>${escapeHtml(pick(item, "log_path", "logPath") || "")}</td>
+        <td>${escapeHtml(pick(item, "collection_method", "collectionMethod") || "")}</td>
+        <td>${pick(item, "enabled") ? "Enabled" : "Disabled"}</td>
+    </tr>`).join("");
 }
 
 async function executePcceAction(id) {

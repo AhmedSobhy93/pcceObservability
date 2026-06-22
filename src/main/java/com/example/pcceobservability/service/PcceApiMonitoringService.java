@@ -255,7 +255,11 @@ public class PcceApiMonitoringService {
             return "";
         }
         try (InputStream inputStream = stream) {
-            return new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
+            String body = new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
+            if (statusCode == 401 || statusCode == 403 || body.toLowerCase().contains("access denied")) {
+                return "Access denied by PCCE/IIS. Verify PCCE API base URL, endpoint path, API user permissions, authentication method, and that the API is enabled on this node.";
+            }
+            return body;
         }
     }
 
