@@ -5,6 +5,7 @@ Spring Boot API for Cisco PCCE 12.6.2 reporting across AW/HDS/CVP Reporting data
 ## What It Exposes
 
 - `GET /api/v1/metrics/calls?from=2026-06-01&to=2026-06-15&skillGroup=Sales`
+- `GET /api/v1/metrics/call-types?from=2026-06-01&to=2026-06-15`
 - `GET /api/v1/agents/stats?from=2026-06-01&to=2026-06-15&agentId=jsmith`
 - `GET /api/v1/calls/dropped?from=2026-06-01&to=2026-06-15`
 - `GET /api/v1/calls/disposition-breakdown?from=2026-06-01&to=2026-06-15`
@@ -134,6 +135,8 @@ The app includes the IBM Informix JDBC dependency `com.ibm.informix:jdbc`. If yo
 - `vswsitcvpr01` / `10.10.90.198`: CVP Reporting Informix
 
 If a TCP probe times out, verify the exact listener port from Cisco service configuration and Windows firewall. Do not mark Router/PG/CTI ports as failed until the port is confirmed to be open from the app host.
+
+Router and PG default to `HOST` probe in SIT so the dashboard distinguishes server reachability from Cisco service-port reachability. Add separate TCP checks only after confirming the exact PCCE listener ports from your deployment.
 
 Dropped-call counting is disabled by default to avoid misleading numbers. Use `/api/v1/calls/disposition-breakdown` to see your live HDS distribution, then enable `pcce.queries.dropped-calls-enabled` and configure the approved dropped-call SQL after the bank confirms which call disposition codes count as dropped calls.
 

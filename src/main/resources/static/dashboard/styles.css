@@ -219,6 +219,17 @@ pre { white-space: pre-wrap; margin: 0; color: #d9e5f7; }
     line-height: 1.45;
 }
 .action-result { margin-top: 16px; }
+.action-body {
+    width: 100%;
+    min-height: 96px;
+    margin-bottom: 16px;
+    border: 1px solid #242f3d;
+    border-radius: 12px;
+    background: #0d131b;
+    color: var(--text);
+    padding: 14px;
+    resize: vertical;
+}
 
 body.collapsed .sidebar { width: 92px; }
 body.collapsed .brand div:not(.brand-mark), body.collapsed .nav-item:not(.active) { font-size: 0; }

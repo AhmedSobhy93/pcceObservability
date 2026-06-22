@@ -73,73 +73,94 @@ pcce:
       - id: users.list
         category: User Configuration and Management
         name: List users
-        enabled: false
+        enabled: true
         admin-only: false
         method: GET
         path: /unifiedconfig/config/user
       - id: teams.list
         category: Team Configuration and Management
         name: List agent teams
-        enabled: false
+        enabled: true
         admin-only: false
         method: GET
         path: /unifiedconfig/config/agentteam
       - id: skills.list
         category: Skill Group Management
         name: List skill groups
-        enabled: false
+        enabled: true
         admin-only: false
         method: GET
         path: /unifiedconfig/config/skillgroup
       - id: dialedNumbers.list
         category: Call Configuration and Management
         name: List dialed numbers
-        enabled: false
+        enabled: true
         admin-only: false
         method: GET
         path: /unifiedconfig/config/dialednumber
       - id: callTypes.list
         category: Call Configuration and Management
         name: List call types
-        enabled: false
+        enabled: true
         admin-only: false
         method: GET
         path: /unifiedconfig/config/calltype
       - id: eccVariables.list
         category: Call Configuration and Management
         name: List ECC variables
-        enabled: false
+        enabled: true
         admin-only: false
         method: GET
         path: /unifiedconfig/config/expandedcallvariable
       - id: campaigns.list
         category: Outbound Option
         name: List campaigns
-        enabled: false
+        enabled: true
         admin-only: false
         method: GET
         path: /unifiedconfig/config/campaign
       - id: businessHours.list
         category: System Configuration
         name: List business hours
-        enabled: false
+        enabled: true
         admin-only: false
         method: GET
         path: /unifiedconfig/config/businesshour
       - id: deploymentType.get
         category: System Configuration
         name: Get deployment type
-        enabled: false
+        enabled: true
         admin-only: false
         method: GET
         path: /unifiedconfig/config/deploymenttype
       - id: cvpReportingServer.get
         category: System Configuration
         name: Get CVP Reporting Server
-        enabled: false
+        enabled: true
         admin-only: false
         method: GET
         path: /unifiedconfig/config/cvpreportingserver
+      - id: user.update
+        category: User Configuration and Management
+        name: Update user
+        enabled: false
+        admin-only: true
+        method: PUT
+        path: /unifiedconfig/config/user/{id}
+      - id: team.update
+        category: Team Configuration and Management
+        name: Update agent team
+        enabled: false
+        admin-only: true
+        method: PUT
+        path: /unifiedconfig/config/agentteam/{id}
+      - id: businessHours.update
+        category: System Configuration
+        name: Update business hours
+        enabled: false
+        admin-only: true
+        method: PUT
+        path: /unifiedconfig/config/businesshour/{id}
 
   queries:
     call-metrics-tcd-fallback-enabled: true
@@ -247,9 +268,10 @@ pcce:
   components:
     - name: ICM_Router
       enabled: true
-      probe: TCP
+      probe: HOST
       host: 10.10.90.191
       port: 4000
+      timeout: 5s
     - name: ICM_Logger
       enabled: true
       probe: JDBC_AW
@@ -270,14 +292,16 @@ pcce:
       port: 42027
     - name: PG_CUCM
       enabled: true
-      probe: TCP
+      probe: HOST
       host: 10.10.90.192
       port: 42028
+      timeout: 5s
     - name: PG_CVP
       enabled: true
-      probe: TCP
+      probe: HOST
       host: 10.10.90.192
       port: 42029
+      timeout: 5s
     - name: VoIP_Gateway
       enabled: true
       probe: TCP

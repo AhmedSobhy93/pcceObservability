@@ -106,6 +106,8 @@ public class PcceProperties {
         private boolean callMetricsTcdFallbackEnabled = true;
         private String callMetricsTcdFallback = DefaultSql.CALL_METRICS_TCD_FALLBACK;
         private String agentStats = DefaultSql.AGENT_STATS;
+        private String agentStatsTcd = DefaultSql.AGENT_STATS_TCD;
+        private String callTypeMetrics = DefaultSql.CALL_TYPE_METRICS;
         private String droppedCalls = DefaultSql.DROPPED_CALLS;
         private boolean droppedCallsEnabled;
         private String dispositionBreakdown = DefaultSql.DISPOSITION_BREAKDOWN;
@@ -141,6 +143,22 @@ public class PcceProperties {
 
         public void setAgentStats(String agentStats) {
             this.agentStats = agentStats;
+        }
+
+        public String getAgentStatsTcd() {
+            return agentStatsTcd;
+        }
+
+        public void setAgentStatsTcd(String agentStatsTcd) {
+            this.agentStatsTcd = agentStatsTcd;
+        }
+
+        public String getCallTypeMetrics() {
+            return callTypeMetrics;
+        }
+
+        public void setCallTypeMetrics(String callTypeMetrics) {
+            this.callTypeMetrics = callTypeMetrics;
         }
 
         public String getDroppedCalls() {
@@ -270,6 +288,7 @@ public class PcceProperties {
     }
 
     public enum ProbeType {
+        HOST,
         TCP,
         HTTP,
         JDBC_AW,
@@ -970,6 +989,65 @@ public class PcceProperties {
                   AND (? IS NULL OR p.LoginName = ?)
                   AND (? IS NULL OR at.EnterpriseName = ?)
                 ORDER BY [date], agent_name
+                """;
+
+        static final String AGENT_STATS_TCD = """
+                SELECT
+                    CAST(tcd.DateTime AS date) AS [date],
+                    COALESCE(p.FirstName + ' ' + p.LastName, 'UNKNOWN') AS agent_name,
+                    COALESCE(p.LoginName, CAST(tcd.AgentSkillTargetID AS varchar(50))) AS agent_id,
+                    at.EnterpriseName AS team,
+                    COALESCE(sg.EnterpriseName, 'UNKNOWN') AS skill_group,
+                    'offline' AS status,
+                    COUNT_BIG(*) AS calls_handled,
+                    CAST(NULL AS decimal(18,2)) AS avg_handle_time,
+                    CAST(NULL AS decimal(18,2)) AS avg_talk_time,
+                    CAST(NULL AS decimal(18,2)) AS avg_hold_time,
+                    CAST(NULL AS decimal(18,2)) AS avg_wrap_time,
+                    CAST(NULL AS decimal(9,2)) AS occupancy_pct,
+                    CAST(NULL AS decimal(9,2)) AS adherence_pct,
+                    CAST(0 AS bigint) AS transfers,
+                    CAST(NULL AS decimal(18,2)) AS login_duration_min,
+                    CAST(NULL AS decimal(18,2)) AS not_ready_time_min
+                FROM t_Termination_Call_Detail tcd
+                LEFT JOIN t_Agent a ON a.SkillTargetID = tcd.AgentSkillTargetID
+                LEFT JOIN t_Person p ON p.PersonID = a.PersonID
+                LEFT JOIN t_Agent_Team_Member atm ON atm.SkillTargetID = a.SkillTargetID
+                LEFT JOIN t_Agent_Team at ON at.AgentTeamID = atm.AgentTeamID
+                LEFT JOIN t_Skill_Group sg ON sg.SkillTargetID = tcd.SkillGroupSkillTargetID
+                WHERE tcd.DateTime >= ? AND tcd.DateTime < ?
+                  AND COALESCE(tcd.AgentSkillTargetID, 0) > 0
+                  AND (? IS NULL OR p.LoginName = ? OR CAST(tcd.AgentSkillTargetID AS varchar(50)) = ?)
+                  AND (? IS NULL OR at.EnterpriseName = ?)
+                GROUP BY
+                    CAST(tcd.DateTime AS date),
+                    COALESCE(p.FirstName + ' ' + p.LastName, 'UNKNOWN'),
+                    COALESCE(p.LoginName, CAST(tcd.AgentSkillTargetID AS varchar(50))),
+                    at.EnterpriseName,
+                    COALESCE(sg.EnterpriseName, 'UNKNOWN')
+                ORDER BY [date], agent_name
+                """;
+
+        static final String CALL_TYPE_METRICS = """
+                SELECT
+                    CAST(tcd.DateTime AS date) AS [date],
+                    DATEPART(hour, tcd.DateTime) AS [hour],
+                    COALESCE(ct.EnterpriseName, CAST(tcd.CallTypeID AS varchar(50)), 'UNKNOWN') AS call_type,
+                    COALESCE(sg.EnterpriseName, 'UNKNOWN') AS skill_group,
+                    COUNT_BIG(*) AS calls,
+                    SUM(CASE WHEN COALESCE(tcd.AgentSkillTargetID, 0) > 0 THEN 1 ELSE 0 END) AS handled_calls
+                FROM t_Termination_Call_Detail tcd
+                LEFT JOIN t_Call_Type ct ON ct.CallTypeID = tcd.CallTypeID
+                LEFT JOIN t_Skill_Group sg ON sg.SkillTargetID = tcd.SkillGroupSkillTargetID
+                WHERE tcd.DateTime >= ? AND tcd.DateTime < ?
+                  AND (? IS NULL OR ct.EnterpriseName = ?)
+                  AND (? IS NULL OR sg.EnterpriseName = ?)
+                GROUP BY
+                    CAST(tcd.DateTime AS date),
+                    DATEPART(hour, tcd.DateTime),
+                    COALESCE(ct.EnterpriseName, CAST(tcd.CallTypeID AS varchar(50)), 'UNKNOWN'),
+                    COALESCE(sg.EnterpriseName, 'UNKNOWN')
+                ORDER BY [date], [hour], call_type, skill_group
                 """;
 
         static final String DROPPED_CALLS = """

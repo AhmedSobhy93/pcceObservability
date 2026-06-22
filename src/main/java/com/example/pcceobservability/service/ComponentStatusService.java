@@ -6,6 +6,7 @@ import com.example.pcceobservability.model.ComponentState;
 import com.example.pcceobservability.model.ComponentStatus;
 import java.io.IOException;
 import java.net.HttpURLConnection;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.URL;
@@ -61,6 +62,7 @@ public class ComponentStatusService {
 
         try {
             switch (target.getProbe()) {
+                case HOST -> hostProbe(target);
                 case TCP -> tcpProbe(target);
                 case HTTP -> httpProbe(target);
                 case JDBC_AW -> jdbcProbe(awJdbcTemplate, "SELECT 1");
@@ -104,6 +106,13 @@ public class ComponentStatusService {
         }
     }
 
+    private void hostProbe(ComponentTarget target) throws IOException {
+        if (target.getHost() == null || target.getHost().isBlank()) {
+            throw new IllegalArgumentException("HOST probe requires host");
+        }
+        InetAddress.getByName(target.getHost());
+    }
+
     private void trustAll(HttpsURLConnection connection) throws IOException {
         try {
             TrustManager[] trustManagers = new TrustManager[] {
@@ -138,6 +147,7 @@ public class ComponentStatusService {
 
     private String describeTarget(ComponentTarget target) {
         return switch (target.getProbe()) {
+            case HOST -> target.getHost();
             case HTTP -> target.getUrl();
             case TCP -> target.getHost() + ":" + target.getPort();
             case JDBC_AW -> "AW database";

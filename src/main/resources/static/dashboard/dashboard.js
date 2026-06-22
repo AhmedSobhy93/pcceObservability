@@ -1,6 +1,7 @@
 const state = {
     summary: null,
     calls: [],
+    callTypes: [],
     agents: [],
     drops: [],
     ivr: [],
@@ -108,6 +109,7 @@ async function refresh() {
     const loads = [
         safeLoad("user", "/api/v1/auth/me", null),
         safeLoad("calls", `/api/v1/metrics/calls?${params}`, []),
+        safeLoad("callTypes", `/api/v1/metrics/call-types?${params}`, []),
         safeLoad("agents", `/api/v1/agents/stats?${params}`, []),
         safeLoad("drops", `/api/v1/calls/dropped?${params}`, []),
         safeLoad("ivr", `/api/v1/metrics/ivr-containment?${params}`, []),
@@ -142,6 +144,7 @@ function renderAll(errors) {
     renderBusiness();
     renderAgents();
     renderDrops();
+    renderCallTypes();
     renderComponents();
     renderIntegration();
     renderOperations();
@@ -235,6 +238,18 @@ function renderDrops() {
     qs("#dropList").innerHTML = grouped.labels.map((label, index) => metricRow(label, fmt(grouped.values[index]))).join("") || metricRow("Dropped Calls", "0");
 }
 
+function renderCallTypes() {
+    qs("#callTypeCount").textContent = `${state.callTypes.length} rows`;
+    qs("#callTypeTable").innerHTML = state.callTypes.slice(0, 300).map(row => `<tr>
+        <td>${escapeHtml(pick(row, "date") || "")}</td>
+        <td>${escapeHtml(pick(row, "hour") ?? "")}</td>
+        <td>${escapeHtml(pick(row, "call_type", "callType") || "")}</td>
+        <td>${escapeHtml(pick(row, "skill_group", "skillGroup") || "")}</td>
+        <td>${fmt(pick(row, "calls"))}</td>
+        <td>${fmt(pick(row, "handled_calls", "handledCalls"))}</td>
+    </tr>`).join("");
+}
+
 function renderComponents() {
     const down = state.components.filter(c => String(pick(c, "state")).toUpperCase() === "DOWN").length;
     qs("#componentSummary").textContent = `${state.components.length} components / ${down} down`;
@@ -312,9 +327,10 @@ function renderIntegration() {
 async function executePcceAction(id) {
     qs("#pcceActionResult").textContent = `Running ${id}...`;
     try {
+        const bodyText = qs("#pcceActionBody").value.trim();
         const result = await api(`/api/v1/pcce-api/actions/${encodeURIComponent(id)}/execute`, {
             method: "POST",
-            body: "{}"
+            body: JSON.stringify({ body: bodyText || null })
         });
         qs("#pcceActionResult").textContent = JSON.stringify(result, null, 2);
     } catch (error) {

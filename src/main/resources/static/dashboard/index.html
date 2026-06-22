@@ -98,6 +98,10 @@
             <article class="panel wide"><h2>Dropped Calls by Hour</h2><canvas id="dropsChart" height="260"></canvas></article>
             <article class="panel"><h2>Drop Hotspots</h2><div class="metric-list" id="dropList"></div></article>
         </div>
+        <article class="panel full api-functions-panel">
+            <div class="panel-head"><h2>Calls by Call Type and Skill Group</h2><span id="callTypeCount"></span></div>
+            <div class="table-wrap"><table><thead><tr><th>Date</th><th>Hour</th><th>Call Type</th><th>Skill Group</th><th>Calls</th><th>Handled</th></tr></thead><tbody id="callTypeTable"></tbody></table></div>
+        </article>
     </section>
 
     <section class="view" id="view-system">
@@ -122,6 +126,7 @@
         </article>
         <article class="panel full api-functions-panel">
             <div class="panel-head"><h2>PCCE API Actions</h2><span>Approved operations</span></div>
+            <textarea class="action-body" id="pcceActionBody" placeholder="Optional JSON body for enabled POST/PUT/PATCH actions"></textarea>
             <div class="table-wrap"><table><thead><tr><th>Category</th><th>Action</th><th>Method</th><th>Path</th><th>Status</th><th></th></tr></thead><tbody id="pcceActionTable"></tbody></table></div>
             <pre class="log-box action-result" id="pcceActionResult">No PCCE API action executed yet.</pre>
         </article>

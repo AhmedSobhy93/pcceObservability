@@ -4,6 +4,7 @@ import com.example.pcceobservability.config.PcceProperties;
 import com.example.pcceobservability.model.AgentStat;
 import com.example.pcceobservability.model.AgentStatus;
 import com.example.pcceobservability.model.CallMetric;
+import com.example.pcceobservability.model.CallTypeMetric;
 import com.example.pcceobservability.model.ContactCenterSummary;
 import com.example.pcceobservability.model.DispositionBreakdown;
 import com.example.pcceobservability.model.DroppedCallMetric;
@@ -88,15 +89,49 @@ public class ReportingService {
         validateDateRange(from, to);
         String normalizedAgentId = blankToNull(accessControlService.scopedAgentId(agentId));
         String normalizedTeam = blankToNull(accessControlService.scopedTeam(team));
-        return timedQuery("hds.agentStats", () -> hdsJdbcTemplate.query(
-                    pcceProperties.getQueries().getAgentStats(),
-                    this::mapAgentStat,
-                    start(from),
-                    exclusiveEnd(to),
-                    normalizedAgentId,
-                    normalizedAgentId,
-                    normalizedTeam,
-                    normalizedTeam));
+        List<AgentStat> tcdStats = timedQuery("hds.agentStats.tcd", () -> hdsJdbcTemplate.query(
+                pcceProperties.getQueries().getAgentStatsTcd(),
+                this::mapAgentStat,
+                start(from),
+                exclusiveEnd(to),
+                normalizedAgentId,
+                normalizedAgentId,
+                normalizedAgentId,
+                normalizedTeam,
+                normalizedTeam));
+        if (!tcdStats.isEmpty()) {
+            return tcdStats;
+        }
+        return timedQuery("hds.agentStats.roster", () -> hdsJdbcTemplate.query(
+                pcceProperties.getQueries().getAgentStats(),
+                this::mapAgentStat,
+                start(from),
+                exclusiveEnd(to),
+                normalizedAgentId,
+                normalizedAgentId,
+                normalizedTeam,
+                normalizedTeam));
+    }
+
+    public List<CallTypeMetric> callTypeMetrics(LocalDate from, LocalDate to, String callType, String skillGroup) {
+        validateDateRange(from, to);
+        String normalizedCallType = blankToNull(callType);
+        String normalizedSkillGroup = blankToNull(skillGroup);
+        return timedQuery("hds.callTypeMetrics", () -> hdsJdbcTemplate.query(
+                pcceProperties.getQueries().getCallTypeMetrics(),
+                (rs, rowNum) -> new CallTypeMetric(
+                        rs.getObject("date", LocalDate.class),
+                        rs.getInt("hour"),
+                        rs.getString("call_type"),
+                        rs.getString("skill_group"),
+                        rs.getLong("calls"),
+                        rs.getLong("handled_calls")),
+                start(from),
+                exclusiveEnd(to),
+                normalizedCallType,
+                normalizedCallType,
+                normalizedSkillGroup,
+                normalizedSkillGroup));
     }
 
     public List<DroppedCallMetric> droppedCalls(LocalDate from, LocalDate to, String skillGroup) {

@@ -2,6 +2,7 @@ package com.example.pcceobservability.web;
 
 import com.example.pcceobservability.model.AgentStat;
 import com.example.pcceobservability.model.CallMetric;
+import com.example.pcceobservability.model.CallTypeMetric;
 import com.example.pcceobservability.model.ContactCenterSummary;
 import com.example.pcceobservability.model.DispositionBreakdown;
 import com.example.pcceobservability.model.DroppedCallMetric;
@@ -36,6 +37,16 @@ public class ReportingController {
             @RequestParam @NotNull @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
             @RequestParam(required = false) String skillGroup) {
         return reportingService.callMetrics(from, to, skillGroup);
+    }
+
+    @GetMapping("/metrics/call-types")
+    @PreAuthorize("hasAuthority('PERM_CALL_METRICS_READ')")
+    public List<CallTypeMetric> callTypeMetrics(
+            @RequestParam @NotNull @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam @NotNull @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
+            @RequestParam(required = false) String callType,
+            @RequestParam(required = false) String skillGroup) {
+        return reportingService.callTypeMetrics(from, to, callType, skillGroup);
     }
 
     @GetMapping("/agents/stats")
