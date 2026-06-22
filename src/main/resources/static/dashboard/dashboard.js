@@ -205,6 +205,7 @@ function renderCharts() {
 }
 
 function renderBusiness() {
+    renderBusinessCards();
     const rows = [
         ["Calls Offered", fmt(sum(state.calls, "calls_offered", "callsOffered"))],
         ["Calls Handled", fmt(sum(state.calls, "calls_handled", "callsHandled"))],
@@ -214,21 +215,32 @@ function renderBusiness() {
         ["Average Speed Answer", seconds(weightedAverage(state.calls, "avg_speed_answer", "avgSpeedAnswer", "calls_handled", "callsHandled")) + " sec"]
     ];
     qs("#businessMetrics").innerHTML = rows.map(([label, value]) => metricRow(label, value)).join("");
+
+    const trend = serviceTrendByHour();
+    drawLineChart(qs("#serviceTrendChart"), trend.labels, trend.series, 100);
+    drawRadar(qs("#performanceRadar"), radarMetrics());
 }
 
 function renderAgents() {
-    qs("#agentCount").textContent = `${state.agents.length} rows`;
-    qs("#agentsTable").innerHTML = state.agents.slice(0, 300).map(agent => {
+    renderAgentFilters();
+    const selectedTeam = document.querySelector(".team-filter.active")?.dataset.team || "ALL";
+    const agents = selectedTeam === "ALL"
+        ? state.agents
+        : state.agents.filter(agent => (pick(agent, "team") || "UNKNOWN") === selectedTeam);
+    qs("#agentCount").textContent = `${agents.length} rows`;
+    qs("#agentsTable").innerHTML = agents.slice(0, 300).map(agent => {
         const status = String(pick(agent, "status") || "offline");
+        const occupancy = pick(agent, "occupancy_pct", "occupancyPct");
+        const adherence = pick(agent, "adherence_pct", "adherencePct");
         return `<tr>
-            <td>${escapeHtml(pick(agent, "agent_name", "agentName") || "")}</td>
-            <td>${escapeHtml(pick(agent, "agent_id", "agentId") || "")}</td>
-            <td>${escapeHtml(pick(agent, "team") || "")}</td>
-            <td>${escapeHtml(pick(agent, "skill_group", "skillGroup") || "")}</td>
+            <td><strong>${escapeHtml(pick(agent, "agent_name", "agentName") || "")}</strong><span class="subline">${escapeHtml(pick(agent, "agent_id", "agentId") || "")} · ${escapeHtml(pick(agent, "team") || "UNKNOWN")}</span></td>
             <td><span class="badge ${status}">${escapeHtml(status.replace("_", " "))}</span></td>
             <td>${fmt(pick(agent, "calls_handled", "callsHandled"))}</td>
             <td>${seconds(pick(agent, "avg_handle_time", "avgHandleTime"))}</td>
-            <td>${pct(pick(agent, "occupancy_pct", "occupancyPct"))}</td>
+            <td>${progressCell(occupancy)}</td>
+            <td>${progressCell(adherence)}</td>
+            <td>${fmt(pick(agent, "transfers"))}</td>
+            <td>${minutes(pick(agent, "not_ready_time_min", "notReadyTimeMin"))}</td>
         </tr>`;
     }).join("");
 }
@@ -239,6 +251,7 @@ function renderDrops() {
 }
 
 function renderCallTypes() {
+    renderCallFunnel();
     qs("#callTypeCount").textContent = `${state.callTypes.length} rows`;
     qs("#callTypeTable").innerHTML = state.callTypes.slice(0, 300).map(row => `<tr>
         <td>${escapeHtml(pick(row, "date") || "")}</td>
@@ -248,19 +261,41 @@ function renderCallTypes() {
         <td>${fmt(pick(row, "calls"))}</td>
         <td>${fmt(pick(row, "handled_calls", "handledCalls"))}</td>
     </tr>`).join("");
+    const abandonment = abandonmentByHour();
+    drawLineChart(qs("#abandonmentChart"), abandonment.labels, abandonment.series, 100);
+    const queue = queueByHour();
+    drawBarChart(qs("#queueChart"), queue.labels, queue.values, "#f4a51c");
 }
 
 function renderComponents() {
     const down = state.components.filter(c => String(pick(c, "state")).toUpperCase() === "DOWN").length;
+    const up = state.components.filter(c => String(pick(c, "state")).toUpperCase() === "UP").length;
+    const warn = state.components.filter(c => String(pick(c, "state")).toUpperCase() === "DISABLED").length;
+    const avgLatency = state.components.length
+        ? state.components.reduce((total, c) => total + num(pick(c, "latency_ms", "latencyMs")), 0) / state.components.length
+        : 0;
+    qs("#systemKpis").innerHTML = [
+        systemKpi("Components", state.components.length, `${up} OK   ${warn} Disabled   ${down} Down`),
+        systemKpi("Active Calls", fmt(sum(state.calls, "calls_handled", "callsHandled")), "Handled in selected range"),
+        systemKpi("Alerts", pick(state.assessment, "alerts")?.length || 0, "Open operational alerts"),
+        systemKpi("Avg Latency", `${Math.round(avgLatency)} ms`, "Current probe average")
+    ].join("");
     qs("#componentSummary").textContent = `${state.components.length} components / ${down} down`;
     qs("#componentGrid").innerHTML = state.components.map(component => {
         const stateValue = String(pick(component, "state") || "UNKNOWN").toLowerCase();
         const badgeClass = stateValue === "up" ? "up" : stateValue === "down" ? "down" : "warn";
+        const latency = num(pick(component, "latency_ms", "latencyMs"));
+        const health = stateValue === "up" ? Math.max(5, Math.min(100, 100 - latency / 100)) : 0;
         return `<article class="component-card">
-            <h3>${escapeHtml(pick(component, "name") || "")}</h3>
-            <span class="badge ${badgeClass}">${escapeHtml(stateValue)}</span>
-            <p>${escapeHtml(pick(component, "probe") || "")} - ${escapeHtml(pick(component, "target") || "")}</p>
-            <p>${fmt(pick(component, "latency_ms", "latencyMs"))} ms - ${escapeHtml(pick(component, "detail") || "")}</p>
+            <div class="component-row">
+                <div>
+                    <h3>${escapeHtml(pick(component, "name") || "")}</h3>
+                    <span class="badge ${badgeClass}">${escapeHtml(stateValue)}</span>
+                    <p>${escapeHtml(pick(component, "probe") || "")} - ${escapeHtml(pick(component, "target") || "")}</p>
+                    <p>${fmt(latency)} ms - ${escapeHtml(pick(component, "detail") || "")}</p>
+                </div>
+                <div class="ring" style="--p:${health}"><span>${Math.round(health)}%</span></div>
+            </div>
         </article>`;
     }).join("");
 }
@@ -393,6 +428,167 @@ function metricRow(label, value) {
     return `<div class="metric-row"><span>${escapeHtml(label)}</span><strong>${escapeHtml(String(value ?? "--"))}</strong></div>`;
 }
 
+function systemKpi(label, value, detail) {
+    return `<article class="kpi-card compact"><div class="kpi-top"><span>${escapeHtml(label)}</span></div><strong>${escapeHtml(String(value))}</strong><small>${escapeHtml(detail)}</small></article>`;
+}
+
+function renderBusinessCards() {
+    const grouped = groupSkillMetrics();
+    qs("#businessSkillCards").innerHTML = grouped.slice(0, 6).map((item, index) => `<article class="business-card">
+        <h3><i class="dot" style="background:${colors[index % colors.length]}"></i>${escapeHtml(item.skill)}</h3>
+        <div class="business-metrics">
+            <span>Offered<strong>${fmt(item.offered)}</strong></span>
+            <span>SL%<strong class="teal">${pct(item.service)}</strong></span>
+            <span>Handled<strong>${fmt(item.handled)}</strong></span>
+            <span>AHT<strong>${seconds(item.aht)}s</strong></span>
+            <span>Abandoned<strong class="red">${fmt(item.abandoned)}</strong></span>
+        </div>
+    </article>`).join("") || `<article class="business-card"><h3>No skill group data</h3><p>Check HDS query mapping and selected date range.</p></article>`;
+}
+
+function groupSkillMetrics() {
+    const map = new Map();
+    state.calls.forEach(row => {
+        const skill = pick(row, "skill_group", "skillGroup") || "UNKNOWN";
+        const existing = map.get(skill) || { skill, offered: 0, handled: 0, abandoned: 0, weightedService: 0, serviceWeight: 0, weightedAht: 0, ahtWeight: 0 };
+        const offered = num(pick(row, "calls_offered", "callsOffered"));
+        const handled = num(pick(row, "calls_handled", "callsHandled"));
+        existing.offered += offered;
+        existing.handled += handled;
+        existing.abandoned += num(pick(row, "calls_abandoned", "callsAbandoned"));
+        const service = pick(row, "service_level_pct", "serviceLevelPct");
+        if (service !== null && offered > 0) {
+            existing.weightedService += num(service) * offered;
+            existing.serviceWeight += offered;
+        }
+        const aht = pick(row, "avg_handle_time", "avgHandleTime");
+        if (aht !== null && handled > 0) {
+            existing.weightedAht += num(aht) * handled;
+            existing.ahtWeight += handled;
+        }
+        map.set(skill, existing);
+    });
+    return [...map.values()].map(item => ({
+        ...item,
+        service: item.serviceWeight ? item.weightedService / item.serviceWeight : null,
+        aht: item.ahtWeight ? item.weightedAht / item.ahtWeight : null
+    })).sort((a, b) => b.offered - a.offered);
+}
+
+function serviceTrendByHour() {
+    const byHour = new Map();
+    state.calls.forEach(row => {
+        const hour = num(pick(row, "hour"));
+        const offered = num(pick(row, "calls_offered", "callsOffered"));
+        const service = pick(row, "service_level_pct", "serviceLevelPct");
+        const existing = byHour.get(hour) || { weighted: 0, weight: 0 };
+        if (service !== null && offered > 0) {
+            existing.weighted += num(service) * offered;
+            existing.weight += offered;
+        }
+        byHour.set(hour, existing);
+    });
+    const entries = [...byHour.entries()].sort((a, b) => a[0] - b[0]);
+    return {
+        labels: entries.map(([hour]) => `${hour}:00`),
+        series: [{ label: "Service Level", color: "#2ed3c2", values: entries.map(([, v]) => v.weight ? v.weighted / v.weight : 0) }]
+    };
+}
+
+function radarMetrics() {
+    const offered = sum(state.calls, "calls_offered", "callsOffered");
+    const handled = sum(state.calls, "calls_handled", "callsHandled");
+    const abandoned = sum(state.calls, "calls_abandoned", "callsAbandoned");
+    const service = weightedAverage(state.calls, "service_level_pct", "serviceLevelPct", "calls_offered", "callsOffered");
+    const aht = weightedAverage(state.calls, "avg_handle_time", "avgHandleTime", "calls_handled", "callsHandled");
+    return [
+        { label: "Service Level", value: service ?? 0 },
+        { label: "Handled", value: offered ? handled / offered * 100 : 0 },
+        { label: "Low Abandon", value: offered ? Math.max(0, 100 - abandoned / offered * 100) : 0 },
+        { label: "AHT", value: aht ? Math.max(0, 100 - Math.min(100, aht / 10)) : 0 },
+        { label: "IVR", value: average(state.ivr, "ivr_containment_rate", "ivrContainmentRate") ?? 0 }
+    ];
+}
+
+function renderAgentFilters() {
+    const teams = ["ALL", ...new Set(state.agents.map(agent => pick(agent, "team") || "UNKNOWN"))];
+    const active = document.querySelector(".team-filter.active")?.dataset.team || "ALL";
+    qs("#agentTeamFilters").innerHTML = teams.map(team => `<button class="team-filter ${team === active ? "active" : ""}" data-team="${escapeHtml(team)}">${escapeHtml(team === "ALL" ? "All" : team)}</button>`).join("");
+    document.querySelectorAll(".team-filter").forEach(button => {
+        button.addEventListener("click", () => {
+            document.querySelectorAll(".team-filter").forEach(item => item.classList.remove("active"));
+            button.classList.add("active");
+            renderAgents();
+        });
+    });
+}
+
+function progressCell(value) {
+    if (value === null || value === undefined) return `<span class="muted-value">--</span>`;
+    const width = Math.max(0, Math.min(100, num(value)));
+    const tone = width >= 90 ? "good" : width >= 75 ? "warn" : "bad";
+    return `<span class="progress-value">${pct(width)}</span><span class="progress-track"><i class="${tone}" style="width:${width}%"></i></span>`;
+}
+
+function minutes(value) {
+    if (value === null || value === undefined) return "--";
+    return `${Math.round(num(value))}m`;
+}
+
+function renderCallFunnel() {
+    const offered = sum(state.calls, "calls_offered", "callsOffered");
+    const handled = sum(state.calls, "calls_handled", "callsHandled");
+    const abandoned = sum(state.calls, "calls_abandoned", "callsAbandoned");
+    const ivr = average(state.ivr, "ivr_containment_rate", "ivrContainmentRate");
+    const routed = Math.max(0, offered - (ivr === null ? 0 : offered * ivr / 100));
+    const items = [
+        ["Offered", offered, 100],
+        ["IVR Contained", ivr === null ? null : offered * ivr / 100, ivr],
+        ["Routed to Agent", routed, offered ? routed / offered * 100 : 0],
+        ["Handled", handled, offered ? handled / offered * 100 : 0],
+        ["Abandoned", abandoned, offered ? abandoned / offered * 100 : 0]
+    ];
+    qs("#callFunnel").innerHTML = items.map(([label, value, percent], index) => `<div class="funnel-item">
+        <strong>${value === null ? "--" : fmt(value)}</strong>
+        <span>${escapeHtml(label)}</span>
+        <small>${percent === null ? "--" : pct(percent)}</small>
+    </div>${index < items.length - 1 ? `<b class="funnel-arrow">→</b>` : ""}`).join("");
+}
+
+function abandonmentByHour() {
+    const hourly = groupByHour(state.calls);
+    return {
+        labels: hourly.labels,
+        series: [{
+            label: "Abandonment",
+            color: "#ff626c",
+            values: hourly.offered.map((offered, index) => offered ? (sumHourAbandoned(index, hourly.labels) / offered) * 100 : 0)
+        }]
+    };
+}
+
+function sumHourAbandoned(index, labels) {
+    const hour = Number(String(labels[index]).replace(":00", ""));
+    return state.calls
+        .filter(row => num(pick(row, "hour")) === hour)
+        .reduce((total, row) => total + num(pick(row, "calls_abandoned", "callsAbandoned")), 0);
+}
+
+function queueByHour() {
+    const rows = groupByHour(state.calls);
+    const values = rows.labels.map(label => {
+        const hour = Number(String(label).replace(":00", ""));
+        const matching = state.calls.filter(row => num(pick(row, "hour")) === hour);
+        return average(matching, "avg_queue_time", "avgQueueTime") || 0;
+    });
+    return { labels: rows.labels, values };
+}
+
+function average(rows, ...names) {
+    const values = rows.map(row => pick(row, ...names)).filter(value => value !== null && value !== undefined).map(Number);
+    return values.length ? values.reduce((a, b) => a + b, 0) / values.length : null;
+}
+
 function groupByHour(rows) {
     const map = new Map();
     rows.forEach(row => {
@@ -512,6 +708,53 @@ function drawDoughnut(canvas, labels, values, palette) {
     ctx.fillStyle = "#151a23";
     ctx.arc(cx, cy, radius * .58, 0, Math.PI * 2);
     ctx.fill();
+}
+
+function drawRadar(canvas, metrics) {
+    const ctx = setupCanvas(canvas);
+    const { width, height } = canvas.getBoundingClientRect();
+    ctx.clearRect(0, 0, width, height);
+    const cx = width / 2;
+    const cy = height / 2 + 10;
+    const radius = Math.min(width, height) * .32;
+    const count = metrics.length || 1;
+    ctx.strokeStyle = "#263241";
+    ctx.fillStyle = "#87a1c2";
+    ctx.font = "13px Segoe UI";
+    for (let ring = 1; ring <= 4; ring++) {
+        ctx.beginPath();
+        for (let i = 0; i < count; i++) {
+            const angle = -Math.PI / 2 + i * Math.PI * 2 / count;
+            const r = radius * ring / 4;
+            const x = cx + Math.cos(angle) * r;
+            const y = cy + Math.sin(angle) * r;
+            i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+        }
+        ctx.closePath();
+        ctx.stroke();
+    }
+    metrics.forEach((metric, i) => {
+        const angle = -Math.PI / 2 + i * Math.PI * 2 / count;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(cx + Math.cos(angle) * radius, cy + Math.sin(angle) * radius);
+        ctx.stroke();
+        ctx.fillText(metric.label, cx + Math.cos(angle) * (radius + 18) - 28, cy + Math.sin(angle) * (radius + 18));
+    });
+    ctx.beginPath();
+    metrics.forEach((metric, i) => {
+        const angle = -Math.PI / 2 + i * Math.PI * 2 / count;
+        const value = Math.max(0, Math.min(100, num(metric.value))) / 100;
+        const x = cx + Math.cos(angle) * radius * value;
+        const y = cy + Math.sin(angle) * radius * value;
+        i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+    });
+    ctx.closePath();
+    ctx.fillStyle = "#2ed3c244";
+    ctx.strokeStyle = "#2ed3c2";
+    ctx.lineWidth = 3;
+    ctx.fill();
+    ctx.stroke();
 }
 
 function setupCanvas(canvas) {
