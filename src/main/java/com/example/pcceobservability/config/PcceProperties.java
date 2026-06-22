@@ -458,13 +458,13 @@ public class PcceProperties {
 
         static final String AGENT_STATS = """
                 SELECT
-                    CAST(ai.DateTime AS date) AS [date],
+                    CAST(? AS date) AS [date],
                     p.FirstName + ' ' + p.LastName AS agent_name,
                     p.LoginName AS agent_id,
                     at.EnterpriseName AS team,
                     CAST(NULL AS varchar(255)) AS skill_group,
                     'offline' AS status,
-                    SUM(COALESCE(ai.CallsHandled, 0)) AS calls_handled,
+                    CAST(0 AS bigint) AS calls_handled,
                     CAST(0 AS decimal(18,2)) AS avg_handle_time,
                     CAST(0 AS decimal(18,2)) AS avg_talk_time,
                     CAST(0 AS decimal(18,2)) AS avg_hold_time,
@@ -474,15 +474,13 @@ public class PcceProperties {
                     CAST(0 AS bigint) AS transfers,
                     CAST(0 AS decimal(18,2)) AS login_duration_min,
                     CAST(0 AS decimal(18,2)) AS not_ready_time_min
-                FROM t_Agent_Interval ai
-                JOIN t_Agent a ON a.SkillTargetID = ai.SkillTargetID
+                FROM t_Agent a
                 JOIN t_Person p ON p.PersonID = a.PersonID
                 LEFT JOIN t_Agent_Team_Member atm ON atm.SkillTargetID = a.SkillTargetID
                 LEFT JOIN t_Agent_Team at ON at.AgentTeamID = atm.AgentTeamID
-                WHERE ai.DateTime >= ? AND ai.DateTime < ?
+                WHERE ? IS NOT NULL
                   AND (? IS NULL OR p.LoginName = ?)
                   AND (? IS NULL OR at.EnterpriseName = ?)
-                GROUP BY CAST(ai.DateTime AS date), p.FirstName, p.LastName, p.LoginName, at.EnterpriseName
                 ORDER BY [date], agent_name
                 """;
 
