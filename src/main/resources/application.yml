@@ -33,6 +33,37 @@ pcce:
     audit-retention: 500
 
   security:
+    role-permissions:
+      ADMIN:
+        - CALL_METRICS_READ
+        - AGENT_STATS_READ
+        - DROPPED_CALLS_READ
+        - IVR_METRICS_READ
+        - COMPONENT_STATUS_READ
+        - OPERATIONS_READ
+        - SOLUTION_ADMIN
+      WORKFORCE_MANAGER:
+        - CALL_METRICS_READ
+        - AGENT_STATS_READ
+        - DROPPED_CALLS_READ
+        - IVR_METRICS_READ
+        - COMPONENT_STATUS_READ
+        - OPERATIONS_READ
+      SUPERVISOR:
+        - CALL_METRICS_READ
+        - AGENT_STATS_READ
+        - DROPPED_CALLS_READ
+        - COMPONENT_STATUS_READ
+        - OPERATIONS_READ
+      AGENT:
+        - AGENT_STATS_READ
+      VIEWER:
+        - CALL_METRICS_READ
+        - DROPPED_CALLS_READ
+        - IVR_METRICS_READ
+        - COMPONENT_STATUS_READ
+        - OPERATIONS_READ
+
     users:
       - username: admin
         password: ${PCCE_ADMIN_PASSWORD:{noop}change-me}
@@ -94,14 +125,15 @@ pcce:
     - name: CVP_CallServer
       enabled: true
       probe: HTTP
-      url: https://10.10.90.194.example.local:8000/cvp/diag
+      url: http://10.10.90.194:8000/cvp/diag
+      timeout: 10s
     - name: CVP_ReportingServer
       enabled: true
       probe: JDBC_CVP_REPORTING
     - name: CTI_Server
       enabled: true
       probe: TCP
-      host: 10.10.90.195
+      host: 10.10.90.192
       port: 42027
     - name: PG_CUCM
       enabled: true
@@ -121,12 +153,16 @@ pcce:
     - name: Finesse
       enabled: true
       probe: HTTP
-      url: https://10.10.90.195/desktop
+      url: https://vssitfin01.dev.mdi:8445/desktop
+      timeout: 10s
+      trust-all-certificates: true
     - name: MediaSense
-      enabled: true
+      enabled: false
       probe: HTTP
       url: https://mediasense.example.local
     - name: CUIC
       enabled: true
       probe: HTTP
       url: https://vssitcuic01.dev.mdi/cuic
+      timeout: 10s
+      trust-all-certificates: true

@@ -42,6 +42,8 @@ Admin endpoints:
 
 - `GET /api/v1/admin/users`
 - `PUT /api/v1/admin/users/{username}`
+- `GET /api/v1/admin/roles`
+- `PUT /api/v1/admin/roles/{role}`
 - `GET /api/v1/admin/components`
 - `PUT /api/v1/admin/components/{name}`
 - `GET /api/v1/admin/diagnostics/hds/tables?namePattern=%25Skill%25`
@@ -50,6 +52,15 @@ Admin endpoints:
 - `GET /api/v1/admin/diagnostics/cvp-reporting/tables?namePattern=%25call%25`
 
 Runtime admin updates take effect immediately. Store final production configuration in environment variables, `application.yml`, or a dedicated configuration database so changes survive restarts.
+
+Role permissions are configurable under `pcce.security.role-permissions`. Use this to define exactly what `ADMIN`, `WORKFORCE_MANAGER`, `SUPERVISOR`, `AGENT`, and `VIEWER` can access in production.
+
+Monitoring endpoints:
+
+- `GET /api/v1/monitoring/query-performance?limit=50`
+- `GET /api/v1/monitoring/logs?limit=80`
+
+The dashboard consumes these endpoints from the Spring Boot App tab to show slow/failed database queries and recent application log lines.
 
 ## Configuration
 
@@ -129,3 +140,5 @@ java -jar target/pcce-observability-0.0.1-SNAPSHOT.jar
 ```
 
 For on-prem production deployment, see `ON_PREM_RUNBOOK.md`.
+
+For dashboard/report alignment with Cisco stock reports, see `CISCO_STOCK_REPORT_MAPPING.md`.

@@ -6,7 +6,9 @@ const state = {
     ivr: [],
     components: [],
     assessment: null,
-    user: null
+    user: null,
+    queryPerformance: [],
+    logs: []
 };
 
 const pages = {
@@ -99,10 +101,17 @@ async function refresh() {
         safeLoad("drops", `/api/v1/calls/dropped?${params}`, []),
         safeLoad("ivr", `/api/v1/metrics/ivr-containment?${params}`, []),
         safeLoad("components", "/api/v1/components/status", []),
-        safeLoad("assessment", `/api/v1/operations/assessment?${params}`, null)
+        safeLoad("assessment", `/api/v1/operations/assessment?${params}`, null),
+        safeLoad("queryPerformance", "/api/v1/monitoring/query-performance?limit=50", [])
     ];
     const results = await Promise.all(loads);
     errors.push(...results.filter(Boolean));
+    if (hasPermission("SOLUTION_ADMIN")) {
+        const logError = await safeLoad("logs", "/api/v1/monitoring/logs?limit=80", []);
+        if (logError) errors.push(logError);
+    } else {
+        state.logs = ["Log tail is available for administrators."];
+    }
     renderAll(errors);
 }
 
@@ -119,6 +128,7 @@ function renderAll(errors) {
     renderComponents();
     renderIntegration();
     renderOperations();
+    renderSupport();
     renderPlan();
 
     const componentDown = state.components.filter(c => String(pick(c, "state")).toUpperCase() === "DOWN").length;
@@ -246,6 +256,21 @@ function renderOperations() {
     ).join("");
 }
 
+function renderSupport() {
+    qs("#queryPerformanceList").innerHTML = state.queryPerformance.slice(0, 20).map(item => {
+        const ok = pick(item, "success");
+        const elapsed = `${fmt(pick(item, "elapsed_ms", "elapsedMs"))} ms`;
+        const name = pick(item, "name") || "query";
+        const error = pick(item, "error");
+        return `<div class="metric-row ${ok ? "" : "error-row"}">
+            <span>${escapeHtml(name)}${error ? `<small>${escapeHtml(String(error).slice(0, 120))}</small>` : ""}</span>
+            <strong>${escapeHtml(elapsed)}</strong>
+        </div>`;
+    }).join("") || metricRow("No query samples yet", "Run refresh");
+
+    qs("#logBox").textContent = (state.logs || []).slice(-80).join("\n") || "No log lines found yet.";
+}
+
 function renderPlan() {
     const items = [
         ["1", "Validate Cisco SQL mappings for AW/HDS and CVP Informix"],
@@ -262,6 +287,11 @@ function switchView(view) {
     document.querySelectorAll(".view").forEach(section => section.classList.toggle("active", section.id === `view-${view}`));
     qs("#pageTitle").textContent = pages[view][0];
     qs("#pageSubtitle").textContent = pages[view][1];
+}
+
+function hasPermission(permission) {
+    const permissions = pick(state.user, "permissions") || [];
+    return permissions.includes(permission);
 }
 
 function metricRow(label, value) {

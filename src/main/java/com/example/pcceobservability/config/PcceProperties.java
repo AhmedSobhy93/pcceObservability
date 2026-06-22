@@ -3,7 +3,9 @@ package com.example.pcceobservability.config;
 import jakarta.validation.Valid;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.EnumMap;
 import java.util.List;
+import java.util.Map;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.validation.annotation.Validated;
 
@@ -380,6 +382,7 @@ public class PcceProperties {
 
     public static class Security {
         private List<AppUser> users = defaultUsers();
+        private Map<AppRole, List<Permission>> rolePermissions = defaultRolePermissions();
 
         public List<AppUser> getUsers() {
             return users;
@@ -387,6 +390,14 @@ public class PcceProperties {
 
         public void setUsers(List<AppUser> users) {
             this.users = users;
+        }
+
+        public Map<AppRole, List<Permission>> getRolePermissions() {
+            return rolePermissions;
+        }
+
+        public void setRolePermissions(Map<AppRole, List<Permission>> rolePermissions) {
+            this.rolePermissions = rolePermissions;
         }
 
         private static List<AppUser> defaultUsers() {
@@ -397,6 +408,32 @@ public class PcceProperties {
             admin.setRoles(List.of(AppRole.ADMIN));
             admin.setEnabled(true);
             return List.of(admin);
+        }
+
+        private static Map<AppRole, List<Permission>> defaultRolePermissions() {
+            Map<AppRole, List<Permission>> permissions = new EnumMap<>(AppRole.class);
+            permissions.put(AppRole.ADMIN, List.of(Permission.values()));
+            permissions.put(AppRole.WORKFORCE_MANAGER, List.of(
+                    Permission.CALL_METRICS_READ,
+                    Permission.AGENT_STATS_READ,
+                    Permission.DROPPED_CALLS_READ,
+                    Permission.IVR_METRICS_READ,
+                    Permission.COMPONENT_STATUS_READ,
+                    Permission.OPERATIONS_READ));
+            permissions.put(AppRole.SUPERVISOR, List.of(
+                    Permission.CALL_METRICS_READ,
+                    Permission.AGENT_STATS_READ,
+                    Permission.DROPPED_CALLS_READ,
+                    Permission.COMPONENT_STATUS_READ,
+                    Permission.OPERATIONS_READ));
+            permissions.put(AppRole.AGENT, List.of(Permission.AGENT_STATS_READ));
+            permissions.put(AppRole.VIEWER, List.of(
+                    Permission.CALL_METRICS_READ,
+                    Permission.DROPPED_CALLS_READ,
+                    Permission.IVR_METRICS_READ,
+                    Permission.COMPONENT_STATUS_READ,
+                    Permission.OPERATIONS_READ));
+            return permissions;
         }
     }
 

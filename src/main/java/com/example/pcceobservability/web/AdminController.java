@@ -1,15 +1,20 @@
 package com.example.pcceobservability.web;
 
 import com.example.pcceobservability.config.PcceProperties;
+import com.example.pcceobservability.config.PcceProperties.AppRole;
 import com.example.pcceobservability.config.PcceProperties.AppUser;
 import com.example.pcceobservability.config.PcceProperties.ComponentName;
+import com.example.pcceobservability.model.ManagedRoleView;
 import com.example.pcceobservability.model.ManagedUserView;
 import com.example.pcceobservability.model.UpdateComponentRequest;
+import com.example.pcceobservability.model.UpdateRolePermissionsRequest;
 import com.example.pcceobservability.model.UpsertUserRequest;
+import com.example.pcceobservability.security.PermissionCatalog;
 import com.example.pcceobservability.service.AuditService;
 import java.time.Duration;
-import java.util.LinkedHashMap;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -91,6 +96,31 @@ public class AdminController {
         return toView(user);
     }
 
+    @GetMapping("/roles")
+    public List<ManagedRoleView> roles() {
+        return Arrays.stream(AppRole.values())
+                .map(role -> new ManagedRoleView(
+                        role,
+                        rolePermissions(role)))
+                .toList();
+    }
+
+    @PutMapping("/roles/{role}")
+    public ManagedRoleView updateRole(
+            @PathVariable AppRole role,
+            @RequestBody UpdateRolePermissionsRequest request) {
+        if (request == null || request.permissions() == null) {
+            throw new IllegalArgumentException("permissions are required");
+        }
+        if (pcceProperties.getSecurity().getRolePermissions() == null) {
+            pcceProperties.getSecurity().setRolePermissions(new java.util.EnumMap<>(AppRole.class));
+        }
+        pcceProperties.getSecurity().getRolePermissions().put(role, List.copyOf(request.permissions()));
+        auditService.record("UPDATE_ROLE_PERMISSIONS", role.name(), Map.of(
+                "permissions", request.permissions()));
+        return new ManagedRoleView(role, pcceProperties.getSecurity().getRolePermissions().get(role));
+    }
+
     @GetMapping("/components")
     public List<PcceProperties.ComponentTarget> components() {
         return pcceProperties.getComponents();
@@ -151,5 +181,13 @@ public class AdminController {
                 user.getAllowedTeams(),
                 user.getRoles(),
                 user.getExtraPermissions());
+    }
+
+    private List<PcceProperties.Permission> rolePermissions(AppRole role) {
+        if (pcceProperties.getSecurity().getRolePermissions() == null) {
+            return List.copyOf(PermissionCatalog.permissionsFor(role));
+        }
+        return pcceProperties.getSecurity().getRolePermissions()
+                .getOrDefault(role, List.copyOf(PermissionCatalog.permissionsFor(role)));
     }
 }

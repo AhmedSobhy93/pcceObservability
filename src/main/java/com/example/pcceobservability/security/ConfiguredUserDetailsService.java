@@ -34,7 +34,7 @@ public class ConfiguredUserDetailsService implements UserDetailsService {
 
         List<AppRole> roles = safeList(user.getRoles());
         Set<Permission> permissions = EnumSet.noneOf(Permission.class);
-        roles.forEach(role -> permissions.addAll(PermissionCatalog.permissionsFor(role)));
+        roles.forEach(role -> permissions.addAll(rolePermissions(role)));
         permissions.addAll(safeList(user.getExtraPermissions()));
 
         List<GrantedAuthority> authorities = new ArrayList<>();
@@ -55,5 +55,11 @@ public class ConfiguredUserDetailsService implements UserDetailsService {
 
     private <T> List<T> safeList(Collection<T> values) {
         return values == null ? List.of() : List.copyOf(values);
+    }
+
+    private List<Permission> rolePermissions(AppRole role) {
+        var configuredRoles = pcceProperties.getSecurity().getRolePermissions();
+        List<Permission> configured = configuredRoles == null ? null : configuredRoles.get(role);
+        return configured == null ? List.copyOf(PermissionCatalog.permissionsFor(role)) : configured;
     }
 }

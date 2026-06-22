@@ -34,6 +34,7 @@ public class ReportingService {
     private final ComponentStatusService componentStatusService;
     private final AccessControlService accessControlService;
     private final DispositionCodeService dispositionCodeService;
+    private final QueryPerformanceService queryPerformanceService;
 
     public ReportingService(
             @Qualifier("hdsJdbcTemplate") JdbcTemplate hdsJdbcTemplate,
@@ -41,13 +42,15 @@ public class ReportingService {
             PcceProperties pcceProperties,
             ComponentStatusService componentStatusService,
             AccessControlService accessControlService,
-            DispositionCodeService dispositionCodeService) {
+            DispositionCodeService dispositionCodeService,
+            QueryPerformanceService queryPerformanceService) {
         this.hdsJdbcTemplate = hdsJdbcTemplate;
         this.cvpReportingJdbcTemplate = cvpReportingJdbcTemplate;
         this.pcceProperties = pcceProperties;
         this.componentStatusService = componentStatusService;
         this.accessControlService = accessControlService;
         this.dispositionCodeService = dispositionCodeService;
+        this.queryPerformanceService = queryPerformanceService;
     }
 
     public List<CallMetric> callMetrics(LocalDate from, LocalDate to, String skillGroup) {
@@ -223,10 +226,12 @@ public class ReportingService {
             } else {
                 log.info("query name={} elapsedMs={}", name, elapsedMs);
             }
+            queryPerformanceService.record(name, elapsedMs, true, null);
             return result;
         } catch (RuntimeException ex) {
             long elapsedMs = (System.nanoTime() - start) / 1_000_000;
             log.error("query_failed name={} elapsedMs={} error={}", name, elapsedMs, ex.getMessage());
+            queryPerformanceService.record(name, elapsedMs, false, ex.getMessage());
             throw ex;
         }
     }
