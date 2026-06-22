@@ -131,7 +131,7 @@ If a TCP probe times out, verify the exact listener port from Cisco service conf
 
 Dropped-call counting is disabled by default to avoid misleading numbers. Use `/api/v1/calls/disposition-breakdown` to see your live HDS distribution, then enable `pcce.queries.dropped-calls-enabled` and configure the approved dropped-call SQL after the bank confirms which call disposition codes count as dropped calls.
 
-Call KPIs read `t_Skill_Group_Interval` first. If that interval table is empty for the selected dates, the app automatically falls back to `t_Termination_Call_Detail` using `COALESCE(CallStartDateTime, DateTime)`, which matches CUIC agent/call-detail style data better in some PCCE environments.
+Call KPIs read `t_Skill_Group_Interval` first. If that interval table is empty for the selected dates, the app automatically falls back to `t_Termination_Call_Detail.DateTime`, which matches CUIC agent/call-detail style data better in some PCCE environments.
 
 Fields such as `first_call_resolution`, `csat_score`, `adherence_pct`, and some IVR containment logic usually require WFM/QA/survey integrations or customer-specific CVP application events. They are included in the API contract and default to `null` where the Cisco historical tables do not directly provide them.
 

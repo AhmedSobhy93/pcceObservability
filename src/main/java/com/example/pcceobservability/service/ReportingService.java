@@ -70,13 +70,18 @@ public class ReportingService {
         }
         log.warn("call_metrics_interval_empty using_tcd_fallback=true from={} to={} skillGroup={}",
                 from, to, normalizedSkillGroup);
-        return timedQuery("hds.callMetrics.tcdFallback", () -> hdsJdbcTemplate.query(
-                    pcceProperties.getQueries().getCallMetricsTcdFallback(),
-                    this::mapCallMetric,
-                    start(from),
-                    exclusiveEnd(to),
-                    normalizedSkillGroup,
-                    normalizedSkillGroup));
+        try {
+            return timedQuery("hds.callMetrics.tcdFallback", () -> hdsJdbcTemplate.query(
+                        pcceProperties.getQueries().getCallMetricsTcdFallback(),
+                        this::mapCallMetric,
+                        start(from),
+                        exclusiveEnd(to),
+                        normalizedSkillGroup,
+                        normalizedSkillGroup));
+        } catch (DataAccessException ex) {
+            log.warn("call_metrics_tcd_fallback_unavailable error={}", ex.getMostSpecificCause().getMessage());
+            return intervalMetrics;
+        }
     }
 
     public List<AgentStat> agentStats(LocalDate from, LocalDate to, String agentId, String team) {

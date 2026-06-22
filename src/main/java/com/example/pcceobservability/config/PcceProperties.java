@@ -804,8 +804,8 @@ public class PcceProperties {
 
         static final String CALL_METRICS_TCD_FALLBACK = """
                 SELECT
-                    CAST(COALESCE(tcd.CallStartDateTime, tcd.DateTime) AS date) AS [date],
-                    DATEPART(hour, COALESCE(tcd.CallStartDateTime, tcd.DateTime)) AS [hour],
+                    CAST(tcd.DateTime AS date) AS [date],
+                    DATEPART(hour, tcd.DateTime) AS [hour],
                     COALESCE(sg.EnterpriseName, 'UNKNOWN') AS skill_group,
                     COUNT_BIG(*) AS calls_offered,
                     SUM(CASE WHEN COALESCE(tcd.AgentSkillTargetID, 0) > 0 THEN 1 ELSE 0 END) AS calls_handled,
@@ -824,12 +824,12 @@ public class PcceProperties {
                     CAST(NULL AS decimal(9,2)) AS csat_score
                 FROM t_Termination_Call_Detail tcd
                 LEFT JOIN t_Skill_Group sg ON sg.SkillTargetID = tcd.SkillGroupSkillTargetID
-                WHERE COALESCE(tcd.CallStartDateTime, tcd.DateTime) >= ?
-                  AND COALESCE(tcd.CallStartDateTime, tcd.DateTime) < ?
+                WHERE tcd.DateTime >= ?
+                  AND tcd.DateTime < ?
                   AND (? IS NULL OR sg.EnterpriseName = ?)
                 GROUP BY
-                    CAST(COALESCE(tcd.CallStartDateTime, tcd.DateTime) AS date),
-                    DATEPART(hour, COALESCE(tcd.CallStartDateTime, tcd.DateTime)),
+                    CAST(tcd.DateTime AS date),
+                    DATEPART(hour, tcd.DateTime),
                     COALESCE(sg.EnterpriseName, 'UNKNOWN')
                 ORDER BY [date], [hour], skill_group
                 """;
@@ -871,8 +871,8 @@ public class PcceProperties {
                     MAX(tcd.DateTime) AS last_drop_time
                 FROM t_Termination_Call_Detail tcd
                 LEFT JOIN t_Skill_Group sg ON sg.SkillTargetID = tcd.SkillGroupSkillTargetID
-                WHERE COALESCE(tcd.CallStartDateTime, tcd.DateTime) >= ?
-                  AND COALESCE(tcd.CallStartDateTime, tcd.DateTime) < ?
+                WHERE tcd.DateTime >= ?
+                  AND tcd.DateTime < ?
                   AND 1 = 0
                   AND (? IS NULL OR sg.EnterpriseName = ?)
                 GROUP BY CAST(tcd.DateTime AS date), DATEPART(hour, tcd.DateTime), COALESCE(sg.EnterpriseName, 'UNKNOWN')
