@@ -11,12 +11,6 @@ import java.net.Socket;
 import java.net.URL;
 import java.time.Instant;
 import java.util.List;
-import javax.net.ssl.HostnameVerifier;
-import javax.net.ssl.HttpsURLConnection;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLSocketFactory;
-import javax.net.ssl.TrustManager;
-import javax.net.ssl.X509TrustManager;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -84,10 +78,6 @@ public class ComponentStatusService {
             throw new IllegalArgumentException("HTTP probe requires url");
         }
         HttpURLConnection connection = (HttpURLConnection) new URL(target.getUrl()).openConnection();
-        if (target.isTrustAllCertificates() && connection instanceof HttpsURLConnection httpsConnection) {
-            httpsConnection.setSSLSocketFactory(trustAllSocketFactory());
-            httpsConnection.setHostnameVerifier(trustAllHostnameVerifier());
-        }
         connection.setConnectTimeout((int) target.getTimeout().toMillis());
         connection.setReadTimeout((int) target.getTimeout().toMillis());
         connection.setRequestMethod("GET");
@@ -99,36 +89,6 @@ public class ComponentStatusService {
 
     private void jdbcProbe(JdbcTemplate jdbcTemplate, String sql) {
         jdbcTemplate.queryForObject(sql, Integer.class);
-    }
-
-    private SSLSocketFactory trustAllSocketFactory() {
-        try {
-            TrustManager[] trustManagers = new TrustManager[]{
-                    new X509TrustManager() {
-                        @Override
-                        public void checkClientTrusted(java.security.cert.X509Certificate[] chain, String authType) {
-                        }
-
-                        @Override
-                        public void checkServerTrusted(java.security.cert.X509Certificate[] chain, String authType) {
-                        }
-
-                        @Override
-                        public java.security.cert.X509Certificate[] getAcceptedIssuers() {
-                            return new java.security.cert.X509Certificate[0];
-                        }
-                    }
-            };
-            SSLContext context = SSLContext.getInstance("TLS");
-            context.init(null, trustManagers, new java.security.SecureRandom());
-            return context.getSocketFactory();
-        } catch (Exception ex) {
-            throw new IllegalStateException("Unable to initialize trust-all SSL context", ex);
-        }
-    }
-
-    private HostnameVerifier trustAllHostnameVerifier() {
-        return (hostname, session) -> true;
     }
 
     private String describeTarget(ComponentTarget target) {
