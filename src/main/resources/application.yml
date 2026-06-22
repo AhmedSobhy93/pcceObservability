@@ -89,19 +89,20 @@ pcce:
     - name: CVP_CallServer
       enabled: true
       probe: HTTP
-      url: https://10.10.90.194.example.local:8000/cvp/diag
+      url: http://10.10.90.194:8000/cvp/diag
+      trust-all-certificates: false
     - name: CVP_ReportingServer
       enabled: true
       probe: JDBC_CVP_REPORTING
     - name: CTI_Server
       enabled: true
       probe: TCP
-      host: 10.10.90.195
+      host: 10.10.90.192
       port: 42027
     - name: PG_CUCM
       enabled: true
       probe: TCP
-      host: 10.10.90.192
+      host: 10.10.90.192l
       port: 42028
     - name: PG_CVP
       enabled: true
@@ -116,12 +117,16 @@ pcce:
     - name: Finesse
       enabled: true
       probe: HTTP
-      url: https://10.10.90.195/desktop
+      url: https://vssitfin01.dev.mdi:8445/desktop
+      trust-all-certificates: false
+
     - name: MediaSense
-      enabled: true
+      enabled: false
       probe: HTTP
       url: https://mediasense.example.local
+
     - name: CUIC
       enabled: true
       probe: HTTP
       url: https://vssitcuic01.dev.mdi/cuic
+      trust-all-certificates: false
