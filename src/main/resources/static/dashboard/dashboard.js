@@ -207,9 +207,6 @@ function renderCharts() {
         `<span><i class="dot" style="background:${colors[index % colors.length]}"></i>${escapeHtml(label)} <b>${fmt(skills.values[index])}</b></span>`
     ).join("");
 
-    const drops = groupDropsByHour(state.drops);
-    drawBarChart(qs("#dropsChart"), drops.labels, drops.values, "#ff626c");
-
     const ivr = (state.ivr || []).map(row => ({
         hour: pick(row, "hour"),
         value: pick(row, "ivr_containment_rate", "ivrContainmentRate")
@@ -261,6 +258,7 @@ function renderAgents() {
 }
 
 function renderDrops() {
+    if (!qs("#dropList")) return;
     const grouped = groupBySkill(state.drops, "dropped_calls", "droppedCalls");
     qs("#dropList").innerHTML = grouped.labels.map((label, index) => metricRow(label, fmt(grouped.values[index]))).join("") || metricRow("Dropped Calls", "0");
 }
@@ -657,6 +655,7 @@ function groupBySkill(rows, ...valueNames) {
 }
 
 function drawLineChart(canvas, labels, series, fixedMax) {
+    if (!canvas) return;
     const ctx = setupCanvas(canvas);
     const { width, height } = canvas.getBoundingClientRect();
     const pad = { left: 58, right: 24, top: 24, bottom: 44 };
@@ -685,6 +684,7 @@ function drawLineChart(canvas, labels, series, fixedMax) {
 }
 
 function drawBarChart(canvas, labels, values, color) {
+    if (!canvas) return;
     const ctx = setupCanvas(canvas);
     const { width, height } = canvas.getBoundingClientRect();
     const pad = { left: 48, right: 20, top: 20, bottom: 42 };
@@ -701,6 +701,7 @@ function drawBarChart(canvas, labels, values, color) {
 }
 
 function drawDoughnut(canvas, labels, values, palette) {
+    if (!canvas) return;
     const ctx = setupCanvas(canvas);
     const { width, height } = canvas.getBoundingClientRect();
     ctx.clearRect(0, 0, width, height);
@@ -726,6 +727,7 @@ function drawDoughnut(canvas, labels, values, palette) {
 }
 
 function drawRadar(canvas, metrics) {
+    if (!canvas) return;
     const ctx = setupCanvas(canvas);
     const { width, height } = canvas.getBoundingClientRect();
     ctx.clearRect(0, 0, width, height);
