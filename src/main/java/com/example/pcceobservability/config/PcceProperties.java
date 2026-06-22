@@ -462,38 +462,28 @@ public class PcceProperties {
                     p.FirstName + ' ' + p.LastName AS agent_name,
                     p.LoginName AS agent_id,
                     at.EnterpriseName AS team,
-                    sg.EnterpriseName AS skill_group,
-                    CASE
-                        WHEN SUM(COALESCE(ai.LoggedOnTime, 0)) = 0 THEN 'offline'
-                        WHEN SUM(COALESCE(ai.TalkInTime, 0) + COALESCE(ai.TalkOutTime, 0)) > 0 THEN 'on_call'
-                        WHEN SUM(COALESCE(ai.WorkReadyTime, 0) + COALESCE(ai.WorkNotReadyTime, 0)) > 0 THEN 'wrap_up'
-                        WHEN SUM(COALESCE(ai.NotReadyTime, 0)) > 0 THEN 'not_ready'
-                        ELSE 'available'
-                    END AS status,
+                    CAST(NULL AS varchar(255)) AS skill_group,
+                    'offline' AS status,
                     SUM(COALESCE(ai.CallsHandled, 0)) AS calls_handled,
-                    CAST(SUM(COALESCE(ai.TalkInTime, 0) + COALESCE(ai.TalkOutTime, 0) + COALESCE(ai.WorkReadyTime, 0))
-                        / NULLIF(SUM(COALESCE(ai.CallsHandled, 0)), 0) AS decimal(18,2)) AS avg_handle_time,
-                    CAST(SUM(COALESCE(ai.TalkInTime, 0) + COALESCE(ai.TalkOutTime, 0))
-                        / NULLIF(SUM(COALESCE(ai.CallsHandled, 0)), 0) AS decimal(18,2)) AS avg_talk_time,
+                    CAST(0 AS decimal(18,2)) AS avg_handle_time,
+                    CAST(0 AS decimal(18,2)) AS avg_talk_time,
                     CAST(0 AS decimal(18,2)) AS avg_hold_time,
-                    CAST(SUM(COALESCE(ai.WorkReadyTime, 0)) / NULLIF(SUM(COALESCE(ai.CallsHandled, 0)), 0) AS decimal(18,2)) AS avg_wrap_time,
-                    CAST(100.0 * SUM(COALESCE(ai.TalkInTime, 0) + COALESCE(ai.TalkOutTime, 0) + COALESCE(ai.WorkReadyTime, 0))
-                        / NULLIF(SUM(COALESCE(ai.LoggedOnTime, 0)), 0) AS decimal(9,2)) AS occupancy_pct,
+                    CAST(0 AS decimal(18,2)) AS avg_wrap_time,
+                    CAST(NULL AS decimal(9,2)) AS occupancy_pct,
                     CAST(NULL AS decimal(9,2)) AS adherence_pct,
                     CAST(0 AS bigint) AS transfers,
-                    CAST(SUM(COALESCE(ai.LoggedOnTime, 0)) / 60.0 AS decimal(18,2)) AS login_duration_min,
-                    CAST(SUM(COALESCE(ai.NotReadyTime, 0)) / 60.0 AS decimal(18,2)) AS not_ready_time_min
+                    CAST(0 AS decimal(18,2)) AS login_duration_min,
+                    CAST(0 AS decimal(18,2)) AS not_ready_time_min
                 FROM t_Agent_Interval ai
                 JOIN t_Agent a ON a.SkillTargetID = ai.SkillTargetID
                 JOIN t_Person p ON p.PersonID = a.PersonID
                 LEFT JOIN t_Agent_Team_Member atm ON atm.SkillTargetID = a.SkillTargetID
                 LEFT JOIN t_Agent_Team at ON at.AgentTeamID = atm.AgentTeamID
-                LEFT JOIN t_Skill_Group sg ON sg.SkillTargetID = ai.SkillGroupSkillTargetID
                 WHERE ai.DateTime >= ? AND ai.DateTime < ?
                   AND (? IS NULL OR p.LoginName = ?)
                   AND (? IS NULL OR at.EnterpriseName = ?)
-                GROUP BY CAST(ai.DateTime AS date), p.FirstName, p.LastName, p.LoginName, at.EnterpriseName, sg.EnterpriseName
-                ORDER BY [date], agent_name, skill_group
+                GROUP BY CAST(ai.DateTime AS date), p.FirstName, p.LastName, p.LoginName, at.EnterpriseName
+                ORDER BY [date], agent_name
                 """;
 
         static final String DROPPED_CALLS = """
@@ -506,7 +496,7 @@ public class PcceProperties {
                 FROM t_Termination_Call_Detail tcd
                 LEFT JOIN t_Skill_Group sg ON sg.SkillTargetID = tcd.SkillGroupSkillTargetID
                 WHERE tcd.DateTime >= ? AND tcd.DateTime < ?
-                  AND tcd.CallDisposition IN (3, 13, 26, 27, 28, 29, 30)
+                  AND tcd.CallDisposition IN (3, 4, 5, 6, 7, 10, 19, 26, 27, 35, 36, 37, 39, 40, 41, 42, 52)
                   AND (? IS NULL OR sg.EnterpriseName = ?)
                 GROUP BY CAST(tcd.DateTime AS date), DATEPART(hour, tcd.DateTime), COALESCE(sg.EnterpriseName, 'UNKNOWN')
                 ORDER BY [date], [hour], skill_group

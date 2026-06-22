@@ -80,6 +80,20 @@ The app includes the IBM Informix JDBC dependency `com.ibm.informix:jdbc`. If yo
 
 - Cisco Packaged Contact Center Enterprise support and 12.6 documentation: https://www.cisco.com/c/en/us/support/customer-collaboration/packaged-contact-center-enterprise/series.html
 - Cisco Unified Customer Voice Portal support and reporting documentation: https://www.cisco.com/c/en/us/support/customer-collaboration/unified-customer-voice-portal/series.html
+- Practical call disposition code reference used for initial labels: https://comstice.com/blog/post/cisco-ucce-pcce-call-disposition-codes
+
+## Current SIT Host Map
+
+- `vswsitrgr01` / `10.10.90.191`: Rogger
+- `vswsitpg01` / `10.10.90.192`: PG
+- `vswsitaw01` / `10.10.90.193`: AW/HDS SQL Server
+- `vswsitcvp01` / `10.10.90.194`: CVP Call Server
+- `vssitfin01` / `10.10.90.195`: Finesse
+- `vssitcuic01` / `10.10.90.196`: CUIC
+- `vssitvvb01` / `10.10.90.197`: VVB
+- `vswsitcvpr01` / `10.10.90.198`: CVP Reporting Informix
+
+If a TCP probe times out, verify the exact listener port from Cisco service configuration and Windows firewall. Do not mark Router/PG/CTI ports as failed until the port is confirmed to be open from the app host.
 
 Dropped calls are currently classified with `t_Termination_Call_Detail.CallDisposition IN (3, 13, 26, 27, 28, 29, 30)`. Confirm these disposition codes with your Cisco reporting dictionary and business definition of "dropped call" before operational use.
 
