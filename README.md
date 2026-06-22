@@ -45,6 +45,7 @@ Admin endpoints:
 - `PUT /api/v1/admin/components/{name}`
 - `GET /api/v1/admin/diagnostics/hds/tables?namePattern=%25Skill%25`
 - `GET /api/v1/admin/diagnostics/hds/tables/t_Skill_Group_Interval/columns`
+- `GET /api/v1/admin/diagnostics/hds/columns?tablePattern=t_Skill_Group_Interval&columnPattern=%25Hold%25`
 - `GET /api/v1/admin/diagnostics/cvp-reporting/tables?namePattern=%25call%25`
 
 Runtime admin updates take effect immediately. Store final production configuration in environment variables, `application.yml`, or a dedicated configuration database so changes survive restarts.
@@ -74,6 +75,11 @@ The default SQL targets SQL Server AW/HDS tables such as `t_Skill_Group_Interval
 For production, validate the default query mappings against your AW/HDS SQL Server schema and CVP Reporting Informix schema. Override any query under `pcce.queries.*` in `application.yml` if your table/column names differ.
 
 The app includes the IBM Informix JDBC dependency `com.ibm.informix:jdbc`. If your bank requires a certified internal driver package instead, install that driver into your internal Maven repository and update the version in `pom.xml`.
+
+## Cisco References
+
+- Cisco Packaged Contact Center Enterprise support and 12.6 documentation: https://www.cisco.com/c/en/us/support/customer-collaboration/packaged-contact-center-enterprise/series.html
+- Cisco Unified Customer Voice Portal support and reporting documentation: https://www.cisco.com/c/en/us/support/customer-collaboration/unified-customer-voice-portal/series.html
 
 Dropped calls are currently classified with `t_Termination_Call_Detail.CallDisposition IN (3, 13, 26, 27, 28, 29, 30)`. Confirm these disposition codes with your Cisco reporting dictionary and business definition of "dropped call" before operational use.
 

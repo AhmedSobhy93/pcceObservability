@@ -471,16 +471,16 @@ public class PcceProperties {
                         ELSE 'available'
                     END AS status,
                     SUM(COALESCE(ai.CallsHandled, 0)) AS calls_handled,
-                    CAST(SUM(COALESCE(ai.TalkInTime, 0) + COALESCE(ai.TalkOutTime, 0) + COALESCE(ai.HoldTime, 0) + COALESCE(ai.WorkReadyTime, 0))
+                    CAST(SUM(COALESCE(ai.TalkInTime, 0) + COALESCE(ai.TalkOutTime, 0) + COALESCE(ai.WorkReadyTime, 0))
                         / NULLIF(SUM(COALESCE(ai.CallsHandled, 0)), 0) AS decimal(18,2)) AS avg_handle_time,
                     CAST(SUM(COALESCE(ai.TalkInTime, 0) + COALESCE(ai.TalkOutTime, 0))
                         / NULLIF(SUM(COALESCE(ai.CallsHandled, 0)), 0) AS decimal(18,2)) AS avg_talk_time,
-                    CAST(SUM(COALESCE(ai.HoldTime, 0)) / NULLIF(SUM(COALESCE(ai.CallsHandled, 0)), 0) AS decimal(18,2)) AS avg_hold_time,
+                    CAST(0 AS decimal(18,2)) AS avg_hold_time,
                     CAST(SUM(COALESCE(ai.WorkReadyTime, 0)) / NULLIF(SUM(COALESCE(ai.CallsHandled, 0)), 0) AS decimal(18,2)) AS avg_wrap_time,
-                    CAST(100.0 * SUM(COALESCE(ai.TalkInTime, 0) + COALESCE(ai.TalkOutTime, 0) + COALESCE(ai.HoldTime, 0) + COALESCE(ai.WorkReadyTime, 0))
+                    CAST(100.0 * SUM(COALESCE(ai.TalkInTime, 0) + COALESCE(ai.TalkOutTime, 0) + COALESCE(ai.WorkReadyTime, 0))
                         / NULLIF(SUM(COALESCE(ai.LoggedOnTime, 0)), 0) AS decimal(9,2)) AS occupancy_pct,
                     CAST(NULL AS decimal(9,2)) AS adherence_pct,
-                    SUM(COALESCE(ai.TransferInCalls, 0) + COALESCE(ai.TransferOutCalls, 0)) AS transfers,
+                    CAST(0 AS bigint) AS transfers,
                     CAST(SUM(COALESCE(ai.LoggedOnTime, 0)) / 60.0 AS decimal(18,2)) AS login_duration_min,
                     CAST(SUM(COALESCE(ai.NotReadyTime, 0)) / 60.0 AS decimal(18,2)) AS not_ready_time_min
                 FROM t_Agent_Interval ai

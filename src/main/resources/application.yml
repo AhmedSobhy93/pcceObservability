@@ -90,6 +90,7 @@ pcce:
       enabled: false
       probe: HTTP
       url: https://cvp-callserver.example.local:8000/cvp/diag
+      trust-all-certificates: false
     - name: CVP_ReportingServer
       enabled: false
       probe: JDBC_CVP_REPORTING
@@ -117,6 +118,7 @@ pcce:
       enabled: false
       probe: HTTP
       url: https://finesse.example.local/desktop
+      trust-all-certificates: false
     - name: MediaSense
       enabled: false
       probe: HTTP
@@ -125,3 +127,4 @@ pcce:
       enabled: false
       probe: HTTP
       url: https://cuic.example.local/cuic
+      trust-all-certificates: false

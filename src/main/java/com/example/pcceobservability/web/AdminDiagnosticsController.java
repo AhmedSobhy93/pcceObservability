@@ -76,6 +76,28 @@ public class AdminDiagnosticsController {
         }
     }
 
+    @GetMapping("/{source}/columns")
+    public List<SchemaColumn> searchColumns(
+            @PathVariable String source,
+            @RequestParam(defaultValue = "%") String tablePattern,
+            @RequestParam(defaultValue = "%") String columnPattern) throws SQLException {
+        try (Connection connection = dataSource(source).getConnection()) {
+            DatabaseMetaData metaData = connection.getMetaData();
+            List<SchemaColumn> columns = new ArrayList<>();
+            try (ResultSet rs = metaData.getColumns(connection.getCatalog(), null, tablePattern, columnPattern)) {
+                while (rs.next() && columns.size() < 1000) {
+                    columns.add(new SchemaColumn(
+                            rs.getString("TABLE_NAME"),
+                            rs.getString("COLUMN_NAME"),
+                            rs.getString("TYPE_NAME"),
+                            rs.getInt("COLUMN_SIZE"),
+                            rs.getInt("NULLABLE") == DatabaseMetaData.columnNullable));
+                }
+            }
+            return columns;
+        }
+    }
+
     private DataSource dataSource(String source) {
         return switch (source.toLowerCase()) {
             case "aw" -> awDataSource;
