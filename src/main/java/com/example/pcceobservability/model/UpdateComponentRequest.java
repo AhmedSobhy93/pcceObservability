@@ -8,6 +8,9 @@ public record UpdateComponentRequest(
         String host,
         Integer port,
         String url,
-        Long timeoutSeconds
+        Long timeoutSeconds,
+        Boolean trustAllCertificates,
+        Integer expectedStatusMin,
+        Integer expectedStatusMax
 ) {
 }

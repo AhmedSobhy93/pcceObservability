@@ -59,6 +59,8 @@ Monitoring endpoints:
 
 - `GET /api/v1/monitoring/query-performance?limit=50`
 - `GET /api/v1/monitoring/logs?limit=80`
+- `GET /api/v1/components/history?limit=100`
+- `GET /api/v1/components/{name}/history?limit=100`
 - `GET /api/v1/pcce-api/capabilities`
 - `GET /api/v1/pcce-api/status`
 
@@ -81,6 +83,12 @@ $env:CVP_REPORTING_PASSWORD="..."
 ```
 
 Then edit `src/main/resources/application.yml` to enable component probes and set the real hostnames, ports, and URLs.
+
+If the dashboard still shows an old probe URL after editing YAML, check IntelliJ active profile and environment overrides, then restart the Spring Boot run configuration. You can verify the effective runtime component config with:
+
+```powershell
+curl.exe -u admin:change-me "http://localhost:8080/api/v1/admin/components"
+```
 
 For PCCE REST API surveillance, set:
 
@@ -121,6 +129,8 @@ The app includes the IBM Informix JDBC dependency `com.ibm.informix:jdbc`. If yo
 If a TCP probe times out, verify the exact listener port from Cisco service configuration and Windows firewall. Do not mark Router/PG/CTI ports as failed until the port is confirmed to be open from the app host.
 
 Dropped calls are conservatively classified with `t_Termination_Call_Detail.CallDisposition IN (1, 2, 3, 4, 5, 6, 7, 10, 19)`. Use `/api/v1/calls/disposition-breakdown` to see your live HDS distribution before finalizing the bank's production definition.
+
+Call KPIs read `t_Skill_Group_Interval` first. If that interval table is empty for the selected dates, the app automatically falls back to `t_Termination_Call_Detail`, which matches CUIC agent/call-detail style data better in some PCCE environments.
 
 Fields such as `first_call_resolution`, `csat_score`, `adherence_pct`, and some IVR containment logic usually require WFM/QA/survey integrations or customer-specific CVP application events. They are included in the API contract and default to `null` where the Cisco historical tables do not directly provide them.
 

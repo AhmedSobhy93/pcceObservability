@@ -11,6 +11,11 @@ import java.net.Socket;
 import java.net.URL;
 import java.time.Instant;
 import java.util.List;
+import javax.net.ssl.HostnameVerifier;
+import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -22,16 +27,19 @@ public class ComponentStatusService {
     private final JdbcTemplate awJdbcTemplate;
     private final JdbcTemplate hdsJdbcTemplate;
     private final JdbcTemplate cvpReportingJdbcTemplate;
+    private final ComponentHistoryService componentHistoryService;
 
     public ComponentStatusService(
             PcceProperties pcceProperties,
             @Qualifier("awJdbcTemplate") JdbcTemplate awJdbcTemplate,
             @Qualifier("hdsJdbcTemplate") JdbcTemplate hdsJdbcTemplate,
-            @Qualifier("cvpReportingJdbcTemplate") JdbcTemplate cvpReportingJdbcTemplate) {
+            @Qualifier("cvpReportingJdbcTemplate") JdbcTemplate cvpReportingJdbcTemplate,
+            ComponentHistoryService componentHistoryService) {
         this.pcceProperties = pcceProperties;
         this.awJdbcTemplate = awJdbcTemplate;
         this.hdsJdbcTemplate = hdsJdbcTemplate;
         this.cvpReportingJdbcTemplate = cvpReportingJdbcTemplate;
+        this.componentHistoryService = componentHistoryService;
     }
 
     public List<ComponentStatus> status() {
@@ -43,9 +51,12 @@ public class ComponentStatusService {
     private ComponentStatus probe(ComponentTarget target) {
         Instant checkedAt = Instant.now();
         long start = System.nanoTime();
+        ComponentStatus status;
         if (!target.isEnabled()) {
-            return new ComponentStatus(target.getName(), ComponentState.DISABLED, target.getProbe(), describeTarget(target), 0,
+            status = new ComponentStatus(target.getName(), ComponentState.DISABLED, target.getProbe(), describeTarget(target), 0,
                     "Probe disabled in configuration", checkedAt);
+            componentHistoryService.record(status);
+            return status;
         }
 
         try {
@@ -56,12 +67,14 @@ public class ComponentStatusService {
                 case JDBC_HDS -> jdbcProbe(hdsJdbcTemplate, "SELECT 1");
                 case JDBC_CVP_REPORTING -> jdbcProbe(cvpReportingJdbcTemplate, "SELECT FIRST 1 1 FROM systables");
             }
-            return new ComponentStatus(target.getName(), ComponentState.UP, target.getProbe(), describeTarget(target),
+            status = new ComponentStatus(target.getName(), ComponentState.UP, target.getProbe(), describeTarget(target),
                     elapsedMs(start), "OK", checkedAt);
         } catch (Exception ex) {
-            return new ComponentStatus(target.getName(), ComponentState.DOWN, target.getProbe(), describeTarget(target),
+            status = new ComponentStatus(target.getName(), ComponentState.DOWN, target.getProbe(), describeTarget(target),
                     elapsedMs(start), ex.getMessage(), checkedAt);
         }
+        componentHistoryService.record(status);
+        return status;
     }
 
     private void tcpProbe(ComponentTarget target) throws IOException {
@@ -78,12 +91,44 @@ public class ComponentStatusService {
             throw new IllegalArgumentException("HTTP probe requires url");
         }
         HttpURLConnection connection = (HttpURLConnection) new URL(target.getUrl()).openConnection();
+        if (target.isTrustAllCertificates() && connection instanceof HttpsURLConnection httpsConnection) {
+            trustAll(httpsConnection);
+        }
         connection.setConnectTimeout((int) target.getTimeout().toMillis());
         connection.setReadTimeout((int) target.getTimeout().toMillis());
         connection.setRequestMethod("GET");
+        connection.setInstanceFollowRedirects(false);
         int code = connection.getResponseCode();
-        if (code < 200 || code >= 500) {
+        if (code < target.getExpectedStatusMin() || code > target.getExpectedStatusMax()) {
             throw new IOException("HTTP status " + code);
+        }
+    }
+
+    private void trustAll(HttpsURLConnection connection) throws IOException {
+        try {
+            TrustManager[] trustManagers = new TrustManager[] {
+                    new X509TrustManager() {
+                        @Override
+                        public java.security.cert.X509Certificate[] getAcceptedIssuers() {
+                            return new java.security.cert.X509Certificate[0];
+                        }
+
+                        @Override
+                        public void checkClientTrusted(java.security.cert.X509Certificate[] certs, String authType) {
+                        }
+
+                        @Override
+                        public void checkServerTrusted(java.security.cert.X509Certificate[] certs, String authType) {
+                        }
+                    }
+            };
+            SSLContext context = SSLContext.getInstance("TLS");
+            context.init(null, trustManagers, new java.security.SecureRandom());
+            HostnameVerifier verifier = (hostname, session) -> true;
+            connection.setSSLSocketFactory(context.getSocketFactory());
+            connection.setHostnameVerifier(verifier);
+        } catch (Exception ex) {
+            throw new IOException("Unable to initialize relaxed TLS for component probe", ex);
         }
     }
 

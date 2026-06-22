@@ -31,6 +31,9 @@ public class PcceProperties {
     @Valid
     private PcceApi pcceApi = new PcceApi();
 
+    @Valid
+    private Notifications notifications = new Notifications();
+
     public Queries getQueries() {
         return queries;
     }
@@ -79,6 +82,14 @@ public class PcceProperties {
         this.pcceApi = pcceApi;
     }
 
+    public Notifications getNotifications() {
+        return notifications;
+    }
+
+    public void setNotifications(Notifications notifications) {
+        this.notifications = notifications;
+    }
+
     private static List<ComponentTarget> defaultComponents() {
         List<ComponentTarget> targets = new ArrayList<>();
         for (ComponentName name : ComponentName.values()) {
@@ -92,6 +103,8 @@ public class PcceProperties {
 
     public static class Queries {
         private String callMetrics = DefaultSql.CALL_METRICS;
+        private boolean callMetricsTcdFallbackEnabled = true;
+        private String callMetricsTcdFallback = DefaultSql.CALL_METRICS_TCD_FALLBACK;
         private String agentStats = DefaultSql.AGENT_STATS;
         private String droppedCalls = DefaultSql.DROPPED_CALLS;
         private String dispositionBreakdown = DefaultSql.DISPOSITION_BREAKDOWN;
@@ -103,6 +116,22 @@ public class PcceProperties {
 
         public void setCallMetrics(String callMetrics) {
             this.callMetrics = callMetrics;
+        }
+
+        public boolean isCallMetricsTcdFallbackEnabled() {
+            return callMetricsTcdFallbackEnabled;
+        }
+
+        public void setCallMetricsTcdFallbackEnabled(boolean callMetricsTcdFallbackEnabled) {
+            this.callMetricsTcdFallbackEnabled = callMetricsTcdFallbackEnabled;
+        }
+
+        public String getCallMetricsTcdFallback() {
+            return callMetricsTcdFallback;
+        }
+
+        public void setCallMetricsTcdFallback(String callMetricsTcdFallback) {
+            this.callMetricsTcdFallback = callMetricsTcdFallback;
         }
 
         public String getAgentStats() {
@@ -147,6 +176,8 @@ public class PcceProperties {
         private String url;
         private Duration timeout = Duration.ofSeconds(3);
         private boolean trustAllCertificates;
+        private int expectedStatusMin = 200;
+        private int expectedStatusMax = 499;
 
         public ComponentName getName() {
             return name;
@@ -210,6 +241,22 @@ public class PcceProperties {
 
         public void setTrustAllCertificates(boolean trustAllCertificates) {
             this.trustAllCertificates = trustAllCertificates;
+        }
+
+        public int getExpectedStatusMin() {
+            return expectedStatusMin;
+        }
+
+        public void setExpectedStatusMin(int expectedStatusMin) {
+            this.expectedStatusMin = expectedStatusMin;
+        }
+
+        public int getExpectedStatusMax() {
+            return expectedStatusMax;
+        }
+
+        public void setExpectedStatusMax(int expectedStatusMax) {
+            this.expectedStatusMax = expectedStatusMax;
         }
     }
 
@@ -409,6 +456,45 @@ public class PcceProperties {
 
         public void setExpectedStatusMax(int expectedStatusMax) {
             this.expectedStatusMax = expectedStatusMax;
+        }
+    }
+
+    public static class Notifications {
+        private boolean webhookEnabled;
+        private String webhookUrl;
+        private AlertSeverity minimumSeverity = AlertSeverity.CRITICAL;
+        private Duration timeout = Duration.ofSeconds(10);
+
+        public boolean isWebhookEnabled() {
+            return webhookEnabled;
+        }
+
+        public void setWebhookEnabled(boolean webhookEnabled) {
+            this.webhookEnabled = webhookEnabled;
+        }
+
+        public String getWebhookUrl() {
+            return webhookUrl;
+        }
+
+        public void setWebhookUrl(String webhookUrl) {
+            this.webhookUrl = webhookUrl;
+        }
+
+        public AlertSeverity getMinimumSeverity() {
+            return minimumSeverity;
+        }
+
+        public void setMinimumSeverity(AlertSeverity minimumSeverity) {
+            this.minimumSeverity = minimumSeverity;
+        }
+
+        public Duration getTimeout() {
+            return timeout;
+        }
+
+        public void setTimeout(Duration timeout) {
+            this.timeout = timeout;
         }
     }
 
@@ -704,6 +790,34 @@ public class PcceProperties {
                 WHERE sgi.DateTime >= ? AND sgi.DateTime < ?
                   AND (? IS NULL OR sg.EnterpriseName = ?)
                 GROUP BY CAST(sgi.DateTime AS date), DATEPART(hour, sgi.DateTime), sg.EnterpriseName
+                ORDER BY [date], [hour], skill_group
+                """;
+
+        static final String CALL_METRICS_TCD_FALLBACK = """
+                SELECT
+                    CAST(tcd.DateTime AS date) AS [date],
+                    DATEPART(hour, tcd.DateTime) AS [hour],
+                    COALESCE(sg.EnterpriseName, 'UNKNOWN') AS skill_group,
+                    COUNT_BIG(*) AS calls_offered,
+                    SUM(CASE WHEN COALESCE(tcd.AgentSkillTargetID, 0) > 0 THEN 1 ELSE 0 END) AS calls_handled,
+                    SUM(CASE WHEN COALESCE(tcd.AgentSkillTargetID, 0) = 0 THEN 1 ELSE 0 END) AS calls_abandoned,
+                    CAST(NULL AS decimal(9,2)) AS service_level_pct,
+                    CAST(NULL AS decimal(18,2)) AS avg_handle_time,
+                    CAST(NULL AS decimal(18,2)) AS avg_talk_time,
+                    CAST(NULL AS decimal(18,2)) AS avg_hold_time,
+                    CAST(NULL AS decimal(18,2)) AS avg_wrap_time,
+                    CAST(NULL AS decimal(18,2)) AS avg_speed_answer,
+                    CAST(NULL AS decimal(18,2)) AS avg_queue_time,
+                    CAST(NULL AS decimal(18,2)) AS max_queue_time,
+                    CAST(NULL AS decimal(9,2)) AS transfer_rate,
+                    CAST(NULL AS decimal(9,2)) AS first_call_resolution,
+                    CAST(NULL AS decimal(9,2)) AS ivr_containment_rate,
+                    CAST(NULL AS decimal(9,2)) AS csat_score
+                FROM t_Termination_Call_Detail tcd
+                LEFT JOIN t_Skill_Group sg ON sg.SkillTargetID = tcd.SkillGroupSkillTargetID
+                WHERE tcd.DateTime >= ? AND tcd.DateTime < ?
+                  AND (? IS NULL OR sg.EnterpriseName = ?)
+                GROUP BY CAST(tcd.DateTime AS date), DATEPART(hour, tcd.DateTime), COALESCE(sg.EnterpriseName, 'UNKNOWN')
                 ORDER BY [date], [hour], skill_group
                 """;
 

@@ -156,6 +156,15 @@ public class AdminController {
         if (request.timeoutSeconds() != null) {
             target.setTimeout(Duration.ofSeconds(request.timeoutSeconds()));
         }
+        if (request.trustAllCertificates() != null) {
+            target.setTrustAllCertificates(request.trustAllCertificates());
+        }
+        if (request.expectedStatusMin() != null) {
+            target.setExpectedStatusMin(request.expectedStatusMin());
+        }
+        if (request.expectedStatusMax() != null) {
+            target.setExpectedStatusMax(request.expectedStatusMax());
+        }
 
         Map<String, Object> details = new LinkedHashMap<>();
         details.put("enabled", target.isEnabled());
@@ -164,6 +173,9 @@ public class AdminController {
         details.put("port", target.getPort());
         details.put("url", target.getUrl());
         details.put("timeout", target.getTimeout().toString());
+        details.put("trustAllCertificates", target.isTrustAllCertificates());
+        details.put("expectedStatusMin", target.getExpectedStatusMin());
+        details.put("expectedStatusMax", target.getExpectedStatusMax());
         auditService.record("UPDATE_COMPONENT", name.name(), details);
         return target;
     }

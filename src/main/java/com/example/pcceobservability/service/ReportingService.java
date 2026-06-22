@@ -57,8 +57,21 @@ public class ReportingService {
     public List<CallMetric> callMetrics(LocalDate from, LocalDate to, String skillGroup) {
         validateDateRange(from, to);
         String normalizedSkillGroup = blankToNull(skillGroup);
-        return timedQuery("hds.callMetrics", () -> hdsJdbcTemplate.query(
+        List<CallMetric> intervalMetrics = timedQuery("hds.callMetrics", () -> hdsJdbcTemplate.query(
                     pcceProperties.getQueries().getCallMetrics(),
+                    this::mapCallMetric,
+                    start(from),
+                    exclusiveEnd(to),
+                    normalizedSkillGroup,
+                    normalizedSkillGroup));
+        if (!pcceProperties.getQueries().isCallMetricsTcdFallbackEnabled()
+                || intervalMetrics.stream().mapToLong(metric -> nullToZero(metric.callsOffered())).sum() > 0) {
+            return intervalMetrics;
+        }
+        log.warn("call_metrics_interval_empty using_tcd_fallback=true from={} to={} skillGroup={}",
+                from, to, normalizedSkillGroup);
+        return timedQuery("hds.callMetrics.tcdFallback", () -> hdsJdbcTemplate.query(
+                    pcceProperties.getQueries().getCallMetricsTcdFallback(),
                     this::mapCallMetric,
                     start(from),
                     exclusiveEnd(to),

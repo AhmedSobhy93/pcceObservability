@@ -70,6 +70,9 @@ pcce:
         expected-status-min: 200
         expected-status-max: 499
 
+  queries:
+    call-metrics-tcd-fallback-enabled: true
+
   operations:
     scheduled-assessment-enabled: true
     assessment-fixed-delay-ms: 300000
@@ -82,6 +85,12 @@ pcce:
     maintenance-mode: false
     maintenance-reason:
     audit-retention: 500
+
+  notifications:
+    webhook-enabled: false
+    webhook-url: ${PCCE_ALERT_WEBHOOK_URL:}
+    minimum-severity: CRITICAL
+    timeout: 10s
 
   security:
     role-permissions:
@@ -177,7 +186,9 @@ pcce:
       enabled: true
       probe: HTTP
       url: http://10.10.90.194:8000/cvp/diag
-      timeout: 10s
+      timeout: 15s
+      expected-status-min: 200
+      expected-status-max: 499
     - name: CVP_ReportingServer
       enabled: true
       probe: JDBC_CVP_REPORTING
@@ -205,8 +216,10 @@ pcce:
       enabled: true
       probe: HTTP
       url: https://vssitfin01.dev.mdi:8445/desktop
-      timeout: 10s
+      timeout: 15s
       trust-all-certificates: true
+      expected-status-min: 200
+      expected-status-max: 499
     - name: MediaSense
       enabled: false
       probe: HTTP
@@ -215,5 +228,7 @@ pcce:
       enabled: true
       probe: HTTP
       url: https://vssitcuic01.dev.mdi/cuic
-      timeout: 10s
+      timeout: 15s
       trust-all-certificates: true
+      expected-status-min: 200
+      expected-status-max: 499

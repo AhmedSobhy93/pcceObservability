@@ -25,15 +25,18 @@ public class OperationsService {
     private final PcceProperties pcceProperties;
     private final ComponentStatusService componentStatusService;
     private final ReportingService reportingService;
+    private final AlertNotificationService alertNotificationService;
     private volatile ProductionAssessment lastAssessment;
 
     public OperationsService(
             PcceProperties pcceProperties,
             ComponentStatusService componentStatusService,
-            ReportingService reportingService) {
+            ReportingService reportingService,
+            AlertNotificationService alertNotificationService) {
         this.pcceProperties = pcceProperties;
         this.componentStatusService = componentStatusService;
         this.reportingService = reportingService;
+        this.alertNotificationService = alertNotificationService;
     }
 
     public ProductionAssessment assess(LocalDate from, LocalDate to) {
@@ -65,6 +68,7 @@ public class OperationsService {
                 readiness(components),
                 components);
         lastAssessment = assessment;
+        alertNotificationService.notifyAssessment(assessment);
         return assessment;
     }
 
