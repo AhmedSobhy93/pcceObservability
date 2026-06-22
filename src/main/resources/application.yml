@@ -69,6 +69,77 @@ pcce:
         path: /unifiedconfig/config/businesshour
         expected-status-min: 200
         expected-status-max: 499
+    actions:
+      - id: users.list
+        category: User Configuration and Management
+        name: List users
+        enabled: false
+        admin-only: false
+        method: GET
+        path: /unifiedconfig/config/user
+      - id: teams.list
+        category: Team Configuration and Management
+        name: List agent teams
+        enabled: false
+        admin-only: false
+        method: GET
+        path: /unifiedconfig/config/agentteam
+      - id: skills.list
+        category: Skill Group Management
+        name: List skill groups
+        enabled: false
+        admin-only: false
+        method: GET
+        path: /unifiedconfig/config/skillgroup
+      - id: dialedNumbers.list
+        category: Call Configuration and Management
+        name: List dialed numbers
+        enabled: false
+        admin-only: false
+        method: GET
+        path: /unifiedconfig/config/dialednumber
+      - id: callTypes.list
+        category: Call Configuration and Management
+        name: List call types
+        enabled: false
+        admin-only: false
+        method: GET
+        path: /unifiedconfig/config/calltype
+      - id: eccVariables.list
+        category: Call Configuration and Management
+        name: List ECC variables
+        enabled: false
+        admin-only: false
+        method: GET
+        path: /unifiedconfig/config/expandedcallvariable
+      - id: campaigns.list
+        category: Outbound Option
+        name: List campaigns
+        enabled: false
+        admin-only: false
+        method: GET
+        path: /unifiedconfig/config/campaign
+      - id: businessHours.list
+        category: System Configuration
+        name: List business hours
+        enabled: false
+        admin-only: false
+        method: GET
+        path: /unifiedconfig/config/businesshour
+      - id: deploymentType.get
+        category: System Configuration
+        name: Get deployment type
+        enabled: false
+        admin-only: false
+        method: GET
+        path: /unifiedconfig/config/deploymenttype
+      - id: cvpReportingServer.get
+        category: System Configuration
+        name: Get CVP Reporting Server
+        enabled: false
+        admin-only: false
+        method: GET
+        path: /unifiedconfig/config/cvpreportingserver
 
   queries:
     call-metrics-tcd-fallback-enabled: true

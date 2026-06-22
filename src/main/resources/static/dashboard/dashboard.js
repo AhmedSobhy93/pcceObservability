@@ -11,7 +11,10 @@ const state = {
     logs: [],
     pcceApiStatus: [],
     pcceCapabilities: [],
-    pcceFunctions: []
+    pcceFunctions: [],
+    pcceActions: [],
+    rtmtCapabilities: [],
+    spogCapabilities: []
 };
 
 const pages = {
@@ -74,8 +77,13 @@ function dateParams() {
     return `from=${qs("#fromDate").value}&to=${qs("#toDate").value}`;
 }
 
-async function api(path) {
-    const response = await fetch(path, { credentials: "same-origin" });
+async function api(path, options = {}) {
+    const response = await fetch(path, {
+        credentials: "same-origin",
+        method: options.method || "GET",
+        headers: options.body ? { "Content-Type": "application/json" } : undefined,
+        body: options.body
+    });
     if (!response.ok) {
         const text = await response.text();
         throw new Error(`${response.status} ${response.statusText}: ${text.slice(0, 220)}`);
@@ -108,7 +116,10 @@ async function refresh() {
         safeLoad("queryPerformance", "/api/v1/monitoring/query-performance?limit=50", []),
         safeLoad("pcceApiStatus", "/api/v1/pcce-api/status", []),
         safeLoad("pcceCapabilities", "/api/v1/pcce-api/capabilities", []),
-        safeLoad("pcceFunctions", "/api/v1/pcce-api/functions", [])
+        safeLoad("pcceFunctions", "/api/v1/pcce-api/functions", []),
+        safeLoad("pcceActions", "/api/v1/pcce-api/actions", []),
+        safeLoad("rtmtCapabilities", "/api/v1/pcce-api/rtmt-capabilities", []),
+        safeLoad("spogCapabilities", "/api/v1/pcce-api/spog-capabilities", [])
     ];
     const results = await Promise.all(loads);
     errors.push(...results.filter(Boolean));
@@ -273,6 +284,42 @@ function renderIntegration() {
         <td>${escapeHtml(pick(item, "path") || "")}</td>
         <td>${escapeHtml(pick(item, "description") || "")}</td>
     </tr>`).join("");
+
+    qs("#pcceActionTable").innerHTML = state.pcceActions.map(item => {
+        const enabled = Boolean(pick(item, "enabled"));
+        const id = pick(item, "id") || "";
+        return `<tr>
+            <td>${escapeHtml(pick(item, "category") || "")}</td>
+            <td>${escapeHtml(pick(item, "name") || id)}</td>
+            <td><span class="badge ${enabled ? "up" : "warn"}">${escapeHtml(pick(item, "method") || "GET")}</span></td>
+            <td>${escapeHtml(pick(item, "path") || "")}</td>
+            <td>${enabled ? "Enabled" : "Disabled"}</td>
+            <td><button class="small-btn" data-action-id="${escapeHtml(id)}" ${enabled ? "" : "disabled"}>Run</button></td>
+        </tr>`;
+    }).join("");
+    document.querySelectorAll("[data-action-id]").forEach(button => {
+        button.addEventListener("click", () => executePcceAction(button.dataset.actionId));
+    });
+
+    qs("#rtmtCapabilityList").innerHTML = state.rtmtCapabilities.map(item =>
+        metricRow(`${pick(item, "area")}`, `${pick(item, "capability")} - ${pick(item, "integration_method", "integrationMethod")}`)
+    ).join("");
+    qs("#spogCapabilityList").innerHTML = state.spogCapabilities.map(item =>
+        metricRow(`${pick(item, "area")}`, `${pick(item, "capability")} - ${pick(item, "integration_method", "integrationMethod")}`)
+    ).join("");
+}
+
+async function executePcceAction(id) {
+    qs("#pcceActionResult").textContent = `Running ${id}...`;
+    try {
+        const result = await api(`/api/v1/pcce-api/actions/${encodeURIComponent(id)}/execute`, {
+            method: "POST",
+            body: "{}"
+        });
+        qs("#pcceActionResult").textContent = JSON.stringify(result, null, 2);
+    } catch (error) {
+        qs("#pcceActionResult").textContent = error.message;
+    }
 }
 
 function renderOperations() {

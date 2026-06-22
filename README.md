@@ -63,6 +63,10 @@ Monitoring endpoints:
 - `GET /api/v1/components/{name}/history?limit=100`
 - `GET /api/v1/pcce-api/capabilities`
 - `GET /api/v1/pcce-api/functions`
+- `GET /api/v1/pcce-api/actions`
+- `POST /api/v1/pcce-api/actions/{id}/execute`
+- `GET /api/v1/pcce-api/rtmt-capabilities`
+- `GET /api/v1/pcce-api/spog-capabilities`
 - `GET /api/v1/pcce-api/status`
 
 The dashboard consumes these endpoints from the Spring Boot App tab to show slow/failed database queries and recent application log lines.
@@ -100,6 +104,8 @@ $env:PCCE_API_PASSWORD="..."
 ```
 
 Then enable `pcce.pcce-api.enabled` and the required `pcce.pcce-api.monitors[*].enabled` entries. Keep these checks read-only and use a least-privilege PCCE API account.
+
+The PCCE Integration dashboard includes a controlled API console. Enable only approved `pcce.pcce-api.actions[*]` entries. GET actions are available to operations users; mutating actions require solution administrator permission.
 
 ## Important PCCE Notes
 

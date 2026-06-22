@@ -323,6 +323,7 @@ public class PcceProperties {
         private Duration timeout = Duration.ofSeconds(10);
         private boolean trustAllCertificates;
         private List<ApiMonitor> monitors = defaultApiMonitors();
+        private List<ApiAction> actions = defaultApiActions();
 
         public boolean isEnabled() {
             return enabled;
@@ -380,6 +381,14 @@ public class PcceProperties {
             this.monitors = monitors;
         }
 
+        public List<ApiAction> getActions() {
+            return actions;
+        }
+
+        public void setActions(List<ApiAction> actions) {
+            this.actions = actions;
+        }
+
         private static List<ApiMonitor> defaultApiMonitors() {
             return List.of(
                     monitor("Users", "User Configuration and Management", "/unifiedconfig/config/user"),
@@ -399,6 +408,107 @@ public class PcceProperties {
             monitor.setExpectedStatusMax(499);
             monitor.setEnabled(false);
             return monitor;
+        }
+
+        private static List<ApiAction> defaultApiActions() {
+            return List.of(
+                    action("users.list", "User Configuration and Management", "List users", "GET", "/unifiedconfig/config/user", false),
+                    action("teams.list", "Team Configuration and Management", "List agent teams", "GET", "/unifiedconfig/config/agentteam", false),
+                    action("skills.list", "Skill Group Management", "List skill groups", "GET", "/unifiedconfig/config/skillgroup", false),
+                    action("dialedNumbers.list", "Call Configuration and Management", "List dialed numbers", "GET", "/unifiedconfig/config/dialednumber", false),
+                    action("callTypes.list", "Call Configuration and Management", "List call types", "GET", "/unifiedconfig/config/calltype", false),
+                    action("eccVariables.list", "Call Configuration and Management", "List ECC variables", "GET", "/unifiedconfig/config/expandedcallvariable", false),
+                    action("campaigns.list", "Outbound Option", "List campaigns", "GET", "/unifiedconfig/config/campaign", false),
+                    action("businessHours.list", "System Configuration", "List business hours", "GET", "/unifiedconfig/config/businesshour", false),
+                    action("deploymentType.get", "System Configuration", "Get deployment type", "GET", "/unifiedconfig/config/deploymenttype", false),
+                    action("cvpReportingServer.get", "System Configuration", "Get CVP Reporting Server", "GET", "/unifiedconfig/config/cvpreportingserver", false));
+        }
+
+        private static ApiAction action(String id, String category, String name, String method, String path, boolean adminOnly) {
+            ApiAction action = new ApiAction();
+            action.setId(id);
+            action.setCategory(category);
+            action.setName(name);
+            action.setMethod(method);
+            action.setPath(path);
+            action.setAdminOnly(adminOnly);
+            action.setEnabled(false);
+            return action;
+        }
+    }
+
+    public static class ApiAction {
+        private String id;
+        private String category;
+        private String name;
+        private boolean enabled;
+        private boolean adminOnly;
+        private String method = "GET";
+        private String path;
+        private String contentType = "application/json";
+
+        public String getId() {
+            return id;
+        }
+
+        public void setId(String id) {
+            this.id = id;
+        }
+
+        public String getCategory() {
+            return category;
+        }
+
+        public void setCategory(String category) {
+            this.category = category;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(String name) {
+            this.name = name;
+        }
+
+        public boolean isEnabled() {
+            return enabled;
+        }
+
+        public void setEnabled(boolean enabled) {
+            this.enabled = enabled;
+        }
+
+        public boolean isAdminOnly() {
+            return adminOnly;
+        }
+
+        public void setAdminOnly(boolean adminOnly) {
+            this.adminOnly = adminOnly;
+        }
+
+        public String getMethod() {
+            return method;
+        }
+
+        public void setMethod(String method) {
+            this.method = method;
+        }
+
+        public String getPath() {
+            return path;
+        }
+
+        public void setPath(String path) {
+            this.path = path;
+        }
+
+        public String getContentType() {
+            return contentType;
+        }
+
+        public void setContentType(String contentType) {
+            this.contentType = contentType;
         }
     }
 

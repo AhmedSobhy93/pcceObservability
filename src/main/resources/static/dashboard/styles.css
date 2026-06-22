@@ -109,6 +109,17 @@ p { margin: 8px 0 0; color: var(--muted); font-size: 20px; }
     cursor: pointer;
 }
 .primary-btn:hover { background: #303a49; }
+.small-btn {
+    height: 34px;
+    border: 1px solid #2c3948;
+    border-radius: 10px;
+    background: #1d2632;
+    color: var(--text);
+    padding: 0 12px;
+    cursor: pointer;
+}
+.small-btn:disabled { opacity: .45; cursor: not-allowed; }
+.small-btn:not(:disabled):hover { background: #293545; }
 
 .status-strip { display: flex; gap: 10px; flex-wrap: wrap; min-height: 28px; margin-bottom: 24px; }
 .status-pill {
@@ -207,6 +218,7 @@ pre { white-space: pre-wrap; margin: 0; color: #d9e5f7; }
     font-size: 12px;
     line-height: 1.45;
 }
+.action-result { margin-top: 16px; }
 
 body.collapsed .sidebar { width: 92px; }
 body.collapsed .brand div:not(.brand-mark), body.collapsed .nav-item:not(.active) { font-size: 0; }
