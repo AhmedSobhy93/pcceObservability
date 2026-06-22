@@ -107,6 +107,7 @@ public class PcceProperties {
         private String callMetricsTcdFallback = DefaultSql.CALL_METRICS_TCD_FALLBACK;
         private String agentStats = DefaultSql.AGENT_STATS;
         private String droppedCalls = DefaultSql.DROPPED_CALLS;
+        private boolean droppedCallsEnabled;
         private String dispositionBreakdown = DefaultSql.DISPOSITION_BREAKDOWN;
         private String ivrContainment = DefaultSql.IVR_CONTAINMENT;
 
@@ -148,6 +149,14 @@ public class PcceProperties {
 
         public void setDroppedCalls(String droppedCalls) {
             this.droppedCalls = droppedCalls;
+        }
+
+        public boolean isDroppedCallsEnabled() {
+            return droppedCallsEnabled;
+        }
+
+        public void setDroppedCallsEnabled(boolean droppedCallsEnabled) {
+            this.droppedCallsEnabled = droppedCallsEnabled;
         }
 
         public String getDispositionBreakdown() {
@@ -795,8 +804,8 @@ public class PcceProperties {
 
         static final String CALL_METRICS_TCD_FALLBACK = """
                 SELECT
-                    CAST(tcd.DateTime AS date) AS [date],
-                    DATEPART(hour, tcd.DateTime) AS [hour],
+                    CAST(COALESCE(tcd.CallStartDateTime, tcd.DateTime) AS date) AS [date],
+                    DATEPART(hour, COALESCE(tcd.CallStartDateTime, tcd.DateTime)) AS [hour],
                     COALESCE(sg.EnterpriseName, 'UNKNOWN') AS skill_group,
                     COUNT_BIG(*) AS calls_offered,
                     SUM(CASE WHEN COALESCE(tcd.AgentSkillTargetID, 0) > 0 THEN 1 ELSE 0 END) AS calls_handled,
@@ -815,9 +824,13 @@ public class PcceProperties {
                     CAST(NULL AS decimal(9,2)) AS csat_score
                 FROM t_Termination_Call_Detail tcd
                 LEFT JOIN t_Skill_Group sg ON sg.SkillTargetID = tcd.SkillGroupSkillTargetID
-                WHERE tcd.DateTime >= ? AND tcd.DateTime < ?
+                WHERE COALESCE(tcd.CallStartDateTime, tcd.DateTime) >= ?
+                  AND COALESCE(tcd.CallStartDateTime, tcd.DateTime) < ?
                   AND (? IS NULL OR sg.EnterpriseName = ?)
-                GROUP BY CAST(tcd.DateTime AS date), DATEPART(hour, tcd.DateTime), COALESCE(sg.EnterpriseName, 'UNKNOWN')
+                GROUP BY
+                    CAST(COALESCE(tcd.CallStartDateTime, tcd.DateTime) AS date),
+                    DATEPART(hour, COALESCE(tcd.CallStartDateTime, tcd.DateTime)),
+                    COALESCE(sg.EnterpriseName, 'UNKNOWN')
                 ORDER BY [date], [hour], skill_group
                 """;
 
@@ -858,8 +871,9 @@ public class PcceProperties {
                     MAX(tcd.DateTime) AS last_drop_time
                 FROM t_Termination_Call_Detail tcd
                 LEFT JOIN t_Skill_Group sg ON sg.SkillTargetID = tcd.SkillGroupSkillTargetID
-                WHERE tcd.DateTime >= ? AND tcd.DateTime < ?
-                  AND tcd.CallDisposition IN (1, 2, 3, 4, 5, 6, 7, 10, 19)
+                WHERE COALESCE(tcd.CallStartDateTime, tcd.DateTime) >= ?
+                  AND COALESCE(tcd.CallStartDateTime, tcd.DateTime) < ?
+                  AND 1 = 0
                   AND (? IS NULL OR sg.EnterpriseName = ?)
                 GROUP BY CAST(tcd.DateTime AS date), DATEPART(hour, tcd.DateTime), COALESCE(sg.EnterpriseName, 'UNKNOWN')
                 ORDER BY [date], [hour], skill_group

@@ -96,6 +96,9 @@ public class ReportingService {
 
     public List<DroppedCallMetric> droppedCalls(LocalDate from, LocalDate to, String skillGroup) {
         validateDateRange(from, to);
+        if (!pcceProperties.getQueries().isDroppedCallsEnabled()) {
+            return List.of();
+        }
         String normalizedSkillGroup = blankToNull(skillGroup);
         return timedQuery("hds.droppedCalls", () -> hdsJdbcTemplate.query(
                     pcceProperties.getQueries().getDroppedCalls(),

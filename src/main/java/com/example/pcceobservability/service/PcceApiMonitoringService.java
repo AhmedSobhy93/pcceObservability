@@ -3,6 +3,7 @@ package com.example.pcceobservability.service;
 import com.example.pcceobservability.config.PcceProperties;
 import com.example.pcceobservability.config.PcceProperties.ApiMonitor;
 import com.example.pcceobservability.model.ApiCapability;
+import com.example.pcceobservability.model.ApiFunctionView;
 import com.example.pcceobservability.model.ApiMonitorStatus;
 import com.example.pcceobservability.model.ComponentState;
 import java.io.IOException;
@@ -39,6 +40,22 @@ public class PcceApiMonitoringService {
                 new ApiCapability("Call Configuration and Management", "Manage dialed numbers, call types, expanded call variables, and bulk configuration"),
                 new ApiCapability("Agents, Skills, Attributes, and Teams", "Manage agent associations used by operations and workforce teams"),
                 new ApiCapability("System Configuration", "Manage business hours, timezone, CVP Reporting Server hostname, remote data centers, deployment type, and capacity"));
+    }
+
+    public List<ApiFunctionView> functions() {
+        return List.of(
+                new ApiFunctionView("User Configuration and Management", "List users", "GET", "/unifiedconfig/config/user", "Read configured users and validate user-management API reachability"),
+                new ApiFunctionView("User Configuration and Management", "User by role", "GET", "/unifiedconfig/config/user?role={role}", "Filter users by configured PCCE role"),
+                new ApiFunctionView("Team Configuration and Management", "List agent teams", "GET", "/unifiedconfig/config/agentteam", "Read agent team configuration for workforce visibility"),
+                new ApiFunctionView("Skill Group Management", "List skill groups", "GET", "/unifiedconfig/config/skillgroup", "Read skill groups used for routing/reporting alignment"),
+                new ApiFunctionView("Call Configuration and Management", "List dialed numbers", "GET", "/unifiedconfig/config/dialednumber", "Read DN configuration used by routing scripts"),
+                new ApiFunctionView("Call Configuration and Management", "List call types", "GET", "/unifiedconfig/config/calltype", "Read call type configuration for CUIC/report mapping"),
+                new ApiFunctionView("Call Configuration and Management", "Expanded call variables", "GET", "/unifiedconfig/config/expandedcallvariable", "Validate ECC variable configuration availability"),
+                new ApiFunctionView("Outbound Option", "Campaigns", "GET", "/unifiedconfig/config/campaign", "Read outbound campaign configuration where Outbound Option is enabled"),
+                new ApiFunctionView("Outbound Option", "Do Not Call import rules", "GET", "/unifiedconfig/config/dncimportrule", "Validate DNC import configuration where Outbound Option is enabled"),
+                new ApiFunctionView("System Configuration", "Business hours", "GET", "/unifiedconfig/config/businesshour", "Read business hour configuration"),
+                new ApiFunctionView("System Configuration", "Deployment information", "GET", "/unifiedconfig/config/deploymenttype", "Validate deployment-level API availability"),
+                new ApiFunctionView("System Configuration", "CVP Reporting Server", "GET", "/unifiedconfig/config/cvpreportingserver", "Validate CVP Reporting Server configuration visibility"));
     }
 
     public List<ApiMonitorStatus> status() {

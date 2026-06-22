@@ -1,6 +1,7 @@
 package com.example.pcceobservability.web;
 
 import com.example.pcceobservability.model.ApiCapability;
+import com.example.pcceobservability.model.ApiFunctionView;
 import com.example.pcceobservability.model.ApiMonitorStatus;
 import com.example.pcceobservability.service.PcceApiMonitoringService;
 import java.util.List;
@@ -23,6 +24,12 @@ public class PcceApiController {
     @PreAuthorize("hasAuthority('PERM_OPERATIONS_READ')")
     public List<ApiCapability> capabilities() {
         return pcceApiMonitoringService.capabilities();
+    }
+
+    @GetMapping("/functions")
+    @PreAuthorize("hasAuthority('PERM_OPERATIONS_READ')")
+    public List<ApiFunctionView> functions() {
+        return pcceApiMonitoringService.functions();
     }
 
     @GetMapping("/status")

@@ -10,7 +10,8 @@ const state = {
     queryPerformance: [],
     logs: [],
     pcceApiStatus: [],
-    pcceCapabilities: []
+    pcceCapabilities: [],
+    pcceFunctions: []
 };
 
 const pages = {
@@ -106,7 +107,8 @@ async function refresh() {
         safeLoad("assessment", `/api/v1/operations/assessment?${params}`, null),
         safeLoad("queryPerformance", "/api/v1/monitoring/query-performance?limit=50", []),
         safeLoad("pcceApiStatus", "/api/v1/pcce-api/status", []),
-        safeLoad("pcceCapabilities", "/api/v1/pcce-api/capabilities", [])
+        safeLoad("pcceCapabilities", "/api/v1/pcce-api/capabilities", []),
+        safeLoad("pcceFunctions", "/api/v1/pcce-api/functions", [])
     ];
     const results = await Promise.all(loads);
     errors.push(...results.filter(Boolean));
@@ -157,6 +159,7 @@ function renderKpis() {
     qs("#kpiHandled").textContent = fmt(handled);
     qs("#kpiAbandoned").textContent = fmt(abandoned);
     qs("#kpiDropped").textContent = fmt(dropped);
+    qs("#trendDropped").textContent = dropped ? "Disposition based" : "Not configured";
     qs("#kpiService").textContent = pct(service);
     qs("#kpiAht").textContent = seconds(aht);
     qs("#chartRange").textContent = `${qs("#fromDate").value} to ${qs("#toDate").value}`;
@@ -262,6 +265,14 @@ function renderIntegration() {
     qs("#pcceCapabilityList").innerHTML = state.pcceCapabilities.map(item =>
         metricRow(pick(item, "category"), pick(item, "capability"))
     ).join("");
+
+    qs("#pcceFunctionTable").innerHTML = state.pcceFunctions.map(item => `<tr>
+        <td>${escapeHtml(pick(item, "category") || "")}</td>
+        <td>${escapeHtml(pick(item, "function") || "")}</td>
+        <td><span class="badge up">${escapeHtml(pick(item, "method") || "GET")}</span></td>
+        <td>${escapeHtml(pick(item, "path") || "")}</td>
+        <td>${escapeHtml(pick(item, "description") || "")}</td>
+    </tr>`).join("");
 }
 
 function renderOperations() {

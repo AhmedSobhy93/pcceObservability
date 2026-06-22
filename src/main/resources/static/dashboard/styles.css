@@ -147,6 +147,7 @@ p { margin: 8px 0 0; color: var(--muted); font-size: 20px; }
 
 .content-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 28px; }
 .support-grid { margin-top: 28px; }
+.api-functions-panel { margin-top: 28px; }
 .panel { padding: 24px; min-width: 0; }
 .panel.full { width: 100%; }
 .panel-head { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-bottom: 18px; }

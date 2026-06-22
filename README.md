@@ -62,6 +62,7 @@ Monitoring endpoints:
 - `GET /api/v1/components/history?limit=100`
 - `GET /api/v1/components/{name}/history?limit=100`
 - `GET /api/v1/pcce-api/capabilities`
+- `GET /api/v1/pcce-api/functions`
 - `GET /api/v1/pcce-api/status`
 
 The dashboard consumes these endpoints from the Spring Boot App tab to show slow/failed database queries and recent application log lines.
@@ -128,9 +129,9 @@ The app includes the IBM Informix JDBC dependency `com.ibm.informix:jdbc`. If yo
 
 If a TCP probe times out, verify the exact listener port from Cisco service configuration and Windows firewall. Do not mark Router/PG/CTI ports as failed until the port is confirmed to be open from the app host.
 
-Dropped calls are conservatively classified with `t_Termination_Call_Detail.CallDisposition IN (1, 2, 3, 4, 5, 6, 7, 10, 19)`. Use `/api/v1/calls/disposition-breakdown` to see your live HDS distribution before finalizing the bank's production definition.
+Dropped-call counting is disabled by default to avoid misleading numbers. Use `/api/v1/calls/disposition-breakdown` to see your live HDS distribution, then enable `pcce.queries.dropped-calls-enabled` and configure the approved dropped-call SQL after the bank confirms which call disposition codes count as dropped calls.
 
-Call KPIs read `t_Skill_Group_Interval` first. If that interval table is empty for the selected dates, the app automatically falls back to `t_Termination_Call_Detail`, which matches CUIC agent/call-detail style data better in some PCCE environments.
+Call KPIs read `t_Skill_Group_Interval` first. If that interval table is empty for the selected dates, the app automatically falls back to `t_Termination_Call_Detail` using `COALESCE(CallStartDateTime, DateTime)`, which matches CUIC agent/call-detail style data better in some PCCE environments.
 
 Fields such as `first_call_resolution`, `csat_score`, `adherence_pct`, and some IVR containment logic usually require WFM/QA/survey integrations or customer-specific CVP application events. They are included in the API contract and default to `null` where the Cisco historical tables do not directly provide them.
 
