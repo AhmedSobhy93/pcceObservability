@@ -19,6 +19,57 @@ pcce:
     slow-query-warning-ms: 2000
     slow-request-warning-ms: 3000
 
+  pcce-api:
+    enabled: false
+    base-url: ${PCCE_API_BASE_URL:https://vswsitaw01}
+    username: ${PCCE_API_USERNAME:}
+    password: ${PCCE_API_PASSWORD:}
+    timeout: 10s
+    trust-all-certificates: true
+    monitors:
+      - name: Users
+        category: User Configuration and Management
+        enabled: false
+        method: GET
+        path: /unifiedconfig/config/user
+        expected-status-min: 200
+        expected-status-max: 499
+      - name: Agent Teams
+        category: Team Configuration and Management
+        enabled: false
+        method: GET
+        path: /unifiedconfig/config/agentteam
+        expected-status-min: 200
+        expected-status-max: 499
+      - name: Skill Groups
+        category: Skill Group Management
+        enabled: false
+        method: GET
+        path: /unifiedconfig/config/skillgroup
+        expected-status-min: 200
+        expected-status-max: 499
+      - name: Dialed Numbers
+        category: Call Configuration and Management
+        enabled: false
+        method: GET
+        path: /unifiedconfig/config/dialednumber
+        expected-status-min: 200
+        expected-status-max: 499
+      - name: Call Types
+        category: Call Configuration and Management
+        enabled: false
+        method: GET
+        path: /unifiedconfig/config/calltype
+        expected-status-min: 200
+        expected-status-max: 499
+      - name: Business Hours
+        category: System Configuration
+        enabled: false
+        method: GET
+        path: /unifiedconfig/config/businesshour
+        expected-status-min: 200
+        expected-status-max: 499
+
   operations:
     scheduled-assessment-enabled: true
     assessment-fixed-delay-ms: 300000

@@ -18,6 +18,7 @@ import java.util.List;
 import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataAccessException;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -112,14 +113,19 @@ public class ReportingService {
 
     public List<IvrContainmentMetric> ivrContainment(LocalDate from, LocalDate to) {
         validateDateRange(from, to);
-        return timedQuery("cvp.ivrContainment", () -> cvpReportingJdbcTemplate.query(
-                    pcceProperties.getQueries().getIvrContainment(),
-                    (rs, rowNum) -> new IvrContainmentMetric(
-                            rs.getObject("call_date", LocalDate.class),
-                            rs.getInt("call_hour"),
-                            rs.getBigDecimal("ivr_containment_rate")),
-                    start(from),
-                    exclusiveEnd(to)));
+        try {
+            return timedQuery("cvp.ivrContainment", () -> cvpReportingJdbcTemplate.query(
+                        pcceProperties.getQueries().getIvrContainment(),
+                        (rs, rowNum) -> new IvrContainmentMetric(
+                                rs.getObject("call_date", LocalDate.class),
+                                rs.getInt("call_hour"),
+                                rs.getBigDecimal("ivr_containment_rate")),
+                        start(from),
+                        exclusiveEnd(to)));
+        } catch (DataAccessException ex) {
+            log.warn("ivr_containment_unavailable error={}", ex.getMostSpecificCause().getMessage());
+            return List.of();
+        }
     }
 
     public ContactCenterSummary summary(LocalDate from, LocalDate to) {

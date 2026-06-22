@@ -28,6 +28,9 @@ public class PcceProperties {
     @Valid
     private Performance performance = new Performance();
 
+    @Valid
+    private PcceApi pcceApi = new PcceApi();
+
     public Queries getQueries() {
         return queries;
     }
@@ -66,6 +69,14 @@ public class PcceProperties {
 
     public void setPerformance(Performance performance) {
         this.performance = performance;
+    }
+
+    public PcceApi getPcceApi() {
+        return pcceApi;
+    }
+
+    public void setPcceApi(PcceApi pcceApi) {
+        this.pcceApi = pcceApi;
     }
 
     private static List<ComponentTarget> defaultComponents() {
@@ -246,6 +257,159 @@ public class PcceProperties {
         INFO,
         WARNING,
         CRITICAL
+    }
+
+    public static class PcceApi {
+        private boolean enabled;
+        private String baseUrl;
+        private String username;
+        private String password;
+        private Duration timeout = Duration.ofSeconds(10);
+        private boolean trustAllCertificates;
+        private List<ApiMonitor> monitors = defaultApiMonitors();
+
+        public boolean isEnabled() {
+            return enabled;
+        }
+
+        public void setEnabled(boolean enabled) {
+            this.enabled = enabled;
+        }
+
+        public String getBaseUrl() {
+            return baseUrl;
+        }
+
+        public void setBaseUrl(String baseUrl) {
+            this.baseUrl = baseUrl;
+        }
+
+        public String getUsername() {
+            return username;
+        }
+
+        public void setUsername(String username) {
+            this.username = username;
+        }
+
+        public String getPassword() {
+            return password;
+        }
+
+        public void setPassword(String password) {
+            this.password = password;
+        }
+
+        public Duration getTimeout() {
+            return timeout;
+        }
+
+        public void setTimeout(Duration timeout) {
+            this.timeout = timeout;
+        }
+
+        public boolean isTrustAllCertificates() {
+            return trustAllCertificates;
+        }
+
+        public void setTrustAllCertificates(boolean trustAllCertificates) {
+            this.trustAllCertificates = trustAllCertificates;
+        }
+
+        public List<ApiMonitor> getMonitors() {
+            return monitors;
+        }
+
+        public void setMonitors(List<ApiMonitor> monitors) {
+            this.monitors = monitors;
+        }
+
+        private static List<ApiMonitor> defaultApiMonitors() {
+            return List.of(
+                    monitor("Users", "User Configuration and Management", "/unifiedconfig/config/user"),
+                    monitor("Agent Teams", "Team Configuration and Management", "/unifiedconfig/config/agentteam"),
+                    monitor("Skill Groups", "Skill Group Management", "/unifiedconfig/config/skillgroup"),
+                    monitor("Dialed Numbers", "Call Configuration and Management", "/unifiedconfig/config/dialednumber"),
+                    monitor("Call Types", "Call Configuration and Management", "/unifiedconfig/config/calltype"),
+                    monitor("Business Hours", "System Configuration", "/unifiedconfig/config/businesshour"));
+        }
+
+        private static ApiMonitor monitor(String name, String category, String path) {
+            ApiMonitor monitor = new ApiMonitor();
+            monitor.setName(name);
+            monitor.setCategory(category);
+            monitor.setMethod("GET");
+            monitor.setPath(path);
+            monitor.setExpectedStatusMax(499);
+            monitor.setEnabled(false);
+            return monitor;
+        }
+    }
+
+    public static class ApiMonitor {
+        private String name;
+        private String category;
+        private boolean enabled;
+        private String method = "GET";
+        private String path;
+        private int expectedStatusMin = 200;
+        private int expectedStatusMax = 499;
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(String name) {
+            this.name = name;
+        }
+
+        public String getCategory() {
+            return category;
+        }
+
+        public void setCategory(String category) {
+            this.category = category;
+        }
+
+        public boolean isEnabled() {
+            return enabled;
+        }
+
+        public void setEnabled(boolean enabled) {
+            this.enabled = enabled;
+        }
+
+        public String getMethod() {
+            return method;
+        }
+
+        public void setMethod(String method) {
+            this.method = method;
+        }
+
+        public String getPath() {
+            return path;
+        }
+
+        public void setPath(String path) {
+            this.path = path;
+        }
+
+        public int getExpectedStatusMin() {
+            return expectedStatusMin;
+        }
+
+        public void setExpectedStatusMin(int expectedStatusMin) {
+            this.expectedStatusMin = expectedStatusMin;
+        }
+
+        public int getExpectedStatusMax() {
+            return expectedStatusMax;
+        }
+
+        public void setExpectedStatusMax(int expectedStatusMax) {
+            this.expectedStatusMax = expectedStatusMax;
+        }
     }
 
     public static class Operations {
@@ -599,14 +763,13 @@ public class PcceProperties {
 
         static final String IVR_CONTAINMENT = """
                 SELECT
-                    DATE(c.startdatetime) AS call_date,
-                    HOUR(c.startdatetime) AS call_hour,
-                    CAST(100.0 * SUM(CASE WHEN c.EndingType = 'NORMAL' THEN 1 ELSE 0 END)
-                        / NULLIF(COUNT(*), 0) AS DECIMAL(9,2)) AS ivr_containment_rate
-                FROM "call" c
-                WHERE c.startdatetime >= ? AND c.startdatetime < ?
-                GROUP BY DATE(c.startdatetime), HOUR(c.startdatetime)
-                ORDER BY call_date, call_hour
+                    TODAY AS call_date,
+                    0 AS call_hour,
+                    CAST(NULL AS DECIMAL(9,2)) AS ivr_containment_rate
+                FROM systables
+                WHERE tabid < 0
+                  AND CURRENT >= ?
+                  AND CURRENT >= ?
                 """;
     }
 }

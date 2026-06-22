@@ -8,7 +8,9 @@ const state = {
     assessment: null,
     user: null,
     queryPerformance: [],
-    logs: []
+    logs: [],
+    pcceApiStatus: [],
+    pcceCapabilities: []
 };
 
 const pages = {
@@ -102,7 +104,9 @@ async function refresh() {
         safeLoad("ivr", `/api/v1/metrics/ivr-containment?${params}`, []),
         safeLoad("components", "/api/v1/components/status", []),
         safeLoad("assessment", `/api/v1/operations/assessment?${params}`, null),
-        safeLoad("queryPerformance", "/api/v1/monitoring/query-performance?limit=50", [])
+        safeLoad("queryPerformance", "/api/v1/monitoring/query-performance?limit=50", []),
+        safeLoad("pcceApiStatus", "/api/v1/pcce-api/status", []),
+        safeLoad("pcceCapabilities", "/api/v1/pcce-api/capabilities", [])
     ];
     const results = await Promise.all(loads);
     errors.push(...results.filter(Boolean));
@@ -237,10 +241,27 @@ function renderIntegration() {
         metricRow("AW Database", "SQL Server"),
         metricRow("HDS Database", "SQL Server"),
         metricRow("CVP Reporting", "IBM Informix"),
+        metricRow("PCCE APIs", `${state.pcceApiStatus.length} monitors configured`),
         metricRow("Authentication", "Spring Security"),
         metricRow("API Docs", "/swagger-ui/index.html")
     ].join("");
     qs("#userBox").textContent = JSON.stringify(state.user || {}, null, 2);
+    qs("#pcceApiGrid").innerHTML = state.pcceApiStatus.map(item => {
+        const stateValue = String(pick(item, "state") || "UNKNOWN").toLowerCase();
+        const badgeClass = stateValue === "up" ? "up" : stateValue === "down" ? "down" : "warn";
+        const statusCode = num(pick(item, "status_code", "statusCode"));
+        return `<article class="component-card">
+            <h3>${escapeHtml(pick(item, "name") || "")}</h3>
+            <span class="badge ${badgeClass}">${escapeHtml(stateValue)}</span>
+            <p>${escapeHtml(pick(item, "category") || "")}</p>
+            <p>${escapeHtml(pick(item, "method") || "GET")} - ${escapeHtml(pick(item, "target") || "")}</p>
+            <p>${fmt(pick(item, "latency_ms", "latencyMs"))} ms - ${statusCode ? `HTTP ${statusCode}` : escapeHtml(pick(item, "detail") || "")}</p>
+        </article>`;
+    }).join("") || `<article class="component-card"><h3>PCCE API</h3><span class="badge warn">disabled</span><p>Configure pcce.pcce-api monitors to enable API surveillance.</p></article>`;
+
+    qs("#pcceCapabilityList").innerHTML = state.pcceCapabilities.map(item =>
+        metricRow(pick(item, "category"), pick(item, "capability"))
+    ).join("");
 }
 
 function renderOperations() {

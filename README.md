@@ -59,6 +59,8 @@ Monitoring endpoints:
 
 - `GET /api/v1/monitoring/query-performance?limit=50`
 - `GET /api/v1/monitoring/logs?limit=80`
+- `GET /api/v1/pcce-api/capabilities`
+- `GET /api/v1/pcce-api/status`
 
 The dashboard consumes these endpoints from the Spring Boot App tab to show slow/failed database queries and recent application log lines.
 
@@ -80,6 +82,16 @@ $env:CVP_REPORTING_PASSWORD="..."
 
 Then edit `src/main/resources/application.yml` to enable component probes and set the real hostnames, ports, and URLs.
 
+For PCCE REST API surveillance, set:
+
+```powershell
+$env:PCCE_API_BASE_URL="https://your-pcce-aw-or-admin-host"
+$env:PCCE_API_USERNAME="pcce_api_reader"
+$env:PCCE_API_PASSWORD="..."
+```
+
+Then enable `pcce.pcce-api.enabled` and the required `pcce.pcce-api.monitors[*].enabled` entries. Keep these checks read-only and use a least-privilege PCCE API account.
+
 ## Important PCCE Notes
 
 The default SQL targets SQL Server AW/HDS tables such as `t_Skill_Group_Interval`, `t_Agent_Interval`, `t_Termination_Call_Detail`, `t_Skill_Group`, `t_Agent`, and `t_Person`. CVP Reporting is configured separately as IBM Informix using `jdbc:informix-sqli`.
@@ -91,6 +103,7 @@ The app includes the IBM Informix JDBC dependency `com.ibm.informix:jdbc`. If yo
 ## Cisco References
 
 - Cisco Packaged Contact Center Enterprise support and 12.6 documentation: https://www.cisco.com/c/en/us/support/customer-collaboration/packaged-contact-center-enterprise/series.html
+- Cisco Packaged Contact Center Enterprise DevNet REST API overview: https://developer.cisco.com/docs/packaged-contact-center/
 - Cisco Unified Customer Voice Portal support and reporting documentation: https://www.cisco.com/c/en/us/support/customer-collaboration/unified-customer-voice-portal/series.html
 - Practical call disposition code reference used for initial labels: https://comstice.com/blog/post/cisco-ucce-pcce-call-disposition-codes
 
@@ -110,6 +123,14 @@ If a TCP probe times out, verify the exact listener port from Cisco service conf
 Dropped calls are conservatively classified with `t_Termination_Call_Detail.CallDisposition IN (1, 2, 3, 4, 5, 6, 7, 10, 19)`. Use `/api/v1/calls/disposition-breakdown` to see your live HDS distribution before finalizing the bank's production definition.
 
 Fields such as `first_call_resolution`, `csat_score`, `adherence_pct`, and some IVR containment logic usually require WFM/QA/survey integrations or customer-specific CVP application events. They are included in the API contract and default to `null` where the Cisco historical tables do not directly provide them.
+
+The default `pcce.queries.ivr-containment` is intentionally a safe no-data Informix query. After confirming your CVP Reporting schema, override it with the bank-approved query. Useful discovery calls:
+
+```powershell
+curl.exe -u admin:change-me "http://localhost:8080/api/v1/admin/diagnostics/cvp-reporting/tables?namePattern=%25call%25"
+curl.exe -u admin:change-me "http://localhost:8080/api/v1/admin/diagnostics/cvp-reporting/columns?tablePattern=%25call%25&columnPattern=%25start%25"
+curl.exe -u admin:change-me "http://localhost:8080/api/v1/admin/diagnostics/cvp-reporting/columns?tablePattern=%25call%25&columnPattern=%25end%25"
+```
 
 ## Run
 
