@@ -73,9 +73,6 @@ public class OperationsService {
     }
 
     public ProductionAssessment lastAssessment() {
-        if (lastAssessment == null) {
-            return assess(LocalDate.now(), LocalDate.now());
-        }
         return lastAssessment;
     }
 

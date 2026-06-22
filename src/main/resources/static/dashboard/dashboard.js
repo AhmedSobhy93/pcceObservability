@@ -74,17 +74,24 @@ function seconds(value) {
     return `${Math.round(num(value))}`;
 }
 
+function metricSeconds(value) {
+    return value === null || value === undefined ? "--" : `${seconds(value)} sec`;
+}
+
 function dateParams() {
     return `from=${qs("#fromDate").value}&to=${qs("#toDate").value}`;
 }
 
 async function api(path, options = {}) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), options.timeoutMs || 12000);
     const response = await fetch(path, {
         credentials: "same-origin",
         method: options.method || "GET",
         headers: options.body ? { "Content-Type": "application/json" } : undefined,
-        body: options.body
-    });
+        body: options.body,
+        signal: controller.signal
+    }).finally(() => clearTimeout(timeout));
     if (!response.ok) {
         const text = await response.text();
         throw new Error(`${response.status} ${response.statusText}: ${text.slice(0, 220)}`);
@@ -92,13 +99,13 @@ async function api(path, options = {}) {
     return response.json();
 }
 
-async function safeLoad(key, path, fallback) {
+async function safeLoad(key, path, fallback, options = {}) {
     try {
-        state[key] = await api(path);
+        state[key] = await api(path, options);
         return null;
     } catch (error) {
         state[key] = fallback;
-        return `${key}: ${error.message}`;
+        return `${key}: ${error.name === "AbortError" ? "request timed out" : error.message}`;
     }
 }
 
@@ -106,15 +113,21 @@ async function refresh() {
     setStatus([{ text: "Refreshing live data...", level: "neutral" }]);
     const params = dateParams();
     const errors = [];
-    const loads = [
+    const coreLoads = [
         safeLoad("user", "/api/v1/auth/me", null),
-        safeLoad("calls", `/api/v1/metrics/calls?${params}`, []),
-        safeLoad("callTypes", `/api/v1/metrics/call-types?${params}`, []),
-        safeLoad("agents", `/api/v1/agents/stats?${params}`, []),
+        safeLoad("calls", `/api/v1/metrics/calls?${params}`, [], { timeoutMs: 15000 }),
+        safeLoad("callTypes", `/api/v1/metrics/call-types?${params}`, [], { timeoutMs: 15000 }),
+        safeLoad("agents", `/api/v1/agents/stats?${params}`, [], { timeoutMs: 15000 }),
         safeLoad("drops", `/api/v1/calls/dropped?${params}`, []),
         safeLoad("ivr", `/api/v1/metrics/ivr-containment?${params}`, []),
-        safeLoad("components", "/api/v1/components/status", []),
-        safeLoad("assessment", `/api/v1/operations/assessment?${params}`, null),
+        safeLoad("components", "/api/v1/components/status", [], { timeoutMs: 16000 })
+    ];
+    const coreResults = await Promise.all(coreLoads);
+    errors.push(...coreResults.filter(Boolean));
+    renderAll(errors);
+
+    const supportLoads = [
+        safeLoad("assessment", "/api/v1/operations/assessment/last", null, { timeoutMs: 8000 }),
         safeLoad("queryPerformance", "/api/v1/monitoring/query-performance?limit=50", []),
         safeLoad("pcceApiStatus", "/api/v1/pcce-api/status", []),
         safeLoad("pcceCapabilities", "/api/v1/pcce-api/capabilities", []),
@@ -123,7 +136,7 @@ async function refresh() {
         safeLoad("rtmtCapabilities", "/api/v1/pcce-api/rtmt-capabilities", []),
         safeLoad("spogCapabilities", "/api/v1/pcce-api/spog-capabilities", [])
     ];
-    const results = await Promise.all(loads);
+    const results = await Promise.all(supportLoads);
     errors.push(...results.filter(Boolean));
     if (hasPermission("SOLUTION_ADMIN")) {
         const logError = await safeLoad("logs", "/api/v1/monitoring/logs?limit=80", []);
@@ -176,6 +189,8 @@ function renderKpis() {
     qs("#trendDropped").textContent = dropped ? "Disposition based" : "Not configured";
     qs("#kpiService").textContent = pct(service);
     qs("#kpiAht").textContent = seconds(aht);
+    qs("#trendService").textContent = service === null ? "Interval data unavailable" : "Target tracked";
+    qs("#kpiAht").nextElementSibling.textContent = aht === null ? "Interval data unavailable" : "Seconds";
     qs("#chartRange").textContent = `${qs("#fromDate").value} to ${qs("#toDate").value}`;
 }
 
@@ -212,7 +227,7 @@ function renderBusiness() {
         ["Calls Abandoned", fmt(sum(state.calls, "calls_abandoned", "callsAbandoned"))],
         ["Dropped Calls", fmt(sum(state.drops, "dropped_calls", "droppedCalls"))],
         ["Service Level", pct(weightedAverage(state.calls, "service_level_pct", "serviceLevelPct", "calls_offered", "callsOffered"))],
-        ["Average Speed Answer", seconds(weightedAverage(state.calls, "avg_speed_answer", "avgSpeedAnswer", "calls_handled", "callsHandled")) + " sec"]
+        ["Average Speed Answer", metricSeconds(weightedAverage(state.calls, "avg_speed_answer", "avgSpeedAnswer", "calls_handled", "callsHandled"))]
     ];
     qs("#businessMetrics").innerHTML = rows.map(([label, value]) => metricRow(label, value)).join("");
 
@@ -233,7 +248,7 @@ function renderAgents() {
         const occupancy = pick(agent, "occupancy_pct", "occupancyPct");
         const adherence = pick(agent, "adherence_pct", "adherencePct");
         return `<tr>
-            <td><strong>${escapeHtml(pick(agent, "agent_name", "agentName") || "")}</strong><span class="subline">${escapeHtml(pick(agent, "agent_id", "agentId") || "")} · ${escapeHtml(pick(agent, "team") || "UNKNOWN")}</span></td>
+            <td><strong>${escapeHtml(pick(agent, "agent_name", "agentName") || "")}</strong><span class="subline">${escapeHtml(pick(agent, "agent_id", "agentId") || "")} - ${escapeHtml(pick(agent, "team") || "UNKNOWN")}</span></td>
             <td><span class="badge ${status}">${escapeHtml(status.replace("_", " "))}</span></td>
             <td>${fmt(pick(agent, "calls_handled", "callsHandled"))}</td>
             <td>${seconds(pick(agent, "avg_handle_time", "avgHandleTime"))}</td>
@@ -552,7 +567,7 @@ function renderCallFunnel() {
         <strong>${value === null ? "--" : fmt(value)}</strong>
         <span>${escapeHtml(label)}</span>
         <small>${percent === null ? "--" : pct(percent)}</small>
-    </div>${index < items.length - 1 ? `<b class="funnel-arrow">→</b>` : ""}`).join("");
+    </div>${index < items.length - 1 ? `<b class="funnel-arrow">-&gt;</b>` : ""}`).join("");
 }
 
 function abandonmentByHour() {
