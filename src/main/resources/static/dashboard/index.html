@@ -17,19 +17,19 @@
     </div>
 
     <nav class="nav">
-        <button class="nav-item active" data-view="overview"><span class="icon">▦</span>Overview</button>
-        <button class="nav-item" data-view="business"><span class="icon">⌁</span>Business Metrics</button>
-        <button class="nav-item" data-view="agents"><span class="icon">♙</span>Agent Performance</button>
-        <button class="nav-item" data-view="calls"><span class="icon">☏</span>Call Analytics</button>
-        <button class="nav-item" data-view="system"><span class="icon">▤</span>System Health</button>
-        <button class="nav-item" data-view="integration"><span class="icon">⌬</span>PCCE Integration</button>
-        <button class="nav-item" data-view="app"><span class="icon">◈</span>Spring Boot App</button>
-        <button class="nav-item" data-view="plan"><span class="icon">☷</span>Project Plan</button>
+        <button class="nav-item active" data-view="overview"><span class="icon">OV</span>Overview</button>
+        <button class="nav-item" data-view="business"><span class="icon">BM</span>Business Metrics</button>
+        <button class="nav-item" data-view="agents"><span class="icon">AP</span>Agent Performance</button>
+        <button class="nav-item" data-view="calls"><span class="icon">CA</span>Call Analytics</button>
+        <button class="nav-item" data-view="system"><span class="icon">SH</span>System Health</button>
+        <button class="nav-item" data-view="integration"><span class="icon">PI</span>PCCE Integration</button>
+        <button class="nav-item" data-view="app"><span class="icon">SB</span>Spring Boot App</button>
+        <button class="nav-item" data-view="plan"><span class="icon">PL</span>Project Plan</button>
     </nav>
 
     <div class="sidebar-footer">
-        <button class="nav-item muted" id="logoutBtn"><span class="icon">↳</span>Logout</button>
-        <button class="nav-item muted" id="collapseBtn"><span class="icon">‹</span>Collapse</button>
+        <button class="nav-item muted" id="logoutBtn"><span class="icon">LO</span>Logout</button>
+        <button class="nav-item muted" id="collapseBtn"><span class="icon">&lt;</span>Collapse</button>
     </div>
 </aside>
 
@@ -48,7 +48,7 @@
                 <span>To</span>
                 <input type="date" id="toDate">
             </label>
-            <button class="primary-btn" id="refreshBtn"><span>↻</span>Refresh</button>
+            <button class="primary-btn" id="refreshBtn">Refresh</button>
         </div>
     </header>
 
@@ -58,12 +58,12 @@
 
     <section class="view active" id="view-overview">
         <div class="kpi-grid">
-            <article class="kpi-card"><div class="kpi-top"><span>Calls Offered</span><b class="teal">☏</b></div><strong id="kpiOffered">--</strong><small id="trendOffered">Live HDS</small></article>
-            <article class="kpi-card"><div class="kpi-top"><span>Calls Handled</span><b class="green">✓</b></div><strong id="kpiHandled">--</strong><small id="trendHandled">Live HDS</small></article>
-            <article class="kpi-card"><div class="kpi-top"><span>Abandoned</span><b class="red">⌁</b></div><strong id="kpiAbandoned">--</strong><small id="trendAbandoned">Live HDS</small></article>
-            <article class="kpi-card"><div class="kpi-top"><span>Service Level</span><b class="blue">↗</b></div><strong id="kpiService">--</strong><small id="trendService">Target tracked</small></article>
-            <article class="kpi-card"><div class="kpi-top"><span>Avg Handle Time</span><b class="amber">◷</b></div><strong id="kpiAht">--</strong><small>Seconds</small></article>
-            <article class="kpi-card"><div class="kpi-top"><span>Dropped Calls</span><b class="purple">!</b></div><strong id="kpiDropped">--</strong><small id="trendDropped">Disposition based</small></article>
+            <article class="kpi-card"><div class="kpi-top"><span>Calls Offered</span><b class="teal">CO</b></div><strong id="kpiOffered">--</strong><small id="trendOffered">Live HDS</small></article>
+            <article class="kpi-card"><div class="kpi-top"><span>Calls Handled</span><b class="green">CH</b></div><strong id="kpiHandled">--</strong><small id="trendHandled">Live HDS</small></article>
+            <article class="kpi-card"><div class="kpi-top"><span>Abandoned</span><b class="red">AB</b></div><strong id="kpiAbandoned">--</strong><small id="trendAbandoned">Live HDS</small></article>
+            <article class="kpi-card"><div class="kpi-top"><span>Service Level</span><b class="blue">SL</b></div><strong id="kpiService">--</strong><small id="trendService">Target tracked</small></article>
+            <article class="kpi-card"><div class="kpi-top"><span>Avg Handle Time</span><b class="amber">AHT</b></div><strong id="kpiAht">--</strong><small>Seconds</small></article>
+            <article class="kpi-card"><div class="kpi-top"><span>Dropped Calls</span><b class="purple">DC</b></div><strong id="kpiDropped">--</strong><small id="trendDropped">Disposition based</small></article>
         </div>
 
         <div class="content-grid">

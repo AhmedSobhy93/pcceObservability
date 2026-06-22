@@ -4,6 +4,7 @@ import java.time.Instant;
 import java.util.Map;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.BadSqlGrammarException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -29,6 +30,12 @@ public class ApiExceptionHandler {
     ResponseEntity<Map<String, Object>> sqlProblem(BadSqlGrammarException ex) {
         return error(HttpStatus.INTERNAL_SERVER_ERROR,
                 "SQL failed. Check the configured PCCE/CVP query and database schema: " + ex.getMostSpecificCause().getMessage());
+    }
+
+    @ExceptionHandler(DataAccessException.class)
+    ResponseEntity<Map<String, Object>> dataAccessProblem(DataAccessException ex) {
+        return error(HttpStatus.INTERNAL_SERVER_ERROR,
+                "Database access failed. Root cause: " + ex.getMostSpecificCause().getMessage());
     }
 
     @ExceptionHandler(AccessDeniedException.class)

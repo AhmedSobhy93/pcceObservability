@@ -43,6 +43,9 @@ Admin endpoints:
 - `PUT /api/v1/admin/users/{username}`
 - `GET /api/v1/admin/components`
 - `PUT /api/v1/admin/components/{name}`
+- `GET /api/v1/admin/diagnostics/hds/tables?namePattern=%25Skill%25`
+- `GET /api/v1/admin/diagnostics/hds/tables/t_Skill_Group_Interval/columns`
+- `GET /api/v1/admin/diagnostics/cvp-reporting/tables?namePattern=%25call%25`
 
 Runtime admin updates take effect immediately. Store final production configuration in environment variables, `application.yml`, or a dedicated configuration database so changes survive restarts.
 

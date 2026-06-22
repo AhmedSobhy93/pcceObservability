@@ -113,6 +113,7 @@ public class PcceProperties {
         private int port;
         private String url;
         private Duration timeout = Duration.ofSeconds(3);
+        private boolean trustAllCertificates;
 
         public ComponentName getName() {
             return name;
@@ -168,6 +169,14 @@ public class PcceProperties {
 
         public void setTimeout(Duration timeout) {
             this.timeout = timeout;
+        }
+
+        public boolean isTrustAllCertificates() {
+            return trustAllCertificates;
+        }
+
+        public void setTrustAllCertificates(boolean trustAllCertificates) {
+            this.trustAllCertificates = trustAllCertificates;
         }
     }
 
@@ -427,16 +436,15 @@ public class PcceProperties {
                     SUM(COALESCE(sgi.AbandonRingCalls, 0) + COALESCE(sgi.AbandonHoldCalls, 0)) AS calls_abandoned,
                     CAST(100.0 * SUM(COALESCE(sgi.ServiceLevelCalls, 0))
                         / NULLIF(SUM(COALESCE(sgi.ServiceLevelCallsOffered, 0)), 0) AS decimal(9,2)) AS service_level_pct,
-                    CAST(SUM(COALESCE(sgi.HandledCallsTalkTime, 0) + COALESCE(sgi.HandledCallsHoldTime, 0) + COALESCE(sgi.WorkReadyTime, 0))
+                    CAST(SUM(COALESCE(sgi.HandledCallsTalkTime, 0) + COALESCE(sgi.WorkReadyTime, 0))
                         / NULLIF(SUM(COALESCE(sgi.CallsHandled, 0)), 0) AS decimal(18,2)) AS avg_handle_time,
                     CAST(SUM(COALESCE(sgi.HandledCallsTalkTime, 0)) / NULLIF(SUM(COALESCE(sgi.CallsHandled, 0)), 0) AS decimal(18,2)) AS avg_talk_time,
-                    CAST(SUM(COALESCE(sgi.HandledCallsHoldTime, 0)) / NULLIF(SUM(COALESCE(sgi.CallsHandled, 0)), 0) AS decimal(18,2)) AS avg_hold_time,
+                    CAST(0 AS decimal(18,2)) AS avg_hold_time,
                     CAST(SUM(COALESCE(sgi.WorkReadyTime, 0)) / NULLIF(SUM(COALESCE(sgi.CallsHandled, 0)), 0) AS decimal(18,2)) AS avg_wrap_time,
                     CAST(SUM(COALESCE(sgi.AnswerWaitTime, 0)) / NULLIF(SUM(COALESCE(sgi.CallsHandled, 0)), 0) AS decimal(18,2)) AS avg_speed_answer,
-                    CAST(SUM(COALESCE(sgi.RouterQueueWaitTime, 0)) / NULLIF(SUM(COALESCE(sgi.CallsOffered, 0)), 0) AS decimal(18,2)) AS avg_queue_time,
-                    MAX(COALESCE(sgi.MaxQueueTime, 0)) AS max_queue_time,
-                    CAST(100.0 * SUM(COALESCE(sgi.TransferInCalls, 0) + COALESCE(sgi.TransferOutCalls, 0))
-                        / NULLIF(SUM(COALESCE(sgi.CallsHandled, 0)), 0) AS decimal(9,2)) AS transfer_rate,
+                    CAST(SUM(COALESCE(sgi.AnswerWaitTime, 0)) / NULLIF(SUM(COALESCE(sgi.CallsOffered, 0)), 0) AS decimal(18,2)) AS avg_queue_time,
+                    CAST(0 AS decimal(18,2)) AS max_queue_time,
+                    CAST(NULL AS decimal(9,2)) AS transfer_rate,
                     CAST(NULL AS decimal(9,2)) AS first_call_resolution,
                     CAST(NULL AS decimal(9,2)) AS ivr_containment_rate,
                     CAST(NULL AS decimal(9,2)) AS csat_score
