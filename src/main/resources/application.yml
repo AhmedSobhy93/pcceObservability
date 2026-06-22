@@ -62,69 +62,66 @@ pcce:
 
   datasources:
     aw:
-      url: ${PCCE_AW_JDBC_URL:jdbc:sqlserver://aw-host:1433;databaseName=awdb;encrypt=true;trustServerCertificate=true}
-      username: ${PCCE_AW_USERNAME:pcce_reader}
-      password: ${PCCE_AW_PASSWORD:change-me}
+      url: ${PCCE_AW_JDBC_URL:jdbc:sqlserver://10.10.90.193:1433;databaseName=pcce_awdb;encrypt=true;trustServerCertificate=true}
+      username: ${PCCE_AW_USERNAME:obser_user}
+      password: ${PCCE_AW_PASSWORD:MDI@bank1}
       driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
     hds:
-      url: ${PCCE_HDS_JDBC_URL:jdbc:sqlserver://hds-host:1433;databaseName=ucce_hds;encrypt=true;trustServerCertificate=true}
-      username: ${PCCE_HDS_USERNAME:pcce_reader}
-      password: ${PCCE_HDS_PASSWORD:change-me}
+      url: ${PCCE_HDS_JDBC_URL:jdbc:sqlserver://10.10.90.193:1433;databaseName=pcce_hds;encrypt=true;trustServerCertificate=true}
+      username: ${PCCE_HDS_USERNAME:obser_user}
+      password: ${PCCE_HDS_PASSWORD:MDI@bank1}
       driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
     cvp-reporting:
-      url: ${CVP_REPORTING_JDBC_URL:jdbc:informix-sqli://cvp-reporting-host:1526/cvp_data:INFORMIXSERVER=cvp_report;DELIMIDENT=y;}
-      username: ${CVP_REPORTING_USERNAME:cvp_reader}
-      password: ${CVP_REPORTING_PASSWORD:change-me}
+      url: ${CVP_REPORTING_JDBC_URL:jdbc:informix-sqli://10.10.90.198:1526/cvp_data:INFORMIXSERVER=cvp;DELIMIDENT=y;}
+      username: ${CVP_REPORTING_USERNAME:cvp_dbuser}
+      password: ${CVP_REPORTING_PASSWORD:MDI@bank12345}
       driver-class-name: com.informix.jdbc.IfxDriver
 
   components:
     - name: ICM_Router
-      enabled: false
+      enabled: true
       probe: TCP
-      host: router-a.example.local
+      host: 10.10.90.191
       port: 4000
     - name: ICM_Logger
-      enabled: false
+      enabled: true
       probe: JDBC_AW
     - name: CVP_CallServer
-      enabled: false
+      enabled: true
       probe: HTTP
-      url: https://cvp-callserver.example.local:8000/cvp/diag
-      trust-all-certificates: false
+      url: https://10.10.90.194.example.local:8000/cvp/diag
     - name: CVP_ReportingServer
-      enabled: false
+      enabled: true
       probe: JDBC_CVP_REPORTING
     - name: CTI_Server
-      enabled: false
+      enabled: true
       probe: TCP
-      host: ctisvr-a.example.local
+      host: 10.10.90.195
       port: 42027
     - name: PG_CUCM
-      enabled: false
+      enabled: true
       probe: TCP
-      host: pg-cucm-a.example.local
+      host: 10.10.90.192
       port: 42028
     - name: PG_CVP
-      enabled: false
+      enabled: true
       probe: TCP
-      host: pg-cvp-a.example.local
+      host: 10.10.90.192
       port: 42029
     - name: VoIP_Gateway
-      enabled: false
+      enabled: true
       probe: TCP
-      host: voice-gw.example.local
+      host: 10.10.141.60
       port: 5060
     - name: Finesse
-      enabled: false
+      enabled: true
       probe: HTTP
-      url: https://finesse.example.local/desktop
-      trust-all-certificates: false
+      url: https://10.10.90.195/desktop
     - name: MediaSense
-      enabled: false
+      enabled: true
       probe: HTTP
       url: https://mediasense.example.local
     - name: CUIC
-      enabled: false
+      enabled: true
       probe: HTTP
-      url: https://cuic.example.local/cuic
-      trust-all-certificates: false
+      url: https://vssitcuic01.dev.mdi/cuic
