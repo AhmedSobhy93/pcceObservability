@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>PCCE 12.6.2 Dashboard</title>
+    <link rel="stylesheet" href="/dashboard/styles.css">
+</head>
+<body>
+<aside class="sidebar">
+    <div class="brand">
+        <div class="brand-mark">CC</div>
+        <div>
+            <div class="brand-title">PCCE 12.6.2</div>
+            <div class="brand-subtitle">Reporting Dashboard</div>
+        </div>
+    </div>
+
+    <nav class="nav">
+        <button class="nav-item active" data-view="overview"><span class="icon">▦</span>Overview</button>
+        <button class="nav-item" data-view="business"><span class="icon">⌁</span>Business Metrics</button>
+        <button class="nav-item" data-view="agents"><span class="icon">♙</span>Agent Performance</button>
+        <button class="nav-item" data-view="calls"><span class="icon">☏</span>Call Analytics</button>
+        <button class="nav-item" data-view="system"><span class="icon">▤</span>System Health</button>
+        <button class="nav-item" data-view="integration"><span class="icon">⌬</span>PCCE Integration</button>
+        <button class="nav-item" data-view="app"><span class="icon">◈</span>Spring Boot App</button>
+        <button class="nav-item" data-view="plan"><span class="icon">☷</span>Project Plan</button>
+    </nav>
+
+    <div class="sidebar-footer">
+        <button class="nav-item muted" id="logoutBtn"><span class="icon">↳</span>Logout</button>
+        <button class="nav-item muted" id="collapseBtn"><span class="icon">‹</span>Collapse</button>
+    </div>
+</aside>
+
+<main class="shell">
+    <header class="topbar">
+        <div>
+            <h1 id="pageTitle">Dashboard Overview</h1>
+            <p id="pageSubtitle">Cisco PCCE 12.6.2 - Real-time Contact Center Analytics</p>
+        </div>
+        <div class="toolbar">
+            <label class="date-field">
+                <span>From</span>
+                <input type="date" id="fromDate">
+            </label>
+            <label class="date-field">
+                <span>To</span>
+                <input type="date" id="toDate">
+            </label>
+            <button class="primary-btn" id="refreshBtn"><span>↻</span>Refresh</button>
+        </div>
+    </header>
+
+    <section class="status-strip" id="statusStrip">
+        <div class="status-pill neutral">Loading dashboard...</div>
+    </section>
+
+    <section class="view active" id="view-overview">
+        <div class="kpi-grid">
+            <article class="kpi-card"><div class="kpi-top"><span>Calls Offered</span><b class="teal">☏</b></div><strong id="kpiOffered">--</strong><small id="trendOffered">Live HDS</small></article>
+            <article class="kpi-card"><div class="kpi-top"><span>Calls Handled</span><b class="green">✓</b></div><strong id="kpiHandled">--</strong><small id="trendHandled">Live HDS</small></article>
+            <article class="kpi-card"><div class="kpi-top"><span>Abandoned</span><b class="red">⌁</b></div><strong id="kpiAbandoned">--</strong><small id="trendAbandoned">Live HDS</small></article>
+            <article class="kpi-card"><div class="kpi-top"><span>Service Level</span><b class="blue">↗</b></div><strong id="kpiService">--</strong><small id="trendService">Target tracked</small></article>
+            <article class="kpi-card"><div class="kpi-top"><span>Avg Handle Time</span><b class="amber">◷</b></div><strong id="kpiAht">--</strong><small>Seconds</small></article>
+            <article class="kpi-card"><div class="kpi-top"><span>Dropped Calls</span><b class="purple">!</b></div><strong id="kpiDropped">--</strong><small id="trendDropped">Disposition based</small></article>
+        </div>
+
+        <div class="content-grid">
+            <article class="panel wide">
+                <div class="panel-head"><h2>Call Volume by Hour</h2><span id="chartRange"></span></div>
+                <canvas id="volumeChart" height="270"></canvas>
+            </article>
+            <article class="panel">
+                <div class="panel-head"><h2>Calls by Skill Group</h2></div>
+                <canvas id="skillChart" height="270"></canvas>
+                <div class="legend" id="skillLegend"></div>
+            </article>
+        </div>
+    </section>
+
+    <section class="view" id="view-business">
+        <div class="content-grid">
+            <article class="panel wide"><h2>Business Metrics</h2><div class="metric-list" id="businessMetrics"></div></article>
+            <article class="panel"><h2>IVR Containment</h2><canvas id="ivrChart" height="250"></canvas></article>
+        </div>
+    </section>
+
+    <section class="view" id="view-agents">
+        <article class="panel full">
+            <div class="panel-head"><h2>Agent Performance</h2><span id="agentCount"></span></div>
+            <div class="table-wrap"><table><thead><tr><th>Agent</th><th>ID</th><th>Team</th><th>Skill</th><th>Status</th><th>Handled</th><th>AHT</th><th>Occupancy</th></tr></thead><tbody id="agentsTable"></tbody></table></div>
+        </article>
+    </section>
+
+    <section class="view" id="view-calls">
+        <div class="content-grid">
+            <article class="panel wide"><h2>Dropped Calls by Hour</h2><canvas id="dropsChart" height="260"></canvas></article>
+            <article class="panel"><h2>Drop Hotspots</h2><div class="metric-list" id="dropList"></div></article>
+        </div>
+    </section>
+
+    <section class="view" id="view-system">
+        <article class="panel full">
+            <div class="panel-head"><h2>System Health</h2><span id="componentSummary"></span></div>
+            <div class="component-grid" id="componentGrid"></div>
+        </article>
+    </section>
+
+    <section class="view" id="view-integration">
+        <div class="content-grid">
+            <article class="panel wide"><h2>PCCE Integration</h2><div class="metric-list" id="integrationList"></div></article>
+            <article class="panel"><h2>Current User</h2><pre id="userBox"></pre></article>
+        </div>
+    </section>
+
+    <section class="view" id="view-app">
+        <div class="content-grid">
+            <article class="panel wide"><h2>Operational Alerts</h2><div class="alert-list" id="alertList"></div></article>
+            <article class="panel"><h2>Readiness</h2><div class="metric-list" id="readinessList"></div></article>
+        </div>
+    </section>
+
+    <section class="view" id="view-plan">
+        <article class="panel full">
+            <h2>Production Plan</h2>
+            <div class="timeline" id="planList"></div>
+        </article>
+    </section>
+</main>
+
+<script src="/dashboard/dashboard.js"></script>
+</body>
+</html>

@@ -52,9 +52,9 @@ public class ComponentStatusService {
             switch (target.getProbe()) {
                 case TCP -> tcpProbe(target);
                 case HTTP -> httpProbe(target);
-                case JDBC_AW -> jdbcProbe(awJdbcTemplate);
-                case JDBC_HDS -> jdbcProbe(hdsJdbcTemplate);
-                case JDBC_CVP_REPORTING -> jdbcProbe(cvpReportingJdbcTemplate);
+                case JDBC_AW -> jdbcProbe(awJdbcTemplate, "SELECT 1");
+                case JDBC_HDS -> jdbcProbe(hdsJdbcTemplate, "SELECT 1");
+                case JDBC_CVP_REPORTING -> jdbcProbe(cvpReportingJdbcTemplate, "SELECT FIRST 1 1 FROM systables");
             }
             return new ComponentStatus(target.getName(), ComponentState.UP, target.getProbe(), describeTarget(target),
                     elapsedMs(start), "OK", checkedAt);
@@ -87,8 +87,8 @@ public class ComponentStatusService {
         }
     }
 
-    private void jdbcProbe(JdbcTemplate jdbcTemplate) {
-        jdbcTemplate.queryForObject("SELECT 1", Integer.class);
+    private void jdbcProbe(JdbcTemplate jdbcTemplate, String sql) {
+        jdbcTemplate.queryForObject(sql, Integer.class);
     }
 
     private String describeTarget(ComponentTarget target) {

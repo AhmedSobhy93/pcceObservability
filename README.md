@@ -11,6 +11,7 @@ Spring Boot API for Cisco PCCE 12.6.2 reporting across AW/HDS/CVP Reporting data
 - `GET /api/v1/components/status`
 - `GET /api/v1/summary?from=2026-06-01&to=2026-06-15`
 - OpenAPI UI: `/swagger-ui/index.html`
+- Dashboard UI: `/dashboard`
 
 JSON uses snake_case, matching the metric names you provided.
 
