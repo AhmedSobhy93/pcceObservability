@@ -94,7 +94,6 @@ async function refresh() {
     const errors = [];
     const loads = [
         safeLoad("user", "/api/v1/auth/me", null),
-        safeLoad("summary", `/api/v1/summary?${params}`, null),
         safeLoad("calls", `/api/v1/metrics/calls?${params}`, []),
         safeLoad("agents", `/api/v1/agents/stats?${params}`, []),
         safeLoad("drops", `/api/v1/calls/dropped?${params}`, []),
@@ -133,13 +132,12 @@ function renderAll(errors) {
 }
 
 function renderKpis() {
-    const summary = state.summary || {};
-    const offered = pick(summary, "calls_offered", "callsOffered");
-    const handled = pick(summary, "calls_handled", "callsHandled");
-    const abandoned = pick(summary, "calls_abandoned", "callsAbandoned");
-    const dropped = pick(summary, "dropped_calls", "droppedCalls");
-    const service = pick(summary, "service_level_pct", "serviceLevelPct");
-    const aht = pick(summary, "avg_handle_time", "avgHandleTime");
+    const offered = sum(state.calls, "calls_offered", "callsOffered");
+    const handled = sum(state.calls, "calls_handled", "callsHandled");
+    const abandoned = sum(state.calls, "calls_abandoned", "callsAbandoned");
+    const dropped = sum(state.drops, "dropped_calls", "droppedCalls");
+    const service = weightedAverage(state.calls, "service_level_pct", "serviceLevelPct", "calls_offered", "callsOffered");
+    const aht = weightedAverage(state.calls, "avg_handle_time", "avgHandleTime", "calls_handled", "callsHandled");
 
     qs("#kpiOffered").textContent = fmt(offered);
     qs("#kpiHandled").textContent = fmt(handled);
@@ -176,14 +174,13 @@ function renderCharts() {
 }
 
 function renderBusiness() {
-    const summary = state.summary || {};
     const rows = [
-        ["Calls Offered", fmt(pick(summary, "calls_offered", "callsOffered"))],
-        ["Calls Handled", fmt(pick(summary, "calls_handled", "callsHandled"))],
-        ["Calls Abandoned", fmt(pick(summary, "calls_abandoned", "callsAbandoned"))],
-        ["Dropped Calls", fmt(pick(summary, "dropped_calls", "droppedCalls"))],
-        ["Service Level", pct(pick(summary, "service_level_pct", "serviceLevelPct"))],
-        ["Average Speed Answer", seconds(pick(summary, "avg_speed_answer", "avgSpeedAnswer")) + " sec"]
+        ["Calls Offered", fmt(sum(state.calls, "calls_offered", "callsOffered"))],
+        ["Calls Handled", fmt(sum(state.calls, "calls_handled", "callsHandled"))],
+        ["Calls Abandoned", fmt(sum(state.calls, "calls_abandoned", "callsAbandoned"))],
+        ["Dropped Calls", fmt(sum(state.drops, "dropped_calls", "droppedCalls"))],
+        ["Service Level", pct(weightedAverage(state.calls, "service_level_pct", "serviceLevelPct", "calls_offered", "callsOffered"))],
+        ["Average Speed Answer", seconds(weightedAverage(state.calls, "avg_speed_answer", "avgSpeedAnswer", "calls_handled", "callsHandled")) + " sec"]
     ];
     qs("#businessMetrics").innerHTML = rows.map(([label, value]) => metricRow(label, value)).join("");
 }
@@ -283,6 +280,24 @@ function groupByHour(rows) {
     const labels = [...map.keys()].sort((a, b) => a - b).map(hour => `${hour}:00`);
     const values = [...map.entries()].sort((a, b) => a[0] - b[0]).map(([, value]) => value);
     return { labels, offered: values.map(v => v.offered), handled: values.map(v => v.handled) };
+}
+
+function sum(rows, ...names) {
+    return rows.reduce((total, row) => total + num(pick(row, ...names)), 0);
+}
+
+function weightedAverage(rows, valueSnake, valueCamel, weightSnake, weightCamel) {
+    let weighted = 0;
+    let totalWeight = 0;
+    rows.forEach(row => {
+        const value = pick(row, valueSnake, valueCamel);
+        const weight = num(pick(row, weightSnake, weightCamel));
+        if (value !== null && value !== undefined && weight > 0) {
+            weighted += num(value) * weight;
+            totalWeight += weight;
+        }
+    });
+    return totalWeight ? weighted / totalWeight : null;
 }
 
 function groupDropsByHour(rows) {

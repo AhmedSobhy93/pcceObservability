@@ -2,6 +2,8 @@ package com.example.pcceobservability.service;
 
 import com.example.pcceobservability.model.DispositionCode;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -38,5 +40,11 @@ public class DispositionCodeService {
 
     public List<DispositionCode> codes() {
         return CODES;
+    }
+
+    public DispositionCode find(int code) {
+        Map<Integer, DispositionCode> byCode = CODES.stream()
+                .collect(Collectors.toMap(DispositionCode::code, item -> item, (left, right) -> left));
+        return byCode.getOrDefault(code, new DispositionCode(code, "Unknown", "unknown", false));
     }
 }

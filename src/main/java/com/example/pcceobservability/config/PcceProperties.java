@@ -23,6 +23,9 @@ public class PcceProperties {
     @Valid
     private Operations operations = new Operations();
 
+    @Valid
+    private Performance performance = new Performance();
+
     public Queries getQueries() {
         return queries;
     }
@@ -55,6 +58,14 @@ public class PcceProperties {
         this.operations = operations;
     }
 
+    public Performance getPerformance() {
+        return performance;
+    }
+
+    public void setPerformance(Performance performance) {
+        this.performance = performance;
+    }
+
     private static List<ComponentTarget> defaultComponents() {
         List<ComponentTarget> targets = new ArrayList<>();
         for (ComponentName name : ComponentName.values()) {
@@ -70,6 +81,7 @@ public class PcceProperties {
         private String callMetrics = DefaultSql.CALL_METRICS;
         private String agentStats = DefaultSql.AGENT_STATS;
         private String droppedCalls = DefaultSql.DROPPED_CALLS;
+        private String dispositionBreakdown = DefaultSql.DISPOSITION_BREAKDOWN;
         private String ivrContainment = DefaultSql.IVR_CONTAINMENT;
 
         public String getCallMetrics() {
@@ -94,6 +106,14 @@ public class PcceProperties {
 
         public void setDroppedCalls(String droppedCalls) {
             this.droppedCalls = droppedCalls;
+        }
+
+        public String getDispositionBreakdown() {
+            return dispositionBreakdown;
+        }
+
+        public void setDispositionBreakdown(String dispositionBreakdown) {
+            this.dispositionBreakdown = dispositionBreakdown;
         }
 
         public String getIvrContainment() {
@@ -328,6 +348,36 @@ public class PcceProperties {
         }
     }
 
+    public static class Performance {
+        private int jdbcQueryTimeoutSeconds = 30;
+        private long slowQueryWarningMs = 2000;
+        private long slowRequestWarningMs = 3000;
+
+        public int getJdbcQueryTimeoutSeconds() {
+            return jdbcQueryTimeoutSeconds;
+        }
+
+        public void setJdbcQueryTimeoutSeconds(int jdbcQueryTimeoutSeconds) {
+            this.jdbcQueryTimeoutSeconds = jdbcQueryTimeoutSeconds;
+        }
+
+        public long getSlowQueryWarningMs() {
+            return slowQueryWarningMs;
+        }
+
+        public void setSlowQueryWarningMs(long slowQueryWarningMs) {
+            this.slowQueryWarningMs = slowQueryWarningMs;
+        }
+
+        public long getSlowRequestWarningMs() {
+            return slowRequestWarningMs;
+        }
+
+        public void setSlowRequestWarningMs(long slowRequestWarningMs) {
+            this.slowRequestWarningMs = slowRequestWarningMs;
+        }
+    }
+
     public static class Security {
         private List<AppUser> users = defaultUsers();
 
@@ -494,22 +544,32 @@ public class PcceProperties {
                 FROM t_Termination_Call_Detail tcd
                 LEFT JOIN t_Skill_Group sg ON sg.SkillTargetID = tcd.SkillGroupSkillTargetID
                 WHERE tcd.DateTime >= ? AND tcd.DateTime < ?
-                  AND tcd.CallDisposition IN (3, 4, 5, 6, 7, 10, 19, 26, 27, 35, 36, 37, 39, 40, 41, 42, 52)
+                  AND tcd.CallDisposition IN (1, 2, 3, 4, 5, 6, 7, 10, 19)
                   AND (? IS NULL OR sg.EnterpriseName = ?)
                 GROUP BY CAST(tcd.DateTime AS date), DATEPART(hour, tcd.DateTime), COALESCE(sg.EnterpriseName, 'UNKNOWN')
                 ORDER BY [date], [hour], skill_group
                 """;
 
+        static final String DISPOSITION_BREAKDOWN = """
+                SELECT
+                    tcd.CallDisposition AS disposition_code,
+                    COUNT_BIG(*) AS calls
+                FROM t_Termination_Call_Detail tcd
+                WHERE tcd.DateTime >= ? AND tcd.DateTime < ?
+                GROUP BY tcd.CallDisposition
+                ORDER BY calls DESC
+                """;
+
         static final String IVR_CONTAINMENT = """
                 SELECT
-                    DATE(c.startdatetime) AS date,
-                    HOUR(c.startdatetime) AS hour,
+                    DATE(c.startdatetime) AS call_date,
+                    HOUR(c.startdatetime) AS call_hour,
                     CAST(100.0 * SUM(CASE WHEN c.EndingType = 'NORMAL' THEN 1 ELSE 0 END)
                         / NULLIF(COUNT(*), 0) AS DECIMAL(9,2)) AS ivr_containment_rate
-                FROM call c
+                FROM "call" c
                 WHERE c.startdatetime >= ? AND c.startdatetime < ?
                 GROUP BY DATE(c.startdatetime), HOUR(c.startdatetime)
-                ORDER BY date, hour
+                ORDER BY call_date, call_hour
                 """;
     }
 }

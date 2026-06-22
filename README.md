@@ -7,6 +7,7 @@ Spring Boot API for Cisco PCCE 12.6.2 reporting across AW/HDS/CVP Reporting data
 - `GET /api/v1/metrics/calls?from=2026-06-01&to=2026-06-15&skillGroup=Sales`
 - `GET /api/v1/agents/stats?from=2026-06-01&to=2026-06-15&agentId=jsmith`
 - `GET /api/v1/calls/dropped?from=2026-06-01&to=2026-06-15`
+- `GET /api/v1/calls/disposition-breakdown?from=2026-06-01&to=2026-06-15`
 - `GET /api/v1/metrics/ivr-containment?from=2026-06-01&to=2026-06-15`
 - `GET /api/v1/components/status`
 - `GET /api/v1/summary?from=2026-06-01&to=2026-06-15`
@@ -95,7 +96,7 @@ The app includes the IBM Informix JDBC dependency `com.ibm.informix:jdbc`. If yo
 
 If a TCP probe times out, verify the exact listener port from Cisco service configuration and Windows firewall. Do not mark Router/PG/CTI ports as failed until the port is confirmed to be open from the app host.
 
-Dropped calls are currently classified with `t_Termination_Call_Detail.CallDisposition IN (3, 13, 26, 27, 28, 29, 30)`. Confirm these disposition codes with your Cisco reporting dictionary and business definition of "dropped call" before operational use.
+Dropped calls are conservatively classified with `t_Termination_Call_Detail.CallDisposition IN (1, 2, 3, 4, 5, 6, 7, 10, 19)`. Use `/api/v1/calls/disposition-breakdown` to see your live HDS distribution before finalizing the bank's production definition.
 
 Fields such as `first_call_resolution`, `csat_score`, `adherence_pct`, and some IVR containment logic usually require WFM/QA/survey integrations or customer-specific CVP application events. They are included in the API contract and default to `null` where the Cisco historical tables do not directly provide them.
 

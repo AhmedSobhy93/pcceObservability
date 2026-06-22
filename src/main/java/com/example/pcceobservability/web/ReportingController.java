@@ -3,6 +3,7 @@ package com.example.pcceobservability.web;
 import com.example.pcceobservability.model.AgentStat;
 import com.example.pcceobservability.model.CallMetric;
 import com.example.pcceobservability.model.ContactCenterSummary;
+import com.example.pcceobservability.model.DispositionBreakdown;
 import com.example.pcceobservability.model.DroppedCallMetric;
 import com.example.pcceobservability.service.ReportingService;
 import com.example.pcceobservability.service.ReportingService.IvrContainmentMetric;
@@ -54,6 +55,14 @@ public class ReportingController {
             @RequestParam @NotNull @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
             @RequestParam(required = false) String skillGroup) {
         return reportingService.droppedCalls(from, to, skillGroup);
+    }
+
+    @GetMapping("/calls/disposition-breakdown")
+    @PreAuthorize("hasAuthority('PERM_DROPPED_CALLS_READ')")
+    public List<DispositionBreakdown> dispositionBreakdown(
+            @RequestParam @NotNull @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam @NotNull @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+        return reportingService.dispositionBreakdown(from, to);
     }
 
     @GetMapping("/metrics/ivr-containment")

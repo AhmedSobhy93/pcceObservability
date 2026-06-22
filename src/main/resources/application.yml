@@ -14,6 +14,11 @@ management:
         include: health,info,metrics
 
 pcce:
+  performance:
+    jdbc-query-timeout-seconds: 30
+    slow-query-warning-ms: 2000
+    slow-request-warning-ms: 3000
+
   operations:
     scheduled-assessment-enabled: true
     assessment-fixed-delay-ms: 300000

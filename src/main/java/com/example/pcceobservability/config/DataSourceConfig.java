@@ -11,6 +11,12 @@ import org.springframework.jdbc.core.JdbcTemplate;
 @Configuration
 public class DataSourceConfig {
 
+    private final PcceProperties pcceProperties;
+
+    public DataSourceConfig(PcceProperties pcceProperties) {
+        this.pcceProperties = pcceProperties;
+    }
+
     @Bean
     @ConfigurationProperties("pcce.datasources.aw")
     DataSourceProperties awDataSourceProperties() {
@@ -25,7 +31,7 @@ public class DataSourceConfig {
 
     @Bean
     JdbcTemplate awJdbcTemplate() {
-        return new JdbcTemplate(awDataSource());
+        return jdbcTemplate(awDataSource());
     }
 
     @Bean
@@ -42,7 +48,7 @@ public class DataSourceConfig {
 
     @Bean
     JdbcTemplate hdsJdbcTemplate() {
-        return new JdbcTemplate(hdsDataSource());
+        return jdbcTemplate(hdsDataSource());
     }
 
     @Bean
@@ -59,6 +65,12 @@ public class DataSourceConfig {
 
     @Bean
     JdbcTemplate cvpReportingJdbcTemplate() {
-        return new JdbcTemplate(cvpReportingDataSource());
+        return jdbcTemplate(cvpReportingDataSource());
+    }
+
+    private JdbcTemplate jdbcTemplate(DataSource dataSource) {
+        JdbcTemplate jdbcTemplate = new JdbcTemplate(dataSource);
+        jdbcTemplate.setQueryTimeout(pcceProperties.getPerformance().getJdbcQueryTimeoutSeconds());
+        return jdbcTemplate;
     }
 }
