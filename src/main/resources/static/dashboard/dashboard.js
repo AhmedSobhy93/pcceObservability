@@ -84,7 +84,25 @@ function metricSeconds(value) {
 }
 
 function dateParams() {
-    return `from=${qs("#fromDate").value}&to=${qs("#toDate").value}`;
+    const params = new URLSearchParams({
+        from: qs("#fromDate").value,
+        to: qs("#toDate").value
+    });
+    const skill = qs("#skillFilter").value.trim();
+    if (skill) params.set("skillGroup", skill);
+    return params.toString();
+}
+
+function callTypeParams() {
+    const params = new URLSearchParams({
+        from: qs("#fromDate").value,
+        to: qs("#toDate").value
+    });
+    const skill = qs("#skillFilter").value.trim();
+    const callType = qs("#callTypeFilter").value.trim();
+    if (skill) params.set("skillGroup", skill);
+    if (callType) params.set("callType", callType);
+    return params.toString();
 }
 
 async function api(path, options = {}) {
@@ -121,7 +139,7 @@ async function refresh() {
     const coreLoads = [
         safeLoad("user", "/api/v1/auth/me", null),
         safeLoad("calls", `/api/v1/metrics/calls?${params}`, [], { timeoutMs: 15000 }),
-        safeLoad("callTypes", `/api/v1/metrics/call-types?${params}`, [], { timeoutMs: 15000 }),
+        safeLoad("callTypes", `/api/v1/metrics/call-types?${callTypeParams()}`, [], { timeoutMs: 15000 }),
         safeLoad("agents", `/api/v1/agents/stats?${params}`, [], { timeoutMs: 15000 }),
         safeLoad("drops", `/api/v1/calls/dropped?${params}`, []),
         safeLoad("ivr", `/api/v1/metrics/ivr-containment?${params}`, []),
@@ -205,6 +223,13 @@ function renderKpis() {
     qs("#trendService").textContent = service === null ? "Interval data unavailable" : "Target tracked";
     qs("#kpiAht").nextElementSibling.textContent = aht === null ? "Interval data unavailable" : "Seconds";
     qs("#chartRange").textContent = `${qs("#fromDate").value} to ${qs("#toDate").value}`;
+    if (qs("#skillFilter").value.trim()) {
+        qs("#trendOffered").textContent = `Skill: ${qs("#skillFilter").value.trim()}`;
+        qs("#trendHandled").textContent = `Skill: ${qs("#skillFilter").value.trim()}`;
+    } else {
+        qs("#trendOffered").textContent = "Live HDS";
+        qs("#trendHandled").textContent = "Live HDS";
+    }
 }
 
 function renderCharts() {
@@ -291,6 +316,15 @@ function renderCallTypes() {
     drawLineChart(qs("#abandonmentChart"), abandonment.labels, abandonment.series, 100);
     const queue = queueByHour();
     drawBarChart(qs("#queueChart"), queue.labels, queue.values, "#f4a51c");
+    if (!queue.hasData) {
+        const ctx = qs("#queueChart")?.getContext("2d");
+        if (ctx) {
+            const rect = qs("#queueChart").getBoundingClientRect();
+            ctx.fillStyle = "#87a1c2";
+            ctx.font = "16px Segoe UI";
+            ctx.fillText("Queue wait data unavailable from current HDS query", 30, rect.height / 2);
+        }
+    }
 }
 
 function renderComponents() {
@@ -596,14 +630,16 @@ function renderCallFunnel() {
     const offered = sum(state.calls, "calls_offered", "callsOffered");
     const handled = sum(state.calls, "calls_handled", "callsHandled");
     const abandoned = sum(state.calls, "calls_abandoned", "callsAbandoned");
+    const hasAbandonSource = state.calls.some(row => pick(row, "calls_abandoned", "callsAbandoned") !== null && pick(row, "calls_abandoned", "callsAbandoned") !== undefined);
     const ivr = average(state.ivr, "ivr_containment_rate", "ivrContainmentRate");
     const routed = Math.max(0, offered - (ivr === null ? 0 : offered * ivr / 100));
+    const hasIvr = ivr !== null;
     const items = [
         ["Offered", offered, 100],
-        ["IVR Contained", ivr === null ? null : offered * ivr / 100, ivr],
-        ["Routed to Agent", routed, offered ? routed / offered * 100 : 0],
+        ["IVR Contained", hasIvr ? offered * ivr / 100 : null, hasIvr ? ivr : null],
+        ["Routed to Agent", hasIvr ? routed : null, hasIvr && offered ? routed / offered * 100 : null],
         ["Handled", handled, offered ? handled / offered * 100 : 0],
-        ["Abandoned", abandoned, offered ? abandoned / offered * 100 : 0]
+        ["Abandoned", hasAbandonSource ? abandoned : null, hasAbandonSource && offered ? abandoned / offered * 100 : null]
     ];
     qs("#callFunnel").innerHTML = items.map(([label, value, percent], index) => `<div class="funnel-item">
         <strong>${value === null ? "--" : fmt(value)}</strong>
@@ -636,9 +672,13 @@ function queueByHour() {
     const values = rows.labels.map(label => {
         const hour = Number(String(label).replace(":00", ""));
         const matching = state.calls.filter(row => num(pick(row, "hour")) === hour);
-        return average(matching, "avg_queue_time", "avgQueueTime") || 0;
+        return average(matching, "avg_queue_time", "avgQueueTime");
     });
-    return { labels: rows.labels, values };
+    return {
+        labels: rows.labels,
+        values: values.map(value => value === null ? 0 : value),
+        hasData: values.some(value => value !== null)
+    };
 }
 
 function average(rows, ...names) {

@@ -24,6 +24,10 @@ pcce:
     base-url: ${PCCE_API_BASE_URL:https://vswsitaw01}
     username: ${PCCE_API_USERNAME:}
     password: ${PCCE_API_PASSWORD:}
+    auth-mode: ${PCCE_API_AUTH_MODE:BASIC}
+    bearer-token: ${PCCE_API_BEARER_TOKEN:}
+    api-key-header-name: ${PCCE_API_KEY_HEADER_NAME:}
+    api-key: ${PCCE_API_KEY:}
     timeout: 10s
     trust-all-certificates: true
     monitors:

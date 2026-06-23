@@ -339,6 +339,10 @@ public class PcceProperties {
         private String baseUrl;
         private String username;
         private String password;
+        private ApiAuthMode authMode = ApiAuthMode.BASIC;
+        private String bearerToken;
+        private String apiKeyHeaderName;
+        private String apiKey;
         private Duration timeout = Duration.ofSeconds(10);
         private boolean trustAllCertificates;
         private List<ApiMonitor> monitors = defaultApiMonitors();
@@ -374,6 +378,38 @@ public class PcceProperties {
 
         public void setPassword(String password) {
             this.password = password;
+        }
+
+        public ApiAuthMode getAuthMode() {
+            return authMode;
+        }
+
+        public void setAuthMode(ApiAuthMode authMode) {
+            this.authMode = authMode;
+        }
+
+        public String getBearerToken() {
+            return bearerToken;
+        }
+
+        public void setBearerToken(String bearerToken) {
+            this.bearerToken = bearerToken;
+        }
+
+        public String getApiKeyHeaderName() {
+            return apiKeyHeaderName;
+        }
+
+        public void setApiKeyHeaderName(String apiKeyHeaderName) {
+            this.apiKeyHeaderName = apiKeyHeaderName;
+        }
+
+        public String getApiKey() {
+            return apiKey;
+        }
+
+        public void setApiKey(String apiKey) {
+            this.apiKey = apiKey;
         }
 
         public Duration getTimeout() {
@@ -529,6 +565,13 @@ public class PcceProperties {
         public void setContentType(String contentType) {
             this.contentType = contentType;
         }
+    }
+
+    public enum ApiAuthMode {
+        NONE,
+        BASIC,
+        BEARER,
+        API_KEY
     }
 
     public static class ApiMonitor {

@@ -176,12 +176,32 @@ public class PcceApiMonitoringService {
         connection.setRequestMethod(StringUtils.hasText(method) ? method : "GET");
         connection.setRequestProperty("Accept", "application/json");
         connection.setRequestProperty("Content-Type", StringUtils.hasText(contentType) ? contentType : "application/json");
-        if (StringUtils.hasText(api.getUsername()) && api.getPassword() != null) {
-            String token = Base64.getEncoder().encodeToString((api.getUsername() + ":" + api.getPassword())
-                    .getBytes(StandardCharsets.UTF_8));
-            connection.setRequestProperty("Authorization", "Basic " + token);
-        }
+        applyAuthentication(api, connection);
         return connection;
+    }
+
+    private void applyAuthentication(PcceProperties.PcceApi api, HttpURLConnection connection) {
+        switch (api.getAuthMode() == null ? PcceProperties.ApiAuthMode.BASIC : api.getAuthMode()) {
+            case NONE -> {
+            }
+            case BASIC -> {
+                if (StringUtils.hasText(api.getUsername()) && api.getPassword() != null) {
+                    String token = Base64.getEncoder().encodeToString((api.getUsername() + ":" + api.getPassword())
+                            .getBytes(StandardCharsets.UTF_8));
+                    connection.setRequestProperty("Authorization", "Basic " + token);
+                }
+            }
+            case BEARER -> {
+                if (StringUtils.hasText(api.getBearerToken())) {
+                    connection.setRequestProperty("Authorization", "Bearer " + api.getBearerToken());
+                }
+            }
+            case API_KEY -> {
+                if (StringUtils.hasText(api.getApiKeyHeaderName()) && StringUtils.hasText(api.getApiKey())) {
+                    connection.setRequestProperty(api.getApiKeyHeaderName(), api.getApiKey());
+                }
+            }
+        }
     }
 
     private void trustAll(HttpsURLConnection connection) throws IOException {
@@ -257,7 +277,7 @@ public class PcceApiMonitoringService {
         try (InputStream inputStream = stream) {
             String body = new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
             if (statusCode == 401 || statusCode == 403 || body.toLowerCase().contains("access denied")) {
-                return "Access denied by PCCE/IIS. Verify PCCE API base URL, endpoint path, API user permissions, authentication method, and that the API is enabled on this node.";
+                return "Access denied by PCCE/IIS. Check pcce.pcce-api.auth-mode, username format, password/token, API user permissions, IIS authentication, endpoint path, and that this node exposes the PCCE REST API.";
             }
             return body;
         }
