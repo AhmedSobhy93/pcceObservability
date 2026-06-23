@@ -98,6 +98,20 @@ p { margin: 8px 0 0; color: var(--muted); font-size: 20px; }
     border-radius: 12px;
     padding: 0 12px;
 }
+.inline-input {
+    width: 100%;
+    min-width: 120px;
+    height: 34px;
+    color: var(--text);
+    background: #101721;
+    border: 1px solid #2b3747;
+    border-radius: 9px;
+    padding: 0 10px;
+}
+.plan-pct-input {
+    max-width: 90px;
+    margin-bottom: 8px;
+}
 .primary-btn {
     height: 48px;
     border: 0;
@@ -255,6 +269,20 @@ td { color: #dce7f7; }
 .component-card { border: 1px solid #263242; border-radius: 14px; padding: 18px; background: var(--panel-2); }
 .component-card h3 { margin: 0 0 12px; font-size: 18px; }
 .component-card p { margin: 6px 0 0; font-size: 14px; }
+.body-preview {
+    max-height: 150px;
+    margin: 12px 0 0;
+    overflow: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+    color: #b8c8df;
+    background: #0c121a;
+    border: 1px solid #223041;
+    border-radius: 10px;
+    padding: 10px;
+    font-size: 12px;
+    line-height: 1.4;
+}
 .component-row { display: flex; align-items: center; justify-content: space-between; gap: 18px; }
 .ring {
     --p: 0;
@@ -339,6 +367,14 @@ pre { white-space: pre-wrap; margin: 0; color: #d9e5f7; }
 .admin-form {
     display: grid;
     gap: 12px;
+}
+.alert-config-form,
+.plan-editor-form {
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    align-items: end;
+}
+.editor-wide {
+    grid-column: span 2;
 }
 .admin-form .date-field {
     min-width: 0;

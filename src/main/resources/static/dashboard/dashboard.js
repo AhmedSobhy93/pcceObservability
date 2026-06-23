@@ -23,13 +23,20 @@ const state = {
     grafanaDashboards: [],
     cuicReports: [],
     integrationCapabilities: [],
+    finesseCapabilities: [],
+    finesseSystem: [],
+    finesseAgents: [],
+    finesseDialogs: [],
+    finesseTeams: [],
+    finesseQueues: [],
     callFlow: [],
     skillGroups: [],
     callTypeOptions: [],
     agentOptions: [],
     adminUsers: [],
     adminRoles: [],
-    adminComponents: []
+    adminComponents: [],
+    notificationSettings: null
 };
 
 const pages = {
@@ -58,7 +65,7 @@ const permissionCatalog = [
     "OPERATIONS_READ",
     "SOLUTION_ADMIN"
 ];
-const planTasks = [
+const defaultPlanTasks = [
     { topic: "PCCE", task: "Finalize AW/HDS/CVP reporting alignment", priority: "CRITICAL", priorityNum: 1, status: "IN_PROGRESS", resource: "Contact Center Team / DB Admin", start: "1-Feb-26", finish: "30-Apr-26", duration: 89, pct: 65, comments: "Align dashboard numbers with CUIC stock reports and Cisco schema." },
     { topic: "PCCE", task: "PCCE API enablement and permissions", priority: "HIGH", priorityNum: 2, status: "IN_PROGRESS", resource: "Cisco Admin & App Owner", start: "10-Feb-26", finish: "15-Mar-26", duration: 34, pct: 55, comments: "Validate IIS auth, API user role, and supported actions." },
     { topic: "PCCE", task: "RTMT-style component monitoring", priority: "HIGH", priorityNum: 3, status: "PLANNED", resource: "Infrastructure Team", start: "1-Mar-26", finish: "30-Apr-26", duration: 60, pct: 25, comments: "SNMP/WMI/exporter required for CPU, memory, disk, and services." },
@@ -70,6 +77,7 @@ const planTasks = [
     { topic: "Chat", task: "Digital channel reporting placeholders", priority: "LOW", priorityNum: 1, status: "PLANNED", resource: "Digital Channels", start: "1-Apr-26", finish: "30-Apr-26", duration: 30, pct: 0, comments: "Prepare model for future chat metrics." },
     { topic: "One Content", task: "Archive evidence and operations documents", priority: "MEDIUM", priorityNum: 1, status: "COMPLETED", resource: "App Owner & Operations", start: "1-Feb-26", finish: "20-Feb-26", duration: 20, pct: 100, comments: "Initial runbook and references captured." }
 ];
+let planTasks = loadPlanTasks();
 
 document.addEventListener("DOMContentLoaded", () => {
     const today = new Date().toISOString().slice(0, 10);
@@ -81,6 +89,9 @@ document.addEventListener("DOMContentLoaded", () => {
     qs("#adminQuickBtn")?.addEventListener("click", () => switchView("admin"));
     qs("#adminSaveUserBtn")?.addEventListener("click", saveAdminUser);
     qs("#adminSaveRoleBtn")?.addEventListener("click", saveAdminRole);
+    qs("#saveAlertConfigBtn")?.addEventListener("click", saveAlertConfig);
+    qs("#planAddTaskBtn")?.addEventListener("click", addPlanTask);
+    qs("#planResetBtn")?.addEventListener("click", resetPlanTasks);
     qs("#adminUsername")?.addEventListener("change", fillAdminUserForm);
     qs("#adminRoleSelect")?.addEventListener("change", renderPermissionEditor);
     qs("#taskListMode")?.addEventListener("click", () => setPlanView("tasks"));
@@ -256,6 +267,12 @@ async function refresh() {
         safeLoad("grafanaDashboards", "/api/v1/integrations/grafana/dashboards", []),
         safeLoad("cuicReports", "/api/v1/cuic/reports", []),
         safeLoad("integrationCapabilities", "/api/v1/integrations/capabilities", []),
+        safeLoad("finesseCapabilities", "/api/v1/finesse/capabilities", []),
+        safeLoad("finesseSystem", "/api/v1/finesse/system", [], { timeoutMs: 12000 }),
+        safeLoad("finesseAgents", "/api/v1/finesse/agents", [], { timeoutMs: 14000 }),
+        safeLoad("finesseDialogs", "/api/v1/finesse/dialogs", [], { timeoutMs: 14000 }),
+        safeLoad("finesseTeams", "/api/v1/finesse/teams", [], { timeoutMs: 14000 }),
+        safeLoad("finesseQueues", "/api/v1/finesse/queues", [], { timeoutMs: 14000 }),
         safeLoad("skillGroups", "/api/v1/reference/skill-groups", []),
         safeLoad("callTypeOptions", "/api/v1/reference/call-types", []),
         safeLoad("agentOptions", "/api/v1/reference/agents", [])
@@ -268,7 +285,9 @@ async function refresh() {
         const adminResults = await Promise.all([
             safeLoad("adminUsers", "/api/v1/admin/users", []),
             safeLoad("adminRoles", "/api/v1/admin/roles", []),
-            safeLoad("adminComponents", "/api/v1/admin/components", [])
+            safeLoad("adminComponents", "/api/v1/admin/components", []),
+            safeLoad("notificationSettings", "/api/v1/admin/notifications", null),
+            safeLoad("serverLogTargets", "/api/v1/admin/server-log-targets", state.serverLogTargets)
         ]);
         errors.push(...adminResults.filter(Boolean));
     } else {
@@ -289,6 +308,7 @@ function renderAll(errors) {
     renderCharts();
     renderBusiness();
     renderAgents();
+    renderFinesse();
     renderDrops();
     renderCallTypes();
     renderComponents();
@@ -406,6 +426,28 @@ function renderAgents() {
     }).join("");
 }
 
+function renderFinesse() {
+    const agentGrid = qs("#finesseAgentGrid");
+    if (!agentGrid) return;
+    qs("#finesseAgentCount").textContent = `${state.finesseAgents.length} configured users`;
+    qs("#finesseDialogCount").textContent = `${state.finesseDialogs.length} dialog probes`;
+    agentGrid.innerHTML = state.finesseAgents.map(endpointCard).join("") ||
+        `<article class="component-card"><h3>Finesse Agents</h3><span class="badge warn">not configured</span><p>Set FINESSE_ENABLED=true and FINESSE_USER_IDS or app user agent IDs.</p></article>`;
+    qs("#finesseDialogList").innerHTML = state.finesseDialogs.map(item =>
+        metricRow(`${pick(item, "name")} - HTTP ${pick(item, "status_code", "statusCode") || 0}`,
+            `${fmt(pick(item, "latency_ms", "latencyMs"))} ms | ${snippet(pick(item, "body"), 180)}`)
+    ).join("") || metricRow("Dialogs", "No configured Finesse user IDs");
+    const teamQueueItems = [...state.finesseTeams, ...state.finesseQueues];
+    qs("#finesseTeamQueueList").innerHTML = teamQueueItems.map(item =>
+        metricRow(`${pick(item, "name")} - HTTP ${pick(item, "status_code", "statusCode") || 0}`,
+            `${fmt(pick(item, "latency_ms", "latencyMs"))} ms | ${snippet(pick(item, "body"), 180)}`)
+    ).join("") || metricRow("Teams / Queues", "Configure FINESSE_TEAM_IDS and FINESSE_QUEUE_IDS if needed");
+    qs("#finesseSystemList").innerHTML = state.finesseSystem.map(item =>
+        metricRow(`${pick(item, "name")} - HTTP ${pick(item, "status_code", "statusCode") || 0}`,
+            `${fmt(pick(item, "latency_ms", "latencyMs"))} ms | ${snippet(pick(item, "body"), 200)}`)
+    ).join("") || metricRow("SystemInfo", "Finesse system endpoint not loaded");
+}
+
 function renderDrops() {
     if (!qs("#dropList")) return;
     const grouped = groupBySkill(state.drops, "dropped_calls", "droppedCalls");
@@ -478,6 +520,7 @@ function renderComponents() {
                     <span class="badge ${badgeClass}">${escapeHtml(stateValue)}</span>
                     <p>${escapeHtml(pick(component, "probe") || "")} - ${escapeHtml(pick(component, "target") || "")}</p>
                     <p>${fmt(latency)} ms - ${escapeHtml(pick(component, "detail") || "")}</p>
+                    <p>${componentProbeHint(component)}</p>
                 </div>
                 <div class="ring" style="--p:${health}"><span>${Math.round(health)}%</span></div>
             </div>
@@ -495,6 +538,15 @@ function renderComponents() {
             <p>${escapeHtml(pick(metric, "detail") || "")}</p>
         </article>`;
     }).join("") || `<article class="component-card"><h3>Server Metrics</h3><span class="badge warn">not configured</span><p>Configure SNMP/WMI/exporter collection for remote servers.</p></article>`;
+}
+
+function componentProbeHint(component) {
+    const probe = String(pick(component, "probe") || "").toUpperCase();
+    const name = String(pick(component, "name") || "");
+    if (probe === "HOST") return "Host reachability only; service port may still be down.";
+    if (name === "CTI_Server") return "CTI requires TCP service reachability on the configured CTI port.";
+    if (probe === "HTTP") return "HTTP OK means web endpoint responded within configured status range.";
+    return "";
 }
 
 function renderReferenceOptions() {
@@ -519,6 +571,12 @@ function renderIntegration() {
     qs("#integrationCapabilityList").innerHTML = state.integrationCapabilities.map(item =>
         metricRow(`${pick(item, "area")} - ${pick(item, "capability")}`, `${pick(item, "method")} | ${pick(item, "status")} | ${pick(item, "action")}`)
     ).join("") || metricRow("Integrations", "Capability catalog unavailable");
+    qs("#finesseIntegrationGrid").innerHTML = [...state.finesseSystem, ...state.finesseAgents, ...state.finesseDialogs].slice(0, 12)
+        .map(endpointCard).join("") ||
+        `<article class="component-card"><h3>Finesse REST</h3><span class="badge warn">disabled</span><p>Configure pcce.finesse to enable live Finesse API monitoring.</p></article>`;
+    qs("#finesseCapabilityList").innerHTML = state.finesseCapabilities.map(item =>
+        metricRow(`${pick(item, "area")} - ${pick(item, "capability")}`, `${pick(item, "method")} | ${pick(item, "status")} | ${pick(item, "action")}`)
+    ).join("") || metricRow("Finesse", "Capability catalog unavailable");
     qs("#pcceApiGrid").innerHTML = state.pcceApiStatus.map(item => {
         const stateValue = String(pick(item, "state") || "UNKNOWN").toLowerCase();
         const badgeClass = stateValue === "up" ? "up" : stateValue === "down" ? "down" : "warn";
@@ -568,18 +626,33 @@ function renderIntegration() {
     ).join("");
 }
 
+function endpointCard(item) {
+    const statusCode = num(pick(item, "status_code", "statusCode"));
+    const ok = statusCode >= 200 && statusCode < 400;
+    const disabled = statusCode === 0 && String(pick(item, "body") || "").toLowerCase().includes("disabled");
+    const badgeClass = ok ? "up" : disabled ? "warn" : "down";
+    return `<article class="component-card">
+        <h3>${escapeHtml(pick(item, "name") || "")}</h3>
+        <span class="badge ${badgeClass}">${statusCode ? `HTTP ${statusCode}` : disabled ? "disabled" : "error"}</span>
+        <p>${escapeHtml(pick(item, "method") || "GET")} - ${escapeHtml(pick(item, "target") || "")}</p>
+        <p>${fmt(pick(item, "latency_ms", "latencyMs"))} ms</p>
+        <pre class="body-preview">${escapeHtml(snippet(pick(item, "body"), 420))}</pre>
+    </article>`;
+}
+
 function renderSmtp() {
     qs("#smtpCapabilityList").innerHTML = state.smtpCapabilities.map(item =>
         metricRow(`${pick(item, "area")} - ${pick(item, "capability")}`, `${pick(item, "status")} | ${pick(item, "action")}`)
     ).join("") || metricRow("SMTP", "Capabilities unavailable");
     qs("#smtpStatusList").innerHTML = [
-        metricRow("Alert Webhook", "Configured in pcce.notifications"),
-        metricRow("SMTP Relay", "Configure approved bank SMTP relay"),
+        metricRow("SMTP", state.notificationSettings?.smtp_enabled || state.notificationSettings?.smtpEnabled ? "enabled" : "disabled"),
+        metricRow("SMS", state.notificationSettings?.sms_enabled || state.notificationSettings?.smsEnabled ? "enabled" : "disabled"),
         metricRow("SMS Gateway", "D-Tech SMS microgateway with X-Correlation-Id, User-Agent, Basic Authorization"),
-        metricRow("Recipients", "Configure operations/support distribution lists"),
-        metricRow("Minimum Severity", "Separate global and SMS thresholds; CRITICAL recommended for SMS"),
-        metricRow("SMS Rate Guard", "Max alerts per assessment avoids notification storms")
+        metricRow("Minimum Severity", pick(state.notificationSettings, "minimum_severity", "minimumSeverity") || "CRITICAL"),
+        metricRow("SMS Severity", pick(state.notificationSettings, "sms_minimum_severity", "smsMinimumSeverity") || "CRITICAL"),
+        metricRow("SMS Rate Guard", `${pick(state.notificationSettings, "sms_max_alerts_per_assessment", "smsMaxAlertsPerAssessment") || 5} max / assessment`)
     ].join("");
+    fillAlertConfigForm();
 }
 
 function renderSpog() {
@@ -594,11 +667,78 @@ function renderSpog() {
     ].join("");
     qs("#serverLogTargetsTable").innerHTML = state.serverLogTargets.map(item => `<tr>
         <td>${escapeHtml(pick(item, "component") || "")}</td>
-        <td>${escapeHtml(pick(item, "host") || "")}</td>
-        <td>${escapeHtml(pick(item, "log_path", "logPath") || "")}</td>
-        <td>${escapeHtml(pick(item, "collection_method", "collectionMethod") || "")}</td>
-        <td>${pick(item, "enabled") ? "Enabled" : "Disabled"}</td>
+        <td><input class="inline-input" data-log-field="host" data-log-component="${escapeHtml(pick(item, "component") || "")}" value="${escapeHtml(pick(item, "host") || "")}"></td>
+        <td><input class="inline-input" data-log-field="logPath" data-log-component="${escapeHtml(pick(item, "component") || "")}" value="${escapeHtml(pick(item, "log_path", "logPath") || "")}"></td>
+        <td><input class="inline-input" data-log-field="collectionMethod" data-log-component="${escapeHtml(pick(item, "component") || "")}" value="${escapeHtml(pick(item, "collection_method", "collectionMethod") || "")}"></td>
+        <td><span class="badge ${pick(item, "enabled") ? "up" : "warn"}">${pick(item, "enabled") ? "Enabled" : "Disabled"}</span></td>
+        <td><button class="small-btn" data-log-save="${escapeHtml(pick(item, "component") || "")}">${pick(item, "enabled") ? "Save" : "Enable"}</button></td>
     </tr>`).join("");
+    document.querySelectorAll("[data-log-save]").forEach(button => {
+        button.addEventListener("click", () => saveServerLogTarget(button.dataset.logSave));
+    });
+}
+
+function fillAlertConfigForm() {
+    const settings = state.notificationSettings;
+    if (!settings || !qs("#alertSmtpEnabled")) return;
+    qs("#alertSmtpEnabled").checked = Boolean(pick(settings, "smtp_enabled", "smtpEnabled"));
+    qs("#alertSmtpFrom").value = pick(settings, "smtp_from", "smtpFrom") || "";
+    qs("#alertSmtpRecipients").value = (pick(settings, "smtp_recipients", "smtpRecipients") || []).join(", ");
+    qs("#alertSubjectPrefix").value = pick(settings, "smtp_subject_prefix", "smtpSubjectPrefix") || "";
+    qs("#alertSmsEnabled").checked = Boolean(pick(settings, "sms_enabled", "smsEnabled"));
+    qs("#alertSmsUrl").placeholder = pick(settings, "sms_url_configured", "smsUrlConfigured") ? "configured; enter value to replace" : "D-Tech SMS gateway URL";
+    qs("#alertSmsUserAgent").value = pick(settings, "sms_user_agent", "smsUserAgent") || "";
+    qs("#alertSmsRecipients").value = (pick(settings, "sms_recipients", "smsRecipients") || []).join(", ");
+    qs("#alertMinimumSeverity").value = pick(settings, "minimum_severity", "minimumSeverity") || "CRITICAL";
+    qs("#alertSmsMinimumSeverity").value = pick(settings, "sms_minimum_severity", "smsMinimumSeverity") || "CRITICAL";
+    qs("#alertSmsMax").value = pick(settings, "sms_max_alerts_per_assessment", "smsMaxAlertsPerAssessment") || 5;
+}
+
+async function saveAlertConfig() {
+    qs("#alertConfigResult").textContent = "Saving alert settings...";
+    try {
+        const body = {
+            smtpEnabled: qs("#alertSmtpEnabled").checked,
+            smtpFrom: qs("#alertSmtpFrom").value.trim(),
+            smtpRecipients: splitCsv(qs("#alertSmtpRecipients").value),
+            smtpSubjectPrefix: qs("#alertSubjectPrefix").value.trim(),
+            smsEnabled: qs("#alertSmsEnabled").checked,
+            smsUrl: qs("#alertSmsUrl").value.trim() || null,
+            smsAuthorization: qs("#alertSmsAuthorization").value.trim() || null,
+            smsUserAgent: qs("#alertSmsUserAgent").value.trim(),
+            smsRecipients: splitCsv(qs("#alertSmsRecipients").value),
+            minimumSeverity: qs("#alertMinimumSeverity").value,
+            smsMinimumSeverity: qs("#alertSmsMinimumSeverity").value,
+            smsMaxAlertsPerAssessment: Number(qs("#alertSmsMax").value || 5)
+        };
+        state.notificationSettings = await api("/api/v1/admin/notifications", {
+            method: "PUT",
+            body: JSON.stringify(body)
+        });
+        qs("#alertSmsAuthorization").value = "";
+        qs("#alertConfigResult").textContent = "Alert settings saved. Persist final values in env/YAML for production restart.";
+        renderSmtp();
+    } catch (error) {
+        qs("#alertConfigResult").textContent = error.message;
+    }
+}
+
+async function saveServerLogTarget(component) {
+    try {
+        const fields = [...document.querySelectorAll("[data-log-component]")]
+            .filter(input => input.dataset.logComponent === component);
+        const payload = { enabled: true };
+        fields.forEach(input => payload[input.dataset.logField] = input.value.trim());
+        const updated = await api(`/api/v1/admin/server-log-targets/${encodeURIComponent(component)}`, {
+            method: "PUT",
+            body: JSON.stringify(payload)
+        });
+        state.serverLogTargets = state.serverLogTargets.map(item =>
+            String(pick(item, "component")).toLowerCase() === component.toLowerCase() ? updated : item);
+        renderSpog();
+    } catch (error) {
+        alert(error.message);
+    }
 }
 
 function renderEleveo() {
@@ -911,17 +1051,24 @@ function renderPlanTaskGroups(tasks) {
         planState.collapsed.has(topic) ? planState.collapsed.delete(topic) : planState.collapsed.add(topic);
         renderPlan();
     }));
+    bindPlanEditors();
 }
 
 function planTaskRow(task) {
     const criticalOpen = task.priority === "CRITICAL" && task.status !== "COMPLETED";
+    const index = planTasks.indexOf(task);
     return `<tr class="${criticalOpen ? "critical-row" : ""}">
         <td><strong>${escapeHtml(task.task)}</strong>${task.priorityNum ? `<span class="subline">Priority #${task.priorityNum}</span>` : ""}</td>
         <td>${badge(task.priority, priorityClass(task.priority))}</td>
-        <td>${badge(task.status.replace("_", " "), statusClass(task.status))}</td>
+        <td><select class="inline-input" data-plan-field="status" data-plan-index="${index}">${["COMPLETED", "IN_PROGRESS", "ON_HOLD", "PLANNED"].map(status => `<option ${task.status === status ? "selected" : ""}>${status}</option>`).join("")}</select></td>
         <td>${escapeHtml(task.resource)}</td>
         <td>${escapeHtml(task.start || "--")} / ${escapeHtml(task.finish || "--")}<span class="subline">${task.duration ?? "--"} days</span></td>
-        <td>${inlineProgress(task.pct)}<span class="subline">${escapeHtml(task.comments)}</span></td>
+        <td>
+            <input class="inline-input plan-pct-input" type="number" min="0" max="100" data-plan-field="pct" data-plan-index="${index}" value="${escapeHtml(task.pct)}">
+            ${inlineProgress(task.pct)}
+            <input class="inline-input" data-plan-field="comments" data-plan-index="${index}" value="${escapeHtml(task.comments)}">
+            <button class="small-btn" data-plan-save="${index}">Save</button>
+        </td>
     </tr>`;
 }
 
@@ -949,6 +1096,65 @@ function renderResourceView() {
 
 function setPlanView(view) {
     planState.view = view;
+    renderPlan();
+}
+
+function loadPlanTasks() {
+    try {
+        const stored = localStorage.getItem("pcce.planTasks");
+        return stored ? JSON.parse(stored) : defaultPlanTasks.map(task => ({ ...task }));
+    } catch {
+        return defaultPlanTasks.map(task => ({ ...task }));
+    }
+}
+
+function savePlanTasks() {
+    localStorage.setItem("pcce.planTasks", JSON.stringify(planTasks));
+}
+
+function bindPlanEditors() {
+    document.querySelectorAll("[data-plan-save]").forEach(button => {
+        button.addEventListener("click", () => savePlanTask(Number(button.dataset.planSave)));
+    });
+}
+
+function savePlanTask(index) {
+    const task = planTasks[index];
+    if (!task) return;
+    document.querySelectorAll(`[data-plan-index="${index}"]`).forEach(input => {
+        const field = input.dataset.planField;
+        task[field] = field === "pct" ? Math.max(0, Math.min(100, Number(input.value || 0))) : input.value;
+    });
+    savePlanTasks();
+    renderPlan();
+}
+
+function addPlanTask() {
+    const name = qs("#planEditTask").value.trim();
+    if (!name) return;
+    planTasks.push({
+        topic: qs("#planEditTopic").value,
+        task: name,
+        priority: qs("#planEditPriority").value,
+        priorityNum: null,
+        status: qs("#planEditStatus").value,
+        resource: qs("#planEditResource").value.trim() || "Unassigned",
+        start: null,
+        finish: null,
+        duration: null,
+        pct: Math.max(0, Math.min(100, Number(qs("#planEditPct").value || 0))),
+        comments: qs("#planEditComments").value.trim()
+    });
+    savePlanTasks();
+    qs("#planEditTask").value = "";
+    qs("#planEditComments").value = "";
+    renderPlan();
+}
+
+function resetPlanTasks() {
+    if (!confirm("Reset project plan tasks to the default template?")) return;
+    planTasks = defaultPlanTasks.map(task => ({ ...task }));
+    savePlanTasks();
     renderPlan();
 }
 
@@ -1013,6 +1219,12 @@ function hasPermission(permission) {
 
 function metricRow(label, value) {
     return `<div class="metric-row"><span>${escapeHtml(label)}</span><strong>${escapeHtml(String(value ?? "--"))}</strong></div>`;
+}
+
+function snippet(value, limit = 160) {
+    const text = String(value ?? "").replace(/\s+/g, " ").trim();
+    if (!text) return "--";
+    return text.length > limit ? `${text.slice(0, limit)}...` : text;
 }
 
 function fillDatalist(selector, rows) {

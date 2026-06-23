@@ -30,6 +30,17 @@ pcce:
     slow-query-warning-ms: 2000
     slow-request-warning-ms: 3000
 
+  finesse:
+    enabled: ${FINESSE_ENABLED:false}
+    base-url: ${FINESSE_BASE_URL:https://vssitfin01.dev.mdi:8445}
+    username: ${FINESSE_USERNAME:}
+    password: ${FINESSE_PASSWORD:}
+    timeout: ${FINESSE_TIMEOUT:10s}
+    trust-all-certificates: ${FINESSE_TRUST_ALL_CERTIFICATES:true}
+    user-ids: ${FINESSE_USER_IDS:}
+    team-ids: ${FINESSE_TEAM_IDS:}
+    queue-ids: ${FINESSE_QUEUE_IDS:}
+
   pcce-api:
     enabled: false
     base-url: ${PCCE_API_BASE_URL:https://vswsitaw01}

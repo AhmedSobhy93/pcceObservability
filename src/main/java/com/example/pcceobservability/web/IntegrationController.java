@@ -18,6 +18,7 @@ public class IntegrationController {
                 new IntegrationCapability("CUIC Stock Reports", "Historical, live and realtime reporting alignment", "AW/HDS/CUIC SQL mapping", "Framework ready", "Load exact CUIC SQL/report XML to match numbers exactly"),
                 new IntegrationCapability("SNMP", "CPU, memory, disk, interface and process telemetry", "SNMP v2/v3 polling", "Config required", "Configure community/user, OIDs and server targets"),
                 new IntegrationCapability("PCCE Logs", "Router, Logger, PG, CTI, CVP, Finesse and CUIC log collection", "Windows share, SFTP, agent, or SIEM", "Config required", "Configure log target path and approved collection account"),
+                new IntegrationCapability("Finesse", "Live agent/dialog/team monitoring", "Finesse REST API", "Framework ready", "Configure pcce.finesse base URL, credentials, user IDs and team IDs"),
                 new IntegrationCapability("CUCM", "Device registration, CTI Manager, SIP trunk and call-processing status", "AXL/RIS/SNMP/syslog", "Config required", "Configure CUCM publisher/subscriber URLs and API credentials"),
                 new IntegrationCapability("IM&P", "Presence, XMPP and service status", "REST/SOAP/SNMP/syslog", "Config required", "Configure IM&P nodes and monitoring credentials"),
                 new IntegrationCapability("Call Flow Trace", "Readable call path across routing, CVP, queue, agent and disposition", "HDS TCD + CVP Reporting + logs", "Partial live", "Use /api/v1/calls/flow and enrich with CVP/CUCM logs when enabled"));

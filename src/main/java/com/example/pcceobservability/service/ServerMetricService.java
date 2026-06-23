@@ -29,6 +29,9 @@ public class ServerMetricService {
     private ServerMetric metric(ComponentTarget target) {
         String host = StringUtils.hasText(target.getHost()) ? target.getHost() : hostFromUrl(target.getUrl());
         if (!StringUtils.hasText(host)) {
+            host = defaultHost(target);
+        }
+        if (!StringUtils.hasText(host)) {
             return new ServerMetric(target.getName(), "", "NONE", "UNAVAILABLE",
                     null, null, null, "", "No host configured for this component", Instant.now());
         }
@@ -98,6 +101,19 @@ public class ServerMetricService {
             case CUIC -> "Cisco CUIC, Intelligence Center";
             case MediaSense -> "MediaSense services";
             case VoIP_Gateway -> "SIP/H.323 gateway reachability";
+        };
+    }
+
+    private String defaultHost(ComponentTarget target) {
+        return switch (target.getName()) {
+            case ICM_Router -> "vswsitrgr01";
+            case ICM_Logger -> "vswsitaw01";
+            case CVP_CallServer -> "vswsitcvp01";
+            case CVP_ReportingServer -> "vswsitcvpr01";
+            case CTI_Server, PG_CUCM, PG_CVP -> "vswsitpg01";
+            case Finesse -> "vssitfin01";
+            case CUIC -> "vssitcuic01";
+            case VoIP_Gateway, MediaSense -> null;
         };
     }
 }

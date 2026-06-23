@@ -37,6 +37,9 @@ public class PcceProperties {
     @Valid
     private Grafana grafana = new Grafana();
 
+    @Valid
+    private Finesse finesse = new Finesse();
+
     public Queries getQueries() {
         return queries;
     }
@@ -99,6 +102,14 @@ public class PcceProperties {
 
     public void setGrafana(Grafana grafana) {
         this.grafana = grafana;
+    }
+
+    public Finesse getFinesse() {
+        return finesse;
+    }
+
+    public void setFinesse(Finesse finesse) {
+        this.finesse = finesse;
     }
 
     private static List<ComponentTarget> defaultComponents() {
@@ -864,6 +875,90 @@ public class PcceProperties {
 
         public void setDescription(String description) {
             this.description = description;
+        }
+    }
+
+    public static class Finesse {
+        private boolean enabled;
+        private String baseUrl;
+        private String username;
+        private String password;
+        private Duration timeout = Duration.ofSeconds(10);
+        private boolean trustAllCertificates;
+        private List<String> userIds = List.of();
+        private List<String> teamIds = List.of();
+        private List<String> queueIds = List.of();
+
+        public boolean isEnabled() {
+            return enabled;
+        }
+
+        public void setEnabled(boolean enabled) {
+            this.enabled = enabled;
+        }
+
+        public String getBaseUrl() {
+            return baseUrl;
+        }
+
+        public void setBaseUrl(String baseUrl) {
+            this.baseUrl = baseUrl;
+        }
+
+        public String getUsername() {
+            return username;
+        }
+
+        public void setUsername(String username) {
+            this.username = username;
+        }
+
+        public String getPassword() {
+            return password;
+        }
+
+        public void setPassword(String password) {
+            this.password = password;
+        }
+
+        public Duration getTimeout() {
+            return timeout;
+        }
+
+        public void setTimeout(Duration timeout) {
+            this.timeout = timeout;
+        }
+
+        public boolean isTrustAllCertificates() {
+            return trustAllCertificates;
+        }
+
+        public void setTrustAllCertificates(boolean trustAllCertificates) {
+            this.trustAllCertificates = trustAllCertificates;
+        }
+
+        public List<String> getUserIds() {
+            return userIds;
+        }
+
+        public void setUserIds(List<String> userIds) {
+            this.userIds = userIds;
+        }
+
+        public List<String> getTeamIds() {
+            return teamIds;
+        }
+
+        public void setTeamIds(List<String> teamIds) {
+            this.teamIds = teamIds;
+        }
+
+        public List<String> getQueueIds() {
+            return queueIds;
+        }
+
+        public void setQueueIds(List<String> queueIds) {
+            this.queueIds = queueIds;
         }
     }
 

@@ -1,0 +1,21 @@
+package com.example.pcceobservability.model;
+
+import com.example.pcceobservability.config.PcceProperties.AlertSeverity;
+import java.util.List;
+
+public record NotificationSettingsView(
+        boolean webhookEnabled,
+        String webhookUrlConfigured,
+        boolean smtpEnabled,
+        String smtpFrom,
+        List<String> smtpRecipients,
+        String smtpSubjectPrefix,
+        boolean smsEnabled,
+        String smsUrlConfigured,
+        String smsUserAgent,
+        List<String> smsRecipients,
+        AlertSeverity minimumSeverity,
+        AlertSeverity smsMinimumSeverity,
+        int smsMaxAlertsPerAssessment
+) {
+}

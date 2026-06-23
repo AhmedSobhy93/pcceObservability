@@ -116,6 +116,20 @@
             <div class="panel-head"><h2>Agent Performance</h2><span id="agentCount"></span></div>
             <div class="table-wrap"><table><thead><tr><th>Agent</th><th>Status</th><th>Calls</th><th>AHT</th><th>Occupancy</th><th>Adherence</th><th>Transfers</th><th>Not Ready</th></tr></thead><tbody id="agentsTable"></tbody></table></div>
         </article>
+        <div class="content-grid support-grid">
+            <article class="panel wide">
+                <div class="panel-head"><h2>Finesse Live Agents</h2><span id="finesseAgentCount"></span></div>
+                <div class="component-grid" id="finesseAgentGrid"></div>
+            </article>
+            <article class="panel">
+                <div class="panel-head"><h2>Finesse Dialogs</h2><span id="finesseDialogCount"></span></div>
+                <div class="metric-list" id="finesseDialogList"></div>
+            </article>
+        </div>
+        <div class="content-grid support-grid">
+            <article class="panel wide"><h2>Finesse Teams / Queues</h2><div class="metric-list" id="finesseTeamQueueList"></div></article>
+            <article class="panel"><h2>Finesse System</h2><div class="metric-list" id="finesseSystemList"></div></article>
+        </div>
     </section>
 
     <section class="view" id="view-calls">
@@ -165,6 +179,10 @@
             <article class="panel"><h2>SNMP / Logs / CUCM / IM&P</h2><div class="metric-list" id="integrationCapabilityList"></div></article>
         </div>
         <div class="content-grid support-grid">
+            <article class="panel wide"><h2>Finesse REST Monitoring</h2><div class="component-grid" id="finesseIntegrationGrid"></div></article>
+            <article class="panel"><h2>Finesse Capabilities</h2><div class="metric-list" id="finesseCapabilityList"></div></article>
+        </div>
+        <div class="content-grid support-grid">
             <article class="panel wide"><h2>PCCE API Surveillance</h2><div class="component-grid" id="pcceApiGrid"></div></article>
             <article class="panel"><h2>API Capabilities</h2><div class="metric-list" id="pcceCapabilityList"></div></article>
         </div>
@@ -204,6 +222,25 @@
             <article class="panel wide"><h2>Alerting Capabilities</h2><div class="metric-list" id="smtpCapabilityList"></div></article>
             <article class="panel"><h2>Notification Channels</h2><div class="metric-list" id="smtpStatusList"></div></article>
         </div>
+        <article class="panel full api-functions-panel">
+            <div class="panel-head"><h2>Alert Configuration</h2><span>Admin changes are runtime settings</span></div>
+            <div class="admin-form alert-config-form">
+                <label class="check-row"><input type="checkbox" id="alertSmtpEnabled"> SMTP enabled</label>
+                <label class="date-field"><span>SMTP From</span><input id="alertSmtpFrom" placeholder="pcce-observability@bank.local"></label>
+                <label class="date-field"><span>SMTP Recipients</span><input id="alertSmtpRecipients" placeholder="ops@bank.local, support@bank.local"></label>
+                <label class="date-field"><span>Subject Prefix</span><input id="alertSubjectPrefix" placeholder="[PCCE Observability]"></label>
+                <label class="check-row"><input type="checkbox" id="alertSmsEnabled"> SMS enabled</label>
+                <label class="date-field"><span>SMS URL</span><input id="alertSmsUrl" placeholder="D-Tech SMS gateway URL"></label>
+                <label class="date-field"><span>SMS Authorization</span><input id="alertSmsAuthorization" type="password" placeholder="Basic ..."></label>
+                <label class="date-field"><span>SMS User-Agent</span><input id="alertSmsUserAgent" placeholder="D-Tech / v1.6"></label>
+                <label class="date-field"><span>SMS Recipients</span><input id="alertSmsRecipients" placeholder="+201xxxxxxxxx,+201yyyyyyyyy"></label>
+                <label class="date-field"><span>Email/Webhook Severity</span><select id="alertMinimumSeverity"><option>INFO</option><option>WARNING</option><option>CRITICAL</option></select></label>
+                <label class="date-field"><span>SMS Severity</span><select id="alertSmsMinimumSeverity"><option>WARNING</option><option>CRITICAL</option></select></label>
+                <label class="date-field"><span>SMS Max / Assessment</span><input id="alertSmsMax" type="number" min="1" max="50"></label>
+                <button class="primary-btn" id="saveAlertConfigBtn">Save Alert Settings</button>
+                <pre class="log-box action-result" id="alertConfigResult">Alert changes require admin permission.</pre>
+            </div>
+        </article>
     </section>
 
     <section class="view" id="view-spog">
@@ -213,7 +250,7 @@
         </div>
         <article class="panel full api-functions-panel">
             <div class="panel-head"><h2>Server Log Collection Targets</h2><span>Configure collection method before enabling</span></div>
-            <div class="table-wrap"><table><thead><tr><th>Component</th><th>Host</th><th>Log Scope</th><th>Method</th><th>Status</th></tr></thead><tbody id="serverLogTargetsTable"></tbody></table></div>
+            <div class="table-wrap"><table><thead><tr><th>Component</th><th>Host</th><th>Log Scope</th><th>Method</th><th>Status</th><th></th></tr></thead><tbody id="serverLogTargetsTable"></tbody></table></div>
         </article>
     </section>
 
@@ -294,6 +331,20 @@
                 <label class="date-field"><span>Priority</span><select id="planPriorityFilter"></select></label>
                 <label class="date-field"><span>Resource</span><select id="planResourceFilter"></select></label>
                 <strong id="planFilteredCount"></strong>
+            </div>
+        </article>
+        <article class="panel full api-functions-panel">
+            <div class="panel-head"><h2>Task Editor</h2><span>Saved in this browser for team planning</span></div>
+            <div class="admin-form plan-editor-form">
+                <label class="date-field"><span>Topic</span><select id="planEditTopic"><option>PCCE</option><option>Eleveo</option><option>Dtech</option><option>Cisco Portal</option><option>Survey</option><option>Chat</option><option>One Content</option></select></label>
+                <label class="date-field"><span>Task</span><input id="planEditTask" placeholder="Task name"></label>
+                <label class="date-field"><span>Priority</span><select id="planEditPriority"><option>CRITICAL</option><option>HIGH</option><option>MEDIUM</option><option>LOW</option></select></label>
+                <label class="date-field"><span>Status</span><select id="planEditStatus"><option>PLANNED</option><option>IN_PROGRESS</option><option>ON_HOLD</option><option>COMPLETED</option></select></label>
+                <label class="date-field"><span>Resource</span><input id="planEditResource" placeholder="Person / Team"></label>
+                <label class="date-field"><span>Progress %</span><input id="planEditPct" type="number" min="0" max="100" value="0"></label>
+                <label class="date-field editor-wide"><span>Comments</span><input id="planEditComments" placeholder="Notes"></label>
+                <button class="primary-btn" id="planAddTaskBtn">Add Task</button>
+                <button class="primary-btn" id="planResetBtn">Reset Plan</button>
             </div>
         </article>
         <div id="planTaskView"></div>

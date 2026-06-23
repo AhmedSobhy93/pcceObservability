@@ -6,11 +6,16 @@ import com.example.pcceobservability.config.PcceProperties.AppUser;
 import com.example.pcceobservability.config.PcceProperties.ComponentName;
 import com.example.pcceobservability.model.ManagedRoleView;
 import com.example.pcceobservability.model.ManagedUserView;
+import com.example.pcceobservability.model.NotificationSettingsView;
+import com.example.pcceobservability.model.ServerLogTarget;
 import com.example.pcceobservability.model.UpdateComponentRequest;
+import com.example.pcceobservability.model.UpdateNotificationSettingsRequest;
 import com.example.pcceobservability.model.UpdateRolePermissionsRequest;
+import com.example.pcceobservability.model.UpdateServerLogTargetRequest;
 import com.example.pcceobservability.model.UpsertUserRequest;
 import com.example.pcceobservability.security.PermissionCatalog;
 import com.example.pcceobservability.service.AuditService;
+import com.example.pcceobservability.service.SupportCapabilityService;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -33,10 +38,15 @@ public class AdminController {
 
     private final PcceProperties pcceProperties;
     private final AuditService auditService;
+    private final SupportCapabilityService supportCapabilityService;
 
-    public AdminController(PcceProperties pcceProperties, AuditService auditService) {
+    public AdminController(
+            PcceProperties pcceProperties,
+            AuditService auditService,
+            SupportCapabilityService supportCapabilityService) {
         this.pcceProperties = pcceProperties;
         this.auditService = auditService;
+        this.supportCapabilityService = supportCapabilityService;
     }
 
     @GetMapping("/users")
@@ -178,6 +188,95 @@ public class AdminController {
         details.put("expectedStatusMax", target.getExpectedStatusMax());
         auditService.record("UPDATE_COMPONENT", name.name(), details);
         return target;
+    }
+
+    @GetMapping("/notifications")
+    public NotificationSettingsView notifications() {
+        PcceProperties.Notifications notifications = pcceProperties.getNotifications();
+        return new NotificationSettingsView(
+                notifications.isWebhookEnabled(),
+                StringUtils.hasText(notifications.getWebhookUrl()) ? "configured" : "",
+                notifications.isSmtpEnabled(),
+                notifications.getSmtpFrom(),
+                notifications.getSmtpRecipients(),
+                notifications.getSmtpSubjectPrefix(),
+                notifications.isSmsEnabled(),
+                StringUtils.hasText(notifications.getSmsUrl()) ? "configured" : "",
+                notifications.getSmsUserAgent(),
+                notifications.getSmsRecipients(),
+                notifications.getMinimumSeverity(),
+                notifications.getSmsMinimumSeverity(),
+                notifications.getSmsMaxAlertsPerAssessment());
+    }
+
+    @PutMapping("/notifications")
+    public NotificationSettingsView updateNotifications(@RequestBody UpdateNotificationSettingsRequest request) {
+        if (request == null) {
+            throw new IllegalArgumentException("request body is required");
+        }
+        PcceProperties.Notifications notifications = pcceProperties.getNotifications();
+        if (request.webhookEnabled() != null) {
+            notifications.setWebhookEnabled(request.webhookEnabled());
+        }
+        if (request.smtpEnabled() != null) {
+            notifications.setSmtpEnabled(request.smtpEnabled());
+        }
+        if (request.smtpFrom() != null) {
+            notifications.setSmtpFrom(request.smtpFrom());
+        }
+        if (request.smtpRecipients() != null) {
+            notifications.setSmtpRecipients(request.smtpRecipients());
+        }
+        if (request.smtpSubjectPrefix() != null) {
+            notifications.setSmtpSubjectPrefix(request.smtpSubjectPrefix());
+        }
+        if (request.smsEnabled() != null) {
+            notifications.setSmsEnabled(request.smsEnabled());
+        }
+        if (request.smsUrl() != null) {
+            notifications.setSmsUrl(request.smsUrl());
+        }
+        if (request.smsAuthorization() != null) {
+            notifications.setSmsAuthorization(request.smsAuthorization());
+        }
+        if (request.smsUserAgent() != null) {
+            notifications.setSmsUserAgent(request.smsUserAgent());
+        }
+        if (request.smsRecipients() != null) {
+            notifications.setSmsRecipients(request.smsRecipients());
+        }
+        if (request.minimumSeverity() != null) {
+            notifications.setMinimumSeverity(request.minimumSeverity());
+        }
+        if (request.smsMinimumSeverity() != null) {
+            notifications.setSmsMinimumSeverity(request.smsMinimumSeverity());
+        }
+        if (request.smsMaxAlertsPerAssessment() != null) {
+            notifications.setSmsMaxAlertsPerAssessment(request.smsMaxAlertsPerAssessment());
+        }
+        auditService.record("UPDATE_NOTIFICATION_SETTINGS", "notifications", Map.of(
+                "smtpEnabled", notifications.isSmtpEnabled(),
+                "smsEnabled", notifications.isSmsEnabled(),
+                "minimumSeverity", notifications.getMinimumSeverity(),
+                "smsMinimumSeverity", notifications.getSmsMinimumSeverity()));
+        return notifications();
+    }
+
+    @GetMapping("/server-log-targets")
+    public List<ServerLogTarget> serverLogTargets() {
+        return supportCapabilityService.serverLogTargets();
+    }
+
+    @PutMapping("/server-log-targets/{component}")
+    public ServerLogTarget updateServerLogTarget(
+            @PathVariable String component,
+            @RequestBody UpdateServerLogTargetRequest request) {
+        ServerLogTarget updated = supportCapabilityService.updateServerLogTarget(component, request);
+        auditService.record("UPDATE_SERVER_LOG_TARGET", component, Map.of(
+                "host", updated.host(),
+                "enabled", updated.enabled(),
+                "collectionMethod", updated.collectionMethod()));
+        return updated;
     }
 
     private List<AppUser> mutableUsers() {

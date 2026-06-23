@@ -2,11 +2,22 @@ package com.example.pcceobservability.service;
 
 import com.example.pcceobservability.model.ServerLogTarget;
 import com.example.pcceobservability.model.SupportCapability;
+import com.example.pcceobservability.model.UpdateServerLogTargetRequest;
+import java.util.ArrayList;
 import java.util.List;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 @Service
 public class SupportCapabilityService {
+
+    private final List<ServerLogTarget> serverLogTargets = new ArrayList<>(List.of(
+            new ServerLogTarget("ICM_Router", "vswsitrgr01", "Cisco ICM Router logs", "Windows share / agent / SIEM", false),
+            new ServerLogTarget("ICM_Logger", "vswsitaw01", "Cisco ICM Logger logs", "Windows share / agent / SIEM", false),
+            new ServerLogTarget("PG", "vswsitpg01", "Cisco PG/CTI logs", "Windows share / agent / SIEM", false),
+            new ServerLogTarget("CVP", "vswsitcvp01", "CVP Call Server logs", "SFTP / agent / SIEM", false),
+            new ServerLogTarget("Finesse", "vssitfin01", "Finesse Tomcat/application logs", "SFTP / agent / SIEM", false),
+            new ServerLogTarget("CUIC", "vssitcuic01", "CUIC application/reporting logs", "SFTP / agent / SIEM", false)));
 
     public List<SupportCapability> smtpCapabilities() {
         return List.of(
@@ -28,12 +39,40 @@ public class SupportCapabilityService {
     }
 
     public List<ServerLogTarget> serverLogTargets() {
-        return List.of(
-                new ServerLogTarget("ICM_Router", "vswsitrgr01", "Cisco ICM Router logs", "Windows share / agent / SIEM", false),
-                new ServerLogTarget("ICM_Logger", "vswsitrgr01", "Cisco ICM Logger logs", "Windows share / agent / SIEM", false),
-                new ServerLogTarget("PG", "vswsitpg01", "Cisco PG/CTI logs", "Windows share / agent / SIEM", false),
-                new ServerLogTarget("CVP", "vswsitcvp01", "CVP Call Server logs", "SFTP / agent / SIEM", false),
-                new ServerLogTarget("Finesse", "vssitfin01", "Finesse Tomcat/application logs", "SFTP / agent / SIEM", false),
-                new ServerLogTarget("CUIC", "vssitcuic01", "CUIC application/reporting logs", "SFTP / agent / SIEM", false));
+        return List.copyOf(serverLogTargets);
+    }
+
+    public ServerLogTarget updateServerLogTarget(String component, UpdateServerLogTargetRequest request) {
+        if (!StringUtils.hasText(component)) {
+            throw new IllegalArgumentException("component is required");
+        }
+        for (int index = 0; index < serverLogTargets.size(); index++) {
+            ServerLogTarget current = serverLogTargets.get(index);
+            if (current.component().equalsIgnoreCase(component)) {
+                ServerLogTarget updated = merge(current, request);
+                serverLogTargets.set(index, updated);
+                return updated;
+            }
+        }
+        ServerLogTarget created = new ServerLogTarget(
+                component,
+                request == null || request.host() == null ? "" : request.host(),
+                request == null || request.logPath() == null ? "" : request.logPath(),
+                request == null || request.collectionMethod() == null ? "agent / SIEM" : request.collectionMethod(),
+                request != null && Boolean.TRUE.equals(request.enabled()));
+        serverLogTargets.add(created);
+        return created;
+    }
+
+    private ServerLogTarget merge(ServerLogTarget current, UpdateServerLogTargetRequest request) {
+        if (request == null) {
+            return current;
+        }
+        return new ServerLogTarget(
+                current.component(),
+                request.host() == null ? current.host() : request.host(),
+                request.logPath() == null ? current.logPath() : request.logPath(),
+                request.collectionMethod() == null ? current.collectionMethod() : request.collectionMethod(),
+                request.enabled() == null ? current.enabled() : request.enabled());
     }
 }
