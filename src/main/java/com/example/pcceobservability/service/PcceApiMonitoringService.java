@@ -21,6 +21,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Base64;
 import java.util.List;
+import java.util.Map;
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLContext;
@@ -55,12 +56,17 @@ public class PcceApiMonitoringService {
                 new ApiFunctionView("User Configuration and Management", "User by role", "GET", "/unifiedconfig/config/user?role={role}", "Filter users by configured PCCE role"),
                 new ApiFunctionView("Team Configuration and Management", "List agent teams", "GET", "/unifiedconfig/config/agentteam", "Read agent team configuration for workforce visibility"),
                 new ApiFunctionView("Skill Group Management", "List skill groups", "GET", "/unifiedconfig/config/skillgroup", "Read skill groups used for routing/reporting alignment"),
+                new ApiFunctionView("Agents, Skills, Attributes, and Teams", "Agent by ID", "GET", "/unifiedconfig/config/agent/{id}", "Inspect one configured agent and validate ID mapping"),
+                new ApiFunctionView("Agents, Skills, Attributes, and Teams", "List attributes", "GET", "/unifiedconfig/config/attribute", "Read routing attributes where Precision Routing is used"),
+                new ApiFunctionView("Agents, Skills, Attributes, and Teams", "List precision queues", "GET", "/unifiedconfig/config/precisionqueue", "Read precision queues used by scripts/reporting"),
                 new ApiFunctionView("Call Configuration and Management", "List dialed numbers", "GET", "/unifiedconfig/config/dialednumber", "Read DN configuration used by routing scripts"),
                 new ApiFunctionView("Call Configuration and Management", "List call types", "GET", "/unifiedconfig/config/calltype", "Read call type configuration for CUIC/report mapping"),
+                new ApiFunctionView("Call Configuration and Management", "List labels", "GET", "/unifiedconfig/config/label", "Read routing labels and targets"),
                 new ApiFunctionView("Call Configuration and Management", "Expanded call variables", "GET", "/unifiedconfig/config/expandedcallvariable", "Validate ECC variable configuration availability"),
                 new ApiFunctionView("Outbound Option", "Campaigns", "GET", "/unifiedconfig/config/campaign", "Read outbound campaign configuration where Outbound Option is enabled"),
                 new ApiFunctionView("Outbound Option", "Do Not Call import rules", "GET", "/unifiedconfig/config/dncimportrule", "Validate DNC import configuration where Outbound Option is enabled"),
                 new ApiFunctionView("System Configuration", "Business hours", "GET", "/unifiedconfig/config/businesshour", "Read business hour configuration"),
+                new ApiFunctionView("System Configuration", "Capacity info", "GET", "/unifiedconfig/config/capacityinfo", "Read deployment capacity information where exposed"),
                 new ApiFunctionView("System Configuration", "Deployment information", "GET", "/unifiedconfig/config/deploymenttype", "Validate deployment-level API availability"),
                 new ApiFunctionView("System Configuration", "CVP Reporting Server", "GET", "/unifiedconfig/config/cvpreportingserver", "Validate CVP Reporting Server configuration visibility"));
     }
@@ -76,6 +82,10 @@ public class PcceApiMonitoringService {
     }
 
     public ApiActionResult execute(String id, String body) {
+        return execute(id, body, Map.of(), Map.of());
+    }
+
+    public ApiActionResult execute(String id, String body, Map<String, String> pathParams, Map<String, String> queryParams) {
         PcceProperties.PcceApi api = pcceProperties.getPcceApi();
         ApiAction action = api.getActions().stream()
                 .filter(candidate -> id.equalsIgnoreCase(candidate.getId()))
@@ -84,7 +94,7 @@ public class PcceApiMonitoringService {
         if (!api.isEnabled() || !action.isEnabled()) {
             throw new IllegalArgumentException("PCCE API action is disabled: " + id);
         }
-        String target = target(api, action.getPath());
+        String target = target(api, applyPathParams(action.getPath(), pathParams), queryParams);
         long start = System.nanoTime();
         try {
             boolean requestHasBody = hasBody(action.getMethod()) && body != null && !body.isBlank();
@@ -244,17 +254,56 @@ public class PcceApiMonitoringService {
     }
 
     private String target(PcceProperties.PcceApi api, String path) {
+        return target(api, path, Map.of());
+    }
+
+    private String target(PcceProperties.PcceApi api, String path, Map<String, String> queryParams) {
         if (!StringUtils.hasText(path)) {
             return "";
         }
         if (path.startsWith("http://") || path.startsWith("https://")) {
-            return path;
+            return appendQuery(path, queryParams);
         }
         if (!StringUtils.hasText(api.getBaseUrl())) {
-            return path;
+            return appendQuery(path, queryParams);
         }
-        return URI.create(api.getBaseUrl().replaceAll("/+$", "") + "/" + path.replaceAll("^/+", ""))
-                .toString();
+        return appendQuery(URI.create(api.getBaseUrl().replaceAll("/+$", "") + "/" + path.replaceAll("^/+", ""))
+                .toString(), queryParams);
+    }
+
+    private String applyPathParams(String path, Map<String, String> pathParams) {
+        String resolved = path;
+        if (pathParams == null) {
+            return resolved;
+        }
+        for (Map.Entry<String, String> entry : pathParams.entrySet()) {
+            resolved = resolved.replace("{" + entry.getKey() + "}", encode(entry.getValue()));
+        }
+        return resolved;
+    }
+
+    private String appendQuery(String target, Map<String, String> queryParams) {
+        if (queryParams == null || queryParams.isEmpty()) {
+            return target;
+        }
+        StringBuilder builder = new StringBuilder(target);
+        builder.append(target.contains("?") ? "&" : "?");
+        boolean first = true;
+        for (Map.Entry<String, String> entry : queryParams.entrySet()) {
+            if (!StringUtils.hasText(entry.getKey()) || entry.getValue() == null) {
+                continue;
+            }
+            if (!first) {
+                builder.append("&");
+            }
+            builder.append(encode(entry.getKey())).append("=").append(encode(entry.getValue()));
+            first = false;
+        }
+        return builder.toString();
+    }
+
+    private String encode(String value) {
+        return java.net.URLEncoder.encode(value == null ? "" : value, StandardCharsets.UTF_8);
     }
 
     private ApiActionView toView(ApiAction action) {

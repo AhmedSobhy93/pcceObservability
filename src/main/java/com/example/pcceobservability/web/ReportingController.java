@@ -2,8 +2,10 @@ package com.example.pcceobservability.web;
 
 import com.example.pcceobservability.model.AgentStat;
 import com.example.pcceobservability.model.CallMetric;
+import com.example.pcceobservability.model.CallFlowEvent;
 import com.example.pcceobservability.model.CallTypeMetric;
 import com.example.pcceobservability.model.ContactCenterSummary;
+import com.example.pcceobservability.model.CuicReportView;
 import com.example.pcceobservability.model.DispositionBreakdown;
 import com.example.pcceobservability.model.DroppedCallMetric;
 import com.example.pcceobservability.service.ReportingService;
@@ -47,6 +49,22 @@ public class ReportingController {
             @RequestParam(required = false) String callType,
             @RequestParam(required = false) String skillGroup) {
         return reportingService.callTypeMetrics(from, to, callType, skillGroup);
+    }
+
+    @GetMapping("/cuic/reports")
+    @PreAuthorize("hasAuthority('PERM_CALL_METRICS_READ')")
+    public List<CuicReportView> cuicReports() {
+        return reportingService.cuicReports();
+    }
+
+    @GetMapping("/calls/flow")
+    @PreAuthorize("hasAuthority('PERM_CALL_METRICS_READ')")
+    public List<CallFlowEvent> callFlow(
+            @RequestParam @NotNull @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam @NotNull @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
+            @RequestParam(required = false) String callKey,
+            @RequestParam(required = false) String agentId) {
+        return reportingService.callFlow(from, to, callKey, agentId);
     }
 
     @GetMapping("/agents/stats")

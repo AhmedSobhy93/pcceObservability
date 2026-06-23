@@ -481,13 +481,22 @@ public class PcceProperties {
                     action("users.list", "User Configuration and Management", "List users", "GET", "/unifiedconfig/config/user", false),
                     action("teams.list", "Team Configuration and Management", "List agent teams", "GET", "/unifiedconfig/config/agentteam", false),
                     action("skills.list", "Skill Group Management", "List skill groups", "GET", "/unifiedconfig/config/skillgroup", false),
+                    action("agent.get", "Agents, Skills, Attributes, and Teams", "Get agent by ID", "GET", "/unifiedconfig/config/agent/{id}", false),
+                    action("attributes.list", "Agents, Skills, Attributes, and Teams", "List attributes", "GET", "/unifiedconfig/config/attribute", false),
+                    action("precisionQueues.list", "Agents, Skills, Attributes, and Teams", "List precision queues", "GET", "/unifiedconfig/config/precisionqueue", false),
                     action("dialedNumbers.list", "Call Configuration and Management", "List dialed numbers", "GET", "/unifiedconfig/config/dialednumber", false),
                     action("callTypes.list", "Call Configuration and Management", "List call types", "GET", "/unifiedconfig/config/calltype", false),
+                    action("labels.list", "Call Configuration and Management", "List labels", "GET", "/unifiedconfig/config/label", false),
                     action("eccVariables.list", "Call Configuration and Management", "List ECC variables", "GET", "/unifiedconfig/config/expandedcallvariable", false),
                     action("campaigns.list", "Outbound Option", "List campaigns", "GET", "/unifiedconfig/config/campaign", false),
+                    action("dncImportRules.list", "Outbound Option", "List DNC import rules", "GET", "/unifiedconfig/config/dncimportrule", false),
                     action("businessHours.list", "System Configuration", "List business hours", "GET", "/unifiedconfig/config/businesshour", false),
+                    action("capacityInfo.get", "System Configuration", "Get capacity info", "GET", "/unifiedconfig/config/capacityinfo", false),
                     action("deploymentType.get", "System Configuration", "Get deployment type", "GET", "/unifiedconfig/config/deploymenttype", false),
-                    action("cvpReportingServer.get", "System Configuration", "Get CVP Reporting Server", "GET", "/unifiedconfig/config/cvpreportingserver", false));
+                    action("cvpReportingServer.get", "System Configuration", "Get CVP Reporting Server", "GET", "/unifiedconfig/config/cvpreportingserver", false),
+                    action("businessHours.update", "System Configuration", "Update business hours", "PUT", "/unifiedconfig/config/businesshour/{id}", true),
+                    action("user.update", "User Configuration and Management", "Update user", "PUT", "/unifiedconfig/config/user/{id}", true),
+                    action("agentTeam.update", "Team Configuration and Management", "Update agent team", "PUT", "/unifiedconfig/config/agentteam/{id}", true));
         }
 
         private static ApiAction action(String id, String category, String name, String method, String path, boolean adminOnly) {
@@ -1157,7 +1166,7 @@ public class PcceProperties {
                 SELECT
                     CAST(tcd.DateTime AS date) AS [date],
                     DATEPART(hour, tcd.DateTime) AS [hour],
-                    COALESCE(sg.EnterpriseName, 'UNKNOWN') AS skill_group,
+                    COALESCE(sg.EnterpriseName, 'SkillTarget ' + CAST(tcd.SkillGroupSkillTargetID AS varchar(50)), 'UNMAPPED') AS skill_group,
                     COUNT_BIG(*) AS calls_offered,
                     SUM(CASE WHEN COALESCE(tcd.AgentSkillTargetID, 0) > 0 THEN 1 ELSE 0 END) AS calls_handled,
                     SUM(CASE WHEN COALESCE(tcd.AgentSkillTargetID, 0) = 0 THEN 1 ELSE 0 END) AS calls_abandoned,
@@ -1181,7 +1190,7 @@ public class PcceProperties {
                 GROUP BY
                     CAST(tcd.DateTime AS date),
                     DATEPART(hour, tcd.DateTime),
-                    COALESCE(sg.EnterpriseName, 'UNKNOWN')
+                    COALESCE(sg.EnterpriseName, 'SkillTarget ' + CAST(tcd.SkillGroupSkillTargetID AS varchar(50)), 'UNMAPPED')
                 ORDER BY [date], [hour], skill_group
                 """;
 
@@ -1216,10 +1225,10 @@ public class PcceProperties {
         static final String AGENT_STATS_TCD = """
                 SELECT
                     CAST(tcd.DateTime AS date) AS [date],
-                    COALESCE(p.FirstName + ' ' + p.LastName, 'UNKNOWN') AS agent_name,
+                    COALESCE(p.FirstName + ' ' + p.LastName, 'Agent ' + CAST(tcd.AgentSkillTargetID AS varchar(50))) AS agent_name,
                     COALESCE(p.LoginName, CAST(tcd.AgentSkillTargetID AS varchar(50))) AS agent_id,
                     at.EnterpriseName AS team,
-                    COALESCE(sg.EnterpriseName, 'UNKNOWN') AS skill_group,
+                    COALESCE(sg.EnterpriseName, 'SkillTarget ' + CAST(tcd.SkillGroupSkillTargetID AS varchar(50)), 'UNMAPPED') AS skill_group,
                     'offline' AS status,
                     COUNT_BIG(*) AS calls_handled,
                     CAST(NULL AS decimal(18,2)) AS avg_handle_time,
@@ -1243,10 +1252,10 @@ public class PcceProperties {
                   AND (? IS NULL OR at.EnterpriseName = ?)
                 GROUP BY
                     CAST(tcd.DateTime AS date),
-                    COALESCE(p.FirstName + ' ' + p.LastName, 'UNKNOWN'),
+                    COALESCE(p.FirstName + ' ' + p.LastName, 'Agent ' + CAST(tcd.AgentSkillTargetID AS varchar(50))),
                     COALESCE(p.LoginName, CAST(tcd.AgentSkillTargetID AS varchar(50))),
                     at.EnterpriseName,
-                    COALESCE(sg.EnterpriseName, 'UNKNOWN')
+                    COALESCE(sg.EnterpriseName, 'SkillTarget ' + CAST(tcd.SkillGroupSkillTargetID AS varchar(50)), 'UNMAPPED')
                 ORDER BY [date], agent_name
                 """;
 
@@ -1254,8 +1263,8 @@ public class PcceProperties {
                 SELECT
                     CAST(tcd.DateTime AS date) AS [date],
                     DATEPART(hour, tcd.DateTime) AS [hour],
-                    COALESCE(ct.EnterpriseName, CAST(tcd.CallTypeID AS varchar(50)), 'UNKNOWN') AS call_type,
-                    COALESCE(sg.EnterpriseName, 'UNKNOWN') AS skill_group,
+                    COALESCE(ct.EnterpriseName, 'CallType ' + CAST(tcd.CallTypeID AS varchar(50)), 'UNMAPPED') AS call_type,
+                    COALESCE(sg.EnterpriseName, 'SkillTarget ' + CAST(tcd.SkillGroupSkillTargetID AS varchar(50)), 'UNMAPPED') AS skill_group,
                     COUNT_BIG(*) AS calls,
                     SUM(CASE WHEN COALESCE(tcd.AgentSkillTargetID, 0) > 0 THEN 1 ELSE 0 END) AS handled_calls
                 FROM t_Termination_Call_Detail tcd
@@ -1267,8 +1276,8 @@ public class PcceProperties {
                 GROUP BY
                     CAST(tcd.DateTime AS date),
                     DATEPART(hour, tcd.DateTime),
-                    COALESCE(ct.EnterpriseName, CAST(tcd.CallTypeID AS varchar(50)), 'UNKNOWN'),
-                    COALESCE(sg.EnterpriseName, 'UNKNOWN')
+                    COALESCE(ct.EnterpriseName, 'CallType ' + CAST(tcd.CallTypeID AS varchar(50)), 'UNMAPPED'),
+                    COALESCE(sg.EnterpriseName, 'SkillTarget ' + CAST(tcd.SkillGroupSkillTargetID AS varchar(50)), 'UNMAPPED')
                 ORDER BY [date], [hour], call_type, skill_group
                 """;
 
@@ -1276,7 +1285,7 @@ public class PcceProperties {
                 SELECT
                     CAST(tcd.DateTime AS date) AS [date],
                     DATEPART(hour, tcd.DateTime) AS [hour],
-                    COALESCE(sg.EnterpriseName, 'UNKNOWN') AS skill_group,
+                    COALESCE(sg.EnterpriseName, 'SkillTarget ' + CAST(tcd.SkillGroupSkillTargetID AS varchar(50)), 'UNMAPPED') AS skill_group,
                     COUNT_BIG(*) AS dropped_calls,
                     MAX(tcd.DateTime) AS last_drop_time
                 FROM t_Termination_Call_Detail tcd
@@ -1285,7 +1294,7 @@ public class PcceProperties {
                   AND tcd.DateTime < ?
                   AND 1 = 0
                   AND (? IS NULL OR sg.EnterpriseName = ? OR CAST(sg.SkillTargetID AS varchar(50)) = ?)
-                GROUP BY CAST(tcd.DateTime AS date), DATEPART(hour, tcd.DateTime), COALESCE(sg.EnterpriseName, 'UNKNOWN')
+                GROUP BY CAST(tcd.DateTime AS date), DATEPART(hour, tcd.DateTime), COALESCE(sg.EnterpriseName, 'SkillTarget ' + CAST(tcd.SkillGroupSkillTargetID AS varchar(50)), 'UNMAPPED')
                 ORDER BY [date], [hour], skill_group
                 """;
 

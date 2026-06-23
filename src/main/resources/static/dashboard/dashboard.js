@@ -21,6 +21,9 @@ const state = {
     spogOps: [],
     serverLogTargets: [],
     grafanaDashboards: [],
+    cuicReports: [],
+    integrationCapabilities: [],
+    callFlow: [],
     skillGroups: [],
     callTypeOptions: [],
     agentOptions: [],
@@ -46,6 +49,15 @@ const pages = {
 
 const colors = ["#2ed3c2", "#3d82f6", "#f4a51c", "#8d6cf7", "#24e0a4", "#ff626c"];
 const planState = { view: "tasks", topic: "ALL", collapsed: new Set() };
+const permissionCatalog = [
+    "CALL_METRICS_READ",
+    "AGENT_STATS_READ",
+    "DROPPED_CALLS_READ",
+    "IVR_METRICS_READ",
+    "COMPONENT_STATUS_READ",
+    "OPERATIONS_READ",
+    "SOLUTION_ADMIN"
+];
 const planTasks = [
     { topic: "PCCE", task: "Finalize AW/HDS/CVP reporting alignment", priority: "CRITICAL", priorityNum: 1, status: "IN_PROGRESS", resource: "Contact Center Team / DB Admin", start: "1-Feb-26", finish: "30-Apr-26", duration: 89, pct: 65, comments: "Align dashboard numbers with CUIC stock reports and Cisco schema." },
     { topic: "PCCE", task: "PCCE API enablement and permissions", priority: "HIGH", priorityNum: 2, status: "IN_PROGRESS", resource: "Cisco Admin & App Owner", start: "10-Feb-26", finish: "15-Mar-26", duration: 34, pct: 55, comments: "Validate IIS auth, API user role, and supported actions." },
@@ -64,13 +76,20 @@ document.addEventListener("DOMContentLoaded", () => {
     qs("#fromDate").value = today;
     qs("#toDate").value = today;
     qs("#refreshBtn").addEventListener("click", refresh);
+    qs("#agentFilterBtn")?.addEventListener("click", refresh);
+    qs("#callsFilterBtn")?.addEventListener("click", refresh);
+    qs("#adminQuickBtn")?.addEventListener("click", () => switchView("admin"));
+    qs("#adminSaveUserBtn")?.addEventListener("click", saveAdminUser);
+    qs("#adminSaveRoleBtn")?.addEventListener("click", saveAdminRole);
+    qs("#adminUsername")?.addEventListener("change", fillAdminUserForm);
+    qs("#adminRoleSelect")?.addEventListener("change", renderPermissionEditor);
     qs("#taskListMode")?.addEventListener("click", () => setPlanView("tasks"));
     qs("#resourceMode")?.addEventListener("click", () => setPlanView("resources"));
     ["#planTopicFilter", "#planStatusFilter", "#planPriorityFilter", "#planResourceFilter"].forEach(selector => {
         qs(selector)?.addEventListener("change", renderPlan);
     });
     qs("#collapseBtn").addEventListener("click", () => document.body.classList.toggle("collapsed"));
-    qs("#logoutBtn").addEventListener("click", () => location.href = "/swagger-ui/index.html");
+    qs("#logoutBtn").addEventListener("click", logout);
     document.querySelectorAll(".nav-item[data-view]").forEach(button => {
         button.addEventListener("click", () => switchView(button.dataset.view));
     });
@@ -116,8 +135,8 @@ function dateParams() {
         from: qs("#fromDate").value,
         to: qs("#toDate").value
     });
-    const skill = qs("#skillFilter").value.trim();
-    const agent = qs("#agentFilter").value.trim();
+    const skill = firstFilterValue("#callsSkillFilter", "#businessSkillFilter", "#overviewSkillFilter");
+    const agent = firstFilterValue("#agentPageFilter");
     if (skill) params.set("skillGroup", skill);
     if (agent) params.set("agentId", agent);
     return params.toString();
@@ -128,11 +147,44 @@ function callTypeParams() {
         from: qs("#fromDate").value,
         to: qs("#toDate").value
     });
-    const skill = qs("#skillFilter").value.trim();
-    const callType = qs("#callTypeFilter").value.trim();
+    const skill = firstFilterValue("#callsSkillFilter", "#overviewSkillFilter");
+    const callType = firstFilterValue("#callsCallTypeFilter");
     if (skill) params.set("skillGroup", skill);
     if (callType) params.set("callType", callType);
     return params.toString();
+}
+
+function agentParams() {
+    const params = new URLSearchParams({
+        from: qs("#fromDate").value,
+        to: qs("#toDate").value
+    });
+    const agent = firstFilterValue("#agentPageFilter");
+    const team = firstFilterValue("#agentTeamInput");
+    if (agent) params.set("agentId", agent);
+    if (team) params.set("team", team);
+    return params.toString();
+}
+
+function callFlowParams() {
+    const params = new URLSearchParams({
+        from: qs("#fromDate").value,
+        to: qs("#toDate").value
+    });
+    const callKey = firstFilterValue("#callKeyFilter");
+    const agent = firstFilterValue("#agentPageFilter");
+    if (callKey) params.set("callKey", callKey);
+    if (agent) params.set("agentId", agent);
+    return params.toString();
+}
+
+function firstFilterValue(...selectors) {
+    for (const selector of selectors) {
+        const element = qs(selector);
+        const value = element?.value?.trim();
+        if (value) return value;
+    }
+    return "";
 }
 
 async function api(path, options = {}) {
@@ -162,6 +214,14 @@ async function safeLoad(key, path, fallback, options = {}) {
     }
 }
 
+async function logout() {
+    try {
+        await fetch("/logout", { method: "POST", credentials: "same-origin" });
+    } finally {
+        location.href = "/logout.html";
+    }
+}
+
 async function refresh() {
     setStatus([{ text: "Refreshing live data...", level: "neutral" }]);
     const params = dateParams();
@@ -170,7 +230,8 @@ async function refresh() {
         safeLoad("user", "/api/v1/auth/me", null),
         safeLoad("calls", `/api/v1/metrics/calls?${params}`, [], { timeoutMs: 15000 }),
         safeLoad("callTypes", `/api/v1/metrics/call-types?${callTypeParams()}`, [], { timeoutMs: 15000 }),
-        safeLoad("agents", `/api/v1/agents/stats?${params}`, [], { timeoutMs: 15000 }),
+        safeLoad("callFlow", `/api/v1/calls/flow?${callFlowParams()}`, [], { timeoutMs: 15000 }),
+        safeLoad("agents", `/api/v1/agents/stats?${agentParams()}`, [], { timeoutMs: 15000 }),
         safeLoad("drops", `/api/v1/calls/dropped?${params}`, []),
         safeLoad("ivr", `/api/v1/metrics/ivr-containment?${params}`, []),
         safeLoad("components", "/api/v1/components/status", [], { timeoutMs: 16000 }),
@@ -193,6 +254,8 @@ async function refresh() {
         safeLoad("spogOps", "/api/v1/operations/spog-capabilities", []),
         safeLoad("serverLogTargets", "/api/v1/operations/server-log-targets", []),
         safeLoad("grafanaDashboards", "/api/v1/integrations/grafana/dashboards", []),
+        safeLoad("cuicReports", "/api/v1/cuic/reports", []),
+        safeLoad("integrationCapabilities", "/api/v1/integrations/capabilities", []),
         safeLoad("skillGroups", "/api/v1/reference/skill-groups", []),
         safeLoad("callTypeOptions", "/api/v1/reference/call-types", []),
         safeLoad("agentOptions", "/api/v1/reference/agents", [])
@@ -243,7 +306,7 @@ function renderAll(errors) {
     const alertCount = pick(state.assessment, "alerts")?.length || 0;
     const items = [];
     items.push({ text: errors.length ? `${errors.length} data warnings` : "Live data loaded", level: errors.length ? "warn" : "good" });
-    if (state.calls.some(row => (pick(row, "skill_group", "skillGroup") || "UNKNOWN") === "UNKNOWN")) {
+    if (state.calls.some(row => isUnknownLabel(pick(row, "skill_group", "skillGroup")))) {
         items.push({ text: "CUIC alignment needed: skill/call filters not mapped", level: "warn" });
     }
     items.push({ text: `${componentDown} components down`, level: componentDown ? "bad" : "good" });
@@ -270,9 +333,10 @@ function renderKpis() {
     qs("#trendService").textContent = service === null ? "Interval data unavailable" : "Target tracked";
     qs("#kpiAht").nextElementSibling.textContent = aht === null ? "Interval data unavailable" : "Seconds";
     qs("#chartRange").textContent = `${qs("#fromDate").value} to ${qs("#toDate").value}`;
-    if (qs("#skillFilter").value.trim()) {
-        qs("#trendOffered").textContent = `Skill: ${qs("#skillFilter").value.trim()}`;
-        qs("#trendHandled").textContent = `Skill: ${qs("#skillFilter").value.trim()}`;
+    const skillLabel = firstFilterValue("#overviewSkillFilter", "#businessSkillFilter", "#callsSkillFilter");
+    if (skillLabel) {
+        qs("#trendOffered").textContent = `Skill: ${skillLabel}`;
+        qs("#trendHandled").textContent = `Skill: ${skillLabel}`;
     } else {
         qs("#trendOffered").textContent = "Live HDS";
         qs("#trendHandled").textContent = "Live HDS";
@@ -350,6 +414,7 @@ function renderDrops() {
 
 function renderCallTypes() {
     renderCallFunnel();
+    renderCallFlow();
     qs("#callTypeCount").textContent = `${state.callTypes.length} rows`;
     qs("#callTypeTable").innerHTML = state.callTypes.slice(0, 300).map(row => `<tr>
         <td>${escapeHtml(pick(row, "date") || "")}</td>
@@ -372,6 +437,19 @@ function renderCallTypes() {
             ctx.fillText("Queue wait data unavailable from current HDS query", 30, rect.height / 2);
         }
     }
+}
+
+function renderCallFlow() {
+    qs("#callFlowCount").textContent = `${state.callFlow.length} events`;
+    qs("#callFlowTimeline").innerHTML = state.callFlow.slice(0, 80).map(event => `<div class="trace-event">
+        <div class="trace-dot"></div>
+        <div>
+            <strong>${escapeHtml(pick(event, "stage") || "")}</strong>
+            <span>${escapeHtml(pick(event, "event_time", "eventTime") || "")} | ${escapeHtml(pick(event, "node") || "")} | ${escapeHtml(pick(event, "call_key", "callKey") || "")}</span>
+            <p>${escapeHtml(pick(event, "call_type", "callType") || "")} / ${escapeHtml(pick(event, "skill_group", "skillGroup") || "")} / ${escapeHtml(pick(event, "agent") || "No agent")}</p>
+            <small>${escapeHtml(pick(event, "detail") || "")}</small>
+        </div>
+    </div>`).join("") || `<div class="empty-state"><strong>No call flow events</strong><span>Enter a call key or widen the selected date range.</span></div>`;
 }
 
 function renderComponents() {
@@ -435,6 +513,12 @@ function renderIntegration() {
         metricRow("API Docs", "/swagger-ui/index.html")
     ].join("");
     qs("#userBox").textContent = JSON.stringify(state.user || {}, null, 2);
+    qs("#cuicReportList").innerHTML = state.cuicReports.map(report =>
+        metricRow(`${pick(report, "mode")} - ${pick(report, "name")}`, `${pick(report, "source")} | ${pick(report, "endpoint")}`)
+    ).join("") || metricRow("CUIC Stock Reports", "Mapping catalog unavailable");
+    qs("#integrationCapabilityList").innerHTML = state.integrationCapabilities.map(item =>
+        metricRow(`${pick(item, "area")} - ${pick(item, "capability")}`, `${pick(item, "method")} | ${pick(item, "status")} | ${pick(item, "action")}`)
+    ).join("") || metricRow("Integrations", "Capability catalog unavailable");
     qs("#pcceApiGrid").innerHTML = state.pcceApiStatus.map(item => {
         const stateValue = String(pick(item, "state") || "UNKNOWN").toLowerCase();
         const badgeClass = stateValue === "up" ? "up" : stateValue === "down" ? "down" : "warn";
@@ -540,14 +624,25 @@ async function executePcceAction(id) {
     qs("#pcceActionResult").textContent = `Running ${id}...`;
     try {
         const bodyText = qs("#pcceActionBody").value.trim();
+        const pathParams = parseJsonObject(qs("#pccePathParams").value.trim(), "Path params");
+        const queryParams = parseJsonObject(qs("#pcceQueryParams").value.trim(), "Query params");
         const result = await api(`/api/v1/pcce-api/actions/${encodeURIComponent(id)}/execute`, {
             method: "POST",
-            body: JSON.stringify({ body: bodyText || null })
+            body: JSON.stringify({ body: bodyText || null, pathParams, queryParams })
         });
         qs("#pcceActionResult").textContent = JSON.stringify(result, null, 2);
     } catch (error) {
         qs("#pcceActionResult").textContent = error.message;
     }
+}
+
+function parseJsonObject(text, label) {
+    if (!text) return {};
+    const parsed = JSON.parse(text);
+    if (!parsed || Array.isArray(parsed) || typeof parsed !== "object") {
+        throw new Error(`${label} must be a JSON object`);
+    }
+    return parsed;
 }
 
 function renderOperations() {
@@ -580,13 +675,28 @@ function renderSupport() {
 
 function renderAdmin() {
     if (!hasPermission("SOLUTION_ADMIN")) {
+        qs("#adminUserKpi").textContent = "--";
+        qs("#adminRoleKpi").textContent = "--";
+        qs("#adminComponentKpi").textContent = "--";
+        qs("#adminAccessKpi").textContent = "Denied";
         qs("#adminUserCount").textContent = "Admin permission required";
         qs("#adminUsersTable").innerHTML = "";
         qs("#adminRolesList").innerHTML = metricRow("Access", "PERM_SOLUTION_ADMIN required");
         qs("#adminComponentsTable").innerHTML = "";
+        qs("#adminPermissionGrid").innerHTML = "";
+        qs("#adminCapabilityCards").innerHTML = adminCapabilityCards();
         return;
     }
+    qs("#adminUserKpi").textContent = fmt(state.adminUsers.length);
+    qs("#adminRoleKpi").textContent = fmt(state.adminRoles.length);
+    qs("#adminComponentKpi").textContent = fmt(state.adminComponents.length);
+    qs("#adminAccessKpi").textContent = "Enabled";
     qs("#adminUserCount").textContent = `${state.adminUsers.length} users`;
+    fillDatalist("#adminUserOptions", state.adminUsers.map(user => ({
+        value: pick(user, "username"),
+        label: pick(user, "display_name", "displayName") || pick(user, "username"),
+        detail: (pick(user, "roles") || []).join(", ")
+    })));
     qs("#adminUsersTable").innerHTML = state.adminUsers.map(user => `<tr>
         <td>${escapeHtml(pick(user, "username") || "")}</td>
         <td>${escapeHtml(pick(user, "display_name", "displayName") || "")}</td>
@@ -597,6 +707,8 @@ function renderAdmin() {
     qs("#adminRolesList").innerHTML = state.adminRoles.map(role =>
         metricRow(pick(role, "role") || "", (pick(role, "permissions") || []).join(", "))
     ).join("");
+    populateAdminRoleSelect();
+    renderPermissionEditor();
     qs("#adminComponentsTable").innerHTML = state.adminComponents.map(component => `<tr>
         <td>${escapeHtml(pick(component, "name") || "")}</td>
         <td>${pick(component, "enabled") ? "true" : "false"}</td>
@@ -605,6 +717,97 @@ function renderAdmin() {
         <td>${escapeHtml(pick(component, "timeout") || "")}</td>
         <td>${pick(component, "trust_all_certificates", "trustAllCertificates") ? "trust all" : "default"}</td>
     </tr>`).join("");
+    qs("#adminCapabilityCards").innerHTML = adminCapabilityCards();
+}
+
+function populateAdminRoleSelect() {
+    const select = qs("#adminRoleSelect");
+    if (!select) return;
+    const current = select.value || "ADMIN";
+    const roles = state.adminRoles.map(role => pick(role, "role")).filter(Boolean);
+    select.innerHTML = roles.map(role => `<option value="${escapeHtml(role)}">${escapeHtml(role)}</option>`).join("");
+    select.value = roles.includes(current) ? current : roles[0] || "ADMIN";
+}
+
+function renderPermissionEditor() {
+    const roleName = qs("#adminRoleSelect")?.value;
+    const role = state.adminRoles.find(item => pick(item, "role") === roleName);
+    const selected = new Set(pick(role, "permissions") || []);
+    qs("#adminPermissionGrid").innerHTML = permissionCatalog.map(permission => `<label class="check-card">
+        <input type="checkbox" value="${escapeHtml(permission)}" ${selected.has(permission) ? "checked" : ""}>
+        <span>${escapeHtml(permission.replaceAll("_", " "))}</span>
+    </label>`).join("");
+}
+
+function fillAdminUserForm() {
+    const username = qs("#adminUsername").value.trim();
+    const user = state.adminUsers.find(item => pick(item, "username") === username);
+    if (!user) return;
+    qs("#adminDisplayName").value = pick(user, "display_name", "displayName") || "";
+    qs("#adminPassword").value = "";
+    qs("#adminAgentId").value = pick(user, "agent_id", "agentId") || "";
+    qs("#adminTeams").value = (pick(user, "allowed_teams", "allowedTeams") || []).join(", ");
+    qs("#adminUserRole").value = (pick(user, "roles") || ["VIEWER"])[0] || "VIEWER";
+    qs("#adminUserEnabled").checked = Boolean(pick(user, "enabled"));
+}
+
+async function saveAdminUser() {
+    const username = qs("#adminUsername").value.trim();
+    if (!username) {
+        qs("#adminActionResult").textContent = "Username is required.";
+        return;
+    }
+    const password = qs("#adminPassword").value.trim();
+    const body = {
+        displayName: qs("#adminDisplayName").value.trim() || username,
+        agentId: qs("#adminAgentId").value.trim() || null,
+        enabled: qs("#adminUserEnabled").checked,
+        allowedTeams: splitCsv(qs("#adminTeams").value),
+        roles: [qs("#adminUserRole").value],
+        extraPermissions: []
+    };
+    if (password) body.password = password;
+    qs("#adminActionResult").textContent = `Saving ${username}...`;
+    try {
+        const result = await api(`/api/v1/admin/users/${encodeURIComponent(username)}`, {
+            method: "PUT",
+            body: JSON.stringify(body)
+        });
+        qs("#adminActionResult").textContent = JSON.stringify(result, null, 2);
+        await safeLoad("adminUsers", "/api/v1/admin/users", []);
+        renderAdmin();
+    } catch (error) {
+        qs("#adminActionResult").textContent = error.message;
+    }
+}
+
+async function saveAdminRole() {
+    const role = qs("#adminRoleSelect").value;
+    const permissions = [...document.querySelectorAll("#adminPermissionGrid input:checked")].map(input => input.value);
+    qs("#adminActionResult").textContent = `Saving permissions for ${role}...`;
+    try {
+        const result = await api(`/api/v1/admin/roles/${encodeURIComponent(role)}`, {
+            method: "PUT",
+            body: JSON.stringify({ permissions })
+        });
+        qs("#adminActionResult").textContent = JSON.stringify(result, null, 2);
+        await safeLoad("adminRoles", "/api/v1/admin/roles", []);
+        renderAdmin();
+    } catch (error) {
+        qs("#adminActionResult").textContent = error.message;
+    }
+}
+
+function adminCapabilityCards() {
+    const cards = [
+        ["RBAC", "Create/update app users, assign roles, scope teams and agents."],
+        ["Role Permissions", "Tune permissions for Admin, Workforce, Supervisor, Agent, and Viewer."],
+        ["Components", "Review probes, target URLs, TLS trust, timeout and enabled state."],
+        ["Audit", "User and permission changes are recorded by the in-memory audit service."],
+        ["Alerts", "Webhook, SMTP and SMS thresholds are configurable in application.yml/env."],
+        ["Diagnostics", "Use /api/v1/admin/diagnostics for AW/HDS/CVP schema checks."]
+    ];
+    return cards.map(([title, detail]) => `<article class="business-card"><h3>${escapeHtml(title)}</h3><p>${escapeHtml(detail)}</p></article>`).join("");
 }
 
 function renderPlan() {
@@ -827,6 +1030,15 @@ function metricPct(value) {
     return value === null || value === undefined ? "--" : `${Number(value).toFixed(1)}%`;
 }
 
+function splitCsv(value) {
+    return String(value || "").split(",").map(item => item.trim()).filter(Boolean);
+}
+
+function isUnknownLabel(value) {
+    const label = String(value || "").toUpperCase();
+    return label === "UNKNOWN" || label === "UNMAPPED" || label.startsWith("SKILLTARGET ");
+}
+
 function systemKpi(label, value, detail) {
     return `<article class="kpi-card compact"><div class="kpi-top"><span>${escapeHtml(label)}</span></div><strong>${escapeHtml(String(value))}</strong><small>${escapeHtml(detail)}</small></article>`;
 }
@@ -942,18 +1154,27 @@ function renderCallFunnel() {
     const ivr = average(state.ivr, "ivr_containment_rate", "ivrContainmentRate");
     const routed = Math.max(0, offered - (ivr === null ? 0 : offered * ivr / 100));
     const hasIvr = ivr !== null;
-    const items = [
-        ["Offered", offered, 100],
-        ["IVR Contained", hasIvr ? offered * ivr / 100 : null, hasIvr ? ivr : null],
-        ["Routed to Agent", hasIvr ? routed : null, hasIvr && offered ? routed / offered * 100 : null],
-        ["Handled", handled, offered ? handled / offered * 100 : 0],
-        ["Abandoned", hasAbandonSource ? abandoned : null, hasAbandonSource && offered ? abandoned / offered * 100 : null]
-    ];
-    qs("#callFunnel").innerHTML = items.map(([label, value, percent], index) => `<div class="funnel-item">
-        <strong>${value === null ? "--" : fmt(value)}</strong>
+    const queued = hasIvr ? routed : Math.max(0, offered);
+    const unknownMapping = state.calls.some(row => isUnknownLabel(pick(row, "skill_group", "skillGroup")));
+    const node = (tone, label, value, percent, note) => `<div class="flow-node ${tone}">
         <span>${escapeHtml(label)}</span>
-        <small>${percent === null ? "--" : pct(percent)}</small>
-    </div>${index < items.length - 1 ? `<b class="funnel-arrow">-&gt;</b>` : ""}`).join("");
+        <strong>${value === null ? "--" : fmt(value)}</strong>
+        <small>${percent === null ? "--" : pct(percent)}${note ? ` | ${escapeHtml(note)}` : ""}</small>
+    </div>`;
+    qs("#callFunnel").innerHTML = `<div class="flow-diagram">
+        ${node("primary", "Offered", offered, offered ? 100 : 0, "HDS")}
+        <div class="flow-arrow">-&gt;</div>
+        <div class="flow-split">
+            ${node("teal", "IVR Contained", hasIvr ? offered * ivr / 100 : null, hasIvr ? ivr : null, hasIvr ? "CVP" : "CVP unavailable")}
+            ${node("blue", "Queued / Routed", queued, offered ? queued / offered * 100 : null, hasIvr ? "estimated" : "from HDS")}
+        </div>
+        <div class="flow-arrow">-&gt;</div>
+        <div class="flow-split">
+            ${node("green", "Handled", handled, offered ? handled / offered * 100 : null, "agent connected")}
+            ${node("red", "Abandoned", hasAbandonSource ? abandoned : null, hasAbandonSource && offered ? abandoned / offered * 100 : null, hasAbandonSource ? "not handled" : "source missing")}
+        </div>
+    </div>
+    <div class="flow-note">${unknownMapping ? "Some calls are unmapped to skill groups. Use Admin diagnostics or CUIC SQL to map SkillGroupSkillTargetID/CallTypeID exactly." : "Funnel uses live HDS/CVP fields available for the selected filters."}</div>`;
 }
 
 function abandonmentByHour() {

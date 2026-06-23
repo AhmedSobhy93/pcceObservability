@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>PCCE Observability Login</title>
+    <link rel="stylesheet" href="/login.css">
+</head>
+<body>
+<main class="login-shell">
+    <section class="login-panel">
+        <div class="brand-row">
+            <div class="brand-mark">CC</div>
+            <div>
+                <h1>PCCE 12.6.2</h1>
+                <p>Observability and Contact Center Operations</p>
+            </div>
+        </div>
+        <div class="status-message" id="loginMessage"></div>
+        <form class="login-form" method="post" action="/login">
+            <label>
+                <span>Username</span>
+                <input name="username" autocomplete="username" required autofocus>
+            </label>
+            <label>
+                <span>Password</span>
+                <input name="password" type="password" autocomplete="current-password" required>
+            </label>
+            <button type="submit">Sign in</button>
+        </form>
+        <div class="login-meta">
+            <span>Role based access</span>
+            <span>AW/HDS/CVP monitoring</span>
+            <span>Alerts and admin controls</span>
+        </div>
+    </section>
+</main>
+<script>
+    const params = new URLSearchParams(location.search);
+    const message = document.getElementById("loginMessage");
+    if (params.has("error")) {
+        message.textContent = "Invalid username or password.";
+        message.className = "status-message error";
+    } else if (params.has("logout")) {
+        message.textContent = "You have been signed out.";
+        message.className = "status-message ok";
+    } else {
+        message.textContent = "Use your assigned operations account.";
+        message.className = "status-message";
+    }
+</script>
+</body>
+</html>

@@ -4,8 +4,10 @@ import com.example.pcceobservability.config.PcceProperties;
 import com.example.pcceobservability.model.AgentStat;
 import com.example.pcceobservability.model.AgentStatus;
 import com.example.pcceobservability.model.CallMetric;
+import com.example.pcceobservability.model.CallFlowEvent;
 import com.example.pcceobservability.model.CallTypeMetric;
 import com.example.pcceobservability.model.ContactCenterSummary;
+import com.example.pcceobservability.model.CuicReportView;
 import com.example.pcceobservability.model.DispositionBreakdown;
 import com.example.pcceobservability.model.DroppedCallMetric;
 import com.example.pcceobservability.model.ReferenceOption;
@@ -16,6 +18,7 @@ import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Supplier;
 import org.slf4j.Logger;
@@ -140,6 +143,76 @@ public class ReportingService {
                 normalizedSkillGroup,
                 normalizedSkillGroup,
                 normalizedSkillGroup));
+    }
+
+    public List<CuicReportView> cuicReports() {
+        return List.of(
+                new CuicReportView("stock.skill-group-interval", "Skill Group Historical All Fields", "Historical",
+                        "HDS t_Skill_Group_Interval", "CUIC-style interval KPIs: offered, handled, abandon, service level, AHT, ASA and queue wait.", "/api/v1/metrics/calls"),
+                new CuicReportView("stock.agent-team", "Agent Team Historical", "Historical",
+                        "HDS t_Termination_Call_Detail + AW config", "Agent/team productivity aligned to CUIC filters where HDS joins are available.", "/api/v1/agents/stats"),
+                new CuicReportView("stock.call-type", "Call Type Historical", "Historical",
+                        "HDS t_Termination_Call_Detail + t_Call_Type", "Call type and skill-group breakdown for routing/business views.", "/api/v1/metrics/call-types"),
+                new CuicReportView("stock.disposition", "Call Disposition Historical", "Historical",
+                        "HDS t_Termination_Call_Detail", "Disposition-code breakdown for abandoned/dropped-call validation.", "/api/v1/calls/disposition-breakdown"),
+                new CuicReportView("stock.ivr-containment", "CVP IVR Containment", "Historical",
+                        "CVP Reporting Informix", "IVR containment from CVP reporting where schema is configured.", "/api/v1/metrics/ivr-containment"),
+                new CuicReportView("stock.realtime-readiness", "Live/Realtime Operational Status", "Realtime",
+                        "AW config + probes + APIs", "Live component/API/readiness view; true UCCE realtime tables can be added when exact schema is confirmed.", "/api/v1/operations/assessment/last"));
+    }
+
+    public List<CallFlowEvent> callFlow(LocalDate from, LocalDate to, String callKey, String agentId) {
+        validateDateRange(from, to);
+        String normalizedCallKey = blankToNull(callKey);
+        String normalizedAgentId = blankToNull(agentId);
+        return timedQuery("hds.callFlow", () -> hdsJdbcTemplate.query("""
+                SELECT TOP 500
+                    tcd.DateTime AS event_time,
+                    COALESCE(CAST(tcd.RouterCallKey AS varchar(50)), CAST(tcd.RecoveryKey AS varchar(50)), CAST(tcd.DateTime AS varchar(30))) AS call_key,
+                    COALESCE(pg.EnterpriseName, 'PCCE') AS node,
+                    CASE
+                        WHEN COALESCE(tcd.AgentSkillTargetID, 0) > 0 THEN 'Agent connected'
+                        WHEN COALESCE(tcd.CallDisposition, 0) > 0 THEN 'Disposition ' + CAST(tcd.CallDisposition AS varchar(20))
+                        ELSE 'Routed / queued'
+                    END AS stage,
+                    COALESCE(ct.EnterpriseName, 'CallType ' + CAST(tcd.CallTypeID AS varchar(50)), 'UNMAPPED') AS call_type,
+                    COALESCE(sg.EnterpriseName, 'SkillTarget ' + CAST(tcd.SkillGroupSkillTargetID AS varchar(50)), 'UNMAPPED') AS skill_group,
+                    COALESCE(p.FirstName + ' ' + p.LastName, p.LoginName, CASE WHEN tcd.AgentSkillTargetID IS NULL THEN NULL ELSE 'Agent ' + CAST(tcd.AgentSkillTargetID AS varchar(50)) END) AS agent,
+                    CAST(tcd.CallDisposition AS varchar(50)) AS disposition,
+                    CAST(NULL AS bigint) AS duration_seconds,
+                    'RouterCallKey=' + COALESCE(CAST(tcd.RouterCallKey AS varchar(50)), 'n/a')
+                        + '; PeripheralCallKey=' + COALESCE(CAST(tcd.PeripheralCallKey AS varchar(50)), 'n/a')
+                        + '; RecoveryKey=' + COALESCE(CAST(tcd.RecoveryKey AS varchar(50)), 'n/a') AS detail
+                FROM t_Termination_Call_Detail tcd
+                LEFT JOIN t_Call_Type ct ON ct.CallTypeID = tcd.CallTypeID
+                LEFT JOIN t_Skill_Group sg ON sg.SkillTargetID = tcd.SkillGroupSkillTargetID
+                LEFT JOIN t_Agent a ON a.SkillTargetID = tcd.AgentSkillTargetID
+                LEFT JOIN t_Person p ON p.PersonID = a.PersonID
+                LEFT JOIN t_Peripheral pg ON pg.PeripheralID = tcd.PeripheralID
+                WHERE tcd.DateTime >= ? AND tcd.DateTime < ?
+                  AND (? IS NULL OR CAST(tcd.RouterCallKey AS varchar(50)) = ? OR CAST(tcd.PeripheralCallKey AS varchar(50)) = ? OR CAST(tcd.RecoveryKey AS varchar(50)) = ?)
+                  AND (? IS NULL OR p.LoginName = ? OR CAST(tcd.AgentSkillTargetID AS varchar(50)) = ?)
+                ORDER BY tcd.DateTime
+                """, (rs, rowNum) -> new CallFlowEvent(
+                rs.getTimestamp("event_time") == null ? null : rs.getTimestamp("event_time").toLocalDateTime(),
+                rs.getString("call_key"),
+                rs.getString("node"),
+                rs.getString("stage"),
+                rs.getString("call_type"),
+                rs.getString("skill_group"),
+                rs.getString("agent"),
+                rs.getString("disposition"),
+                rs.getLong("duration_seconds"),
+                rs.getString("detail")),
+                start(from),
+                exclusiveEnd(to),
+                normalizedCallKey,
+                normalizedCallKey,
+                normalizedCallKey,
+                normalizedCallKey,
+                normalizedAgentId,
+                normalizedAgentId,
+                normalizedAgentId));
     }
 
     public List<ReferenceOption> skillGroups() {

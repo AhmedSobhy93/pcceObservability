@@ -61,7 +61,11 @@ public class PcceApiController {
         if ((action.adminOnly() || !"GET".equalsIgnoreCase(action.method())) && !hasAuthority(authentication, "PERM_SOLUTION_ADMIN")) {
             throw new AccessDeniedException("Only solution administrators can execute mutating PCCE API actions");
         }
-        return pcceApiMonitoringService.execute(id, request == null ? null : request.body());
+        return pcceApiMonitoringService.execute(
+                id,
+                request == null ? null : request.body(),
+                request == null ? java.util.Map.of() : request.pathParams(),
+                request == null ? java.util.Map.of() : request.queryParams());
     }
 
     @GetMapping("/rtmt-capabilities")

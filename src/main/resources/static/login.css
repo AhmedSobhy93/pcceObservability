@@ -1,0 +1,124 @@
+:root {
+    --bg: #0b1017;
+    --panel: #151a23;
+    --panel-2: #101720;
+    --border: #273140;
+    --text: #f6f8fb;
+    --muted: #87a1c2;
+    --teal: #2ed3c2;
+    --red: #ff626c;
+    --green: #24e0a4;
+}
+
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+    margin: 0;
+    background:
+        radial-gradient(circle at 20% 20%, rgba(46, 211, 194, .12), transparent 32%),
+        linear-gradient(135deg, #070b10, var(--bg));
+    color: var(--text);
+    font-family: Inter, Segoe UI, Roboto, Arial, sans-serif;
+}
+
+.login-shell {
+    min-height: 100%;
+    display: grid;
+    place-items: center;
+    padding: 28px;
+}
+
+.login-panel {
+    width: min(480px, 100%);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    background: rgba(21, 26, 35, .96);
+    box-shadow: 0 24px 80px rgba(0, 0, 0, .35);
+    padding: 30px;
+}
+
+.brand-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 26px;
+}
+
+.brand-mark {
+    width: 56px;
+    height: 56px;
+    border-radius: 16px;
+    display: grid;
+    place-items: center;
+    background: var(--teal);
+    color: #001412;
+    font-weight: 900;
+}
+
+h1 { margin: 0; font-size: 28px; }
+p { margin: 6px 0 0; color: var(--muted); }
+
+.status-message {
+    min-height: 42px;
+    display: flex;
+    align-items: center;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--panel-2);
+    color: var(--muted);
+    padding: 10px 12px;
+    margin-bottom: 18px;
+}
+.status-message.error { color: var(--red); border-color: #5b2530; }
+.status-message.ok { color: var(--green); border-color: #174436; }
+
+.login-form {
+    display: grid;
+    gap: 16px;
+}
+
+label {
+    display: grid;
+    gap: 7px;
+    color: var(--muted);
+    font-size: 14px;
+}
+
+input {
+    height: 48px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: #1d2430;
+    color: var(--text);
+    padding: 0 14px;
+    font-size: 16px;
+}
+
+button {
+    height: 52px;
+    border: 0;
+    border-radius: 14px;
+    background: var(--teal);
+    color: #001412;
+    font-size: 17px;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+button:hover { filter: brightness(1.08); }
+
+.login-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 22px;
+}
+
+.login-meta span {
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 7px 10px;
+    color: var(--muted);
+    background: var(--panel-2);
+    font-size: 12px;
+}

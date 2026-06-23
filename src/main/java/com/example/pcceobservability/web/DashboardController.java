@@ -10,4 +10,9 @@ public class DashboardController {
     public String dashboard() {
         return "redirect:/dashboard/index.html";
     }
+
+    @GetMapping("/login")
+    public String login() {
+        return "redirect:/login.html";
+    }
 }

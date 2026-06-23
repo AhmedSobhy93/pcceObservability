@@ -44,6 +44,7 @@
             <p id="pageSubtitle">Cisco PCCE 12.6.2 - Real-time Contact Center Analytics</p>
         </div>
         <div class="toolbar">
+            <button class="primary-btn admin-shortcut" id="adminQuickBtn">Admin Center</button>
             <label class="date-field">
                 <span>From</span>
                 <input type="date" id="fromDate">
@@ -51,18 +52,6 @@
             <label class="date-field">
                 <span>To</span>
                 <input type="date" id="toDate">
-            </label>
-            <label class="date-field">
-                <span>Skill Group</span>
-                <input type="text" id="skillFilter" list="skillOptions" placeholder="All">
-            </label>
-            <label class="date-field">
-                <span>Call Type</span>
-                <input type="text" id="callTypeFilter" list="callTypeOptions" placeholder="All">
-            </label>
-            <label class="date-field">
-                <span>Agent</span>
-                <input type="text" id="agentFilter" list="agentOptions" placeholder="All">
             </label>
             <button class="primary-btn" id="refreshBtn">Refresh</button>
         </div>
@@ -76,6 +65,9 @@
     </section>
 
     <section class="view active" id="view-overview">
+        <div class="filter-bar page-filter">
+            <label class="date-field"><span>Skill Group</span><input type="text" id="overviewSkillFilter" list="skillOptions" placeholder="All"></label>
+        </div>
         <div class="kpi-grid">
             <article class="kpi-card"><div class="kpi-top"><span>Calls Offered</span><b class="teal">CO</b></div><strong id="kpiOffered">--</strong><small id="trendOffered">Live HDS</small></article>
             <article class="kpi-card"><div class="kpi-top"><span>Calls Handled</span><b class="green">CH</b></div><strong id="kpiHandled">--</strong><small id="trendHandled">Live HDS</small></article>
@@ -99,6 +91,9 @@
     </section>
 
     <section class="view" id="view-business">
+        <div class="filter-bar page-filter">
+            <label class="date-field"><span>Skill Group</span><input type="text" id="businessSkillFilter" list="skillOptions" placeholder="All"></label>
+        </div>
         <div class="business-card-grid" id="businessSkillCards"></div>
         <div class="content-grid">
             <article class="panel wide"><h2>Service Level Trend by Hour</h2><canvas id="serviceTrendChart" height="280"></canvas></article>
@@ -111,6 +106,11 @@
     </section>
 
     <section class="view" id="view-agents">
+        <div class="filter-bar page-filter">
+            <label class="date-field"><span>Agent</span><input type="text" id="agentPageFilter" list="agentOptions" placeholder="All"></label>
+            <label class="date-field"><span>Team</span><input type="text" id="agentTeamInput" placeholder="All"></label>
+            <button class="primary-btn" id="agentFilterBtn">Apply</button>
+        </div>
         <div class="filter-bar" id="agentTeamFilters"></div>
         <article class="panel full">
             <div class="panel-head"><h2>Agent Performance</h2><span id="agentCount"></span></div>
@@ -119,6 +119,12 @@
     </section>
 
     <section class="view" id="view-calls">
+        <div class="filter-bar page-filter">
+            <label class="date-field"><span>Skill Group</span><input type="text" id="callsSkillFilter" list="skillOptions" placeholder="All"></label>
+            <label class="date-field"><span>Call Type</span><input type="text" id="callsCallTypeFilter" list="callTypeOptions" placeholder="All"></label>
+            <label class="date-field"><span>Call Key</span><input type="text" id="callKeyFilter" placeholder="Router/Peripheral/Recovery key"></label>
+            <button class="primary-btn" id="callsFilterBtn">Apply</button>
+        </div>
         <article class="panel full">
             <h2>Call Flow Funnel</h2>
             <div class="funnel-grid" id="callFunnel"></div>
@@ -130,6 +136,10 @@
         <article class="panel full api-functions-panel">
             <div class="panel-head"><h2>Calls by Call Type and Skill Group</h2><span id="callTypeCount"></span></div>
             <div class="table-wrap"><table><thead><tr><th>Date</th><th>Hour</th><th>Call Type</th><th>Skill Group</th><th>Calls</th><th>Handled</th></tr></thead><tbody id="callTypeTable"></tbody></table></div>
+        </article>
+        <article class="panel full api-functions-panel">
+            <div class="panel-head"><h2>Readable Call Flow Trace</h2><span id="callFlowCount"></span></div>
+            <div class="flow-timeline" id="callFlowTimeline"></div>
         </article>
     </section>
 
@@ -151,6 +161,10 @@
             <article class="panel"><h2>Current User</h2><pre id="userBox"></pre></article>
         </div>
         <div class="content-grid support-grid">
+            <article class="panel wide"><h2>CUIC Stock Report Mapping</h2><div class="metric-list" id="cuicReportList"></div></article>
+            <article class="panel"><h2>SNMP / Logs / CUCM / IM&P</h2><div class="metric-list" id="integrationCapabilityList"></div></article>
+        </div>
+        <div class="content-grid support-grid">
             <article class="panel wide"><h2>PCCE API Surveillance</h2><div class="component-grid" id="pcceApiGrid"></div></article>
             <article class="panel"><h2>API Capabilities</h2><div class="metric-list" id="pcceCapabilityList"></div></article>
         </div>
@@ -160,6 +174,10 @@
         </article>
         <article class="panel full api-functions-panel">
             <div class="panel-head"><h2>PCCE API Actions</h2><span>Approved operations</span></div>
+            <div class="api-action-grid">
+                <textarea class="action-body" id="pccePathParams" placeholder='Path params JSON, for example {"id":"5001"}'></textarea>
+                <textarea class="action-body" id="pcceQueryParams" placeholder='Query params JSON, for example {"role":"Agent"}'></textarea>
+            </div>
             <textarea class="action-body" id="pcceActionBody" placeholder="Optional JSON body for enabled POST/PUT/PATCH actions"></textarea>
             <div class="table-wrap"><table><thead><tr><th>Category</th><th>Action</th><th>Method</th><th>Path</th><th>Status</th><th></th></tr></thead><tbody id="pcceActionTable"></tbody></table></div>
             <pre class="log-box action-result" id="pcceActionResult">No PCCE API action executed yet.</pre>
@@ -213,10 +231,39 @@
     </section>
 
     <section class="view" id="view-admin">
+        <div class="admin-kpi-grid">
+            <article class="kpi-card compact"><div class="kpi-top"><span>Users</span></div><strong id="adminUserKpi">--</strong><small>Configured app accounts</small></article>
+            <article class="kpi-card compact"><div class="kpi-top"><span>Roles</span></div><strong id="adminRoleKpi">--</strong><small>RBAC profiles</small></article>
+            <article class="kpi-card compact"><div class="kpi-top"><span>Components</span></div><strong id="adminComponentKpi">--</strong><small>Runtime probes</small></article>
+            <article class="kpi-card compact"><div class="kpi-top"><span>Admin Mode</span></div><strong id="adminAccessKpi">--</strong><small>Solution administration</small></article>
+        </div>
         <div class="content-grid">
             <article class="panel wide">
                 <div class="panel-head"><h2>Users</h2><span id="adminUserCount"></span></div>
                 <div class="table-wrap"><table><thead><tr><th>User</th><th>Display</th><th>Roles</th><th>Teams</th><th>Status</th></tr></thead><tbody id="adminUsersTable"></tbody></table></div>
+            </article>
+            <article class="panel">
+                <h2>User Editor</h2>
+                <div class="admin-form">
+                    <label class="date-field"><span>Username</span><input id="adminUsername" list="adminUserOptions" placeholder="user.name"></label>
+                    <datalist id="adminUserOptions"></datalist>
+                    <label class="date-field"><span>Display Name</span><input id="adminDisplayName" placeholder="Display name"></label>
+                    <label class="date-field"><span>Password</span><input id="adminPassword" type="password" placeholder="{noop}secret or bcrypt"></label>
+                    <label class="date-field"><span>Agent ID</span><input id="adminAgentId" placeholder="Optional"></label>
+                    <label class="date-field"><span>Teams</span><input id="adminTeams" placeholder="Sales, Support"></label>
+                    <label class="date-field"><span>Roles</span><select id="adminUserRole"><option>ADMIN</option><option>WORKFORCE_MANAGER</option><option>SUPERVISOR</option><option>AGENT</option><option>VIEWER</option></select></label>
+                    <label class="check-row"><input type="checkbox" id="adminUserEnabled" checked> Enabled</label>
+                    <button class="primary-btn" id="adminSaveUserBtn">Save User</button>
+                    <pre class="log-box action-result" id="adminActionResult">Admin actions are audited in memory.</pre>
+                </div>
+            </article>
+        </div>
+        <div class="content-grid support-grid">
+            <article class="panel wide">
+                <div class="panel-head"><h2>Role Permission Editor</h2><span>Changes apply until app restart unless persisted in YAML</span></div>
+                <label class="date-field"><span>Role</span><select id="adminRoleSelect"></select></label>
+                <div class="permission-grid" id="adminPermissionGrid"></div>
+                <button class="primary-btn" id="adminSaveRoleBtn">Save Role Permissions</button>
             </article>
             <article class="panel">
                 <h2>Role Permissions</h2>
@@ -226,6 +273,10 @@
         <article class="panel full api-functions-panel">
             <div class="panel-head"><h2>Component Configuration</h2><span>Use Swagger/Admin API to update values</span></div>
             <div class="table-wrap"><table><thead><tr><th>Component</th><th>Enabled</th><th>Probe</th><th>Target</th><th>Timeout</th><th>TLS</th></tr></thead><tbody id="adminComponentsTable"></tbody></table></div>
+        </article>
+        <article class="panel full api-functions-panel">
+            <div class="panel-head"><h2>Production Admin Capabilities</h2><span>Recommended controls for banking operations</span></div>
+            <div class="business-card-grid" id="adminCapabilityCards"></div>
         </article>
     </section>
 
