@@ -93,6 +93,7 @@
     <section class="view" id="view-business">
         <div class="filter-bar page-filter">
             <label class="date-field"><span>Skill Group</span><input type="text" id="businessSkillFilter" list="skillOptions" placeholder="All"></label>
+            <label class="date-field"><span>IVR App</span><input type="text" id="ivrAppFilter" value="OneBank_Main_IVR"></label>
         </div>
         <div class="business-card-grid" id="businessSkillCards"></div>
         <div class="content-grid">
@@ -103,6 +104,10 @@
             <article class="panel wide"><h2>Business Metrics</h2><div class="metric-list" id="businessMetrics"></div></article>
             <article class="panel"><h2>IVR Containment</h2><canvas id="ivrChart" height="250"></canvas></article>
         </div>
+        <article class="panel full api-functions-panel">
+            <div class="panel-head"><h2>CVP IVR Customer Nodes</h2><span id="cvpIvrNodeCount"></span></div>
+            <div class="table-wrap"><table><thead><tr><th>Call ID</th><th>Start</th><th>Caller</th><th>App</th><th>Duration</th><th>Node Flag</th><th>Disposition</th></tr></thead><tbody id="cvpIvrNodeTable"></tbody></table></div>
+        </article>
     </section>
 
     <section class="view" id="view-agents">

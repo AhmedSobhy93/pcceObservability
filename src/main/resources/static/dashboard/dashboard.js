@@ -5,6 +5,7 @@ const state = {
     agents: [],
     drops: [],
     ivr: [],
+    cvpIvrNodes: [],
     components: [],
     serverMetrics: [],
     assessment: null,
@@ -189,6 +190,16 @@ function callFlowParams() {
     return params.toString();
 }
 
+function ivrNodeParams() {
+    const params = new URLSearchParams({
+        from: qs("#fromDate").value,
+        to: qs("#toDate").value
+    });
+    const appName = firstFilterValue("#ivrAppFilter");
+    if (appName) params.set("appName", appName);
+    return params.toString();
+}
+
 function firstFilterValue(...selectors) {
     for (const selector of selectors) {
         const element = qs(selector);
@@ -245,6 +256,7 @@ async function refresh() {
         safeLoad("agents", `/api/v1/agents/stats?${agentParams()}`, [], { timeoutMs: 15000 }),
         safeLoad("drops", `/api/v1/calls/dropped?${params}`, []),
         safeLoad("ivr", `/api/v1/metrics/ivr-containment?${params}`, []),
+        safeLoad("cvpIvrNodes", `/api/v1/metrics/cvp-ivr-nodes?${ivrNodeParams()}`, [], { timeoutMs: 18000 }),
         safeLoad("components", "/api/v1/components/status", [], { timeoutMs: 16000 }),
         safeLoad("serverMetrics", "/api/v1/components/server-metrics", [], { timeoutMs: 8000 })
     ];
@@ -387,6 +399,7 @@ function renderCharts() {
 
 function renderBusiness() {
     renderBusinessCards();
+    renderCvpIvrNodes();
     const rows = [
         ["Calls Offered", fmt(sum(state.calls, "calls_offered", "callsOffered"))],
         ["Calls Handled", fmt(sum(state.calls, "calls_handled", "callsHandled"))],
@@ -400,6 +413,29 @@ function renderBusiness() {
     const trend = serviceTrendByHour();
     drawLineChart(qs("#serviceTrendChart"), trend.labels, trend.series, 100);
     drawRadar(qs("#performanceRadar"), radarMetrics());
+}
+
+function renderCvpIvrNodes() {
+    const count = qs("#cvpIvrNodeCount");
+    const table = qs("#cvpIvrNodeTable");
+    if (!count || !table) return;
+    count.textContent = `${state.cvpIvrNodes.length} rows`;
+    table.innerHTML = state.cvpIvrNodes.slice(0, 500).map(row => `<tr>
+        <td>${escapeHtml(pick(row, "call_id", "callId") || "")}</td>
+        <td>${escapeHtml(pick(row, "call_start_time", "callStartTime") || "")}</td>
+        <td>${escapeHtml(pick(row, "caller_number", "callerNumber") || "")}</td>
+        <td>${escapeHtml(pick(row, "app_name", "appName") || "")}</td>
+        <td>${escapeHtml(pick(row, "duration") || "")}</td>
+        <td>${escapeHtml(pick(row, "flag") || "")}</td>
+        <td><span class="badge ${ivrDispositionClass(pick(row, "call_disposition_id", "callDispositionId"))}">${escapeHtml(pick(row, "call_disposition_flag_desc", "callDispositionFlagDesc") || "")}</span></td>
+    </tr>`).join("") || `<tr><td colspan="7">No CVP IVR node rows for selected dates/app.</td></tr>`;
+}
+
+function ivrDispositionClass(code) {
+    const value = Number(code);
+    if ([18, 1001, 1044].includes(value)) return "down";
+    if (value === 2) return "warn";
+    return "up";
 }
 
 function renderAgents() {

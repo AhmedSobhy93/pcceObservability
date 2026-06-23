@@ -31,9 +31,9 @@ pcce:
     slow-request-warning-ms: 3000
 
   finesse:
-    enabled: ${FINESSE_ENABLED:false}
+    enabled: ${FINESSE_ENABLED:true}
     base-url: ${FINESSE_BASE_URL:https://vssitfin01.dev.mdi:8445}
-    username: ${FINESSE_USERNAME:}
+    username: ${FINESSE_USERNAME:administrator}
     password: ${FINESSE_PASSWORD:}
     timeout: ${FINESSE_TIMEOUT:10s}
     trust-all-certificates: ${FINESSE_TRUST_ALL_CERTIFICATES:true}

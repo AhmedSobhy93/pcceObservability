@@ -1226,7 +1226,7 @@ public class PcceProperties {
         }
     }
 
-    static class DefaultSql {
+    public static class DefaultSql {
         static final String CALL_METRICS = """
                 SELECT
                     CAST(sgi.DateTime AS date) AS [date],
@@ -1405,13 +1405,56 @@ public class PcceProperties {
 
         static final String IVR_CONTAINMENT = """
                 SELECT
-                    TODAY AS call_date,
-                    0 AS call_hour,
-                    CAST(NULL AS DECIMAL(9,2)) AS ivr_containment_rate
-                FROM systables
-                WHERE tabid < 0
-                  AND CURRENT >= ?
-                  AND CURRENT >= ?
+                    DATE(c.startdatetime) AS call_date,
+                    HOUR(c.startdatetime) AS call_hour,
+                    CAST(100.0 * SUM(CASE WHEN vs.causeid NOT IN (2, 18, 1001, 1044) THEN 1 ELSE 0 END)
+                        / NULLIF(COUNT(*), 0) AS DECIMAL(9,2)) AS ivr_containment_rate
+                FROM call c
+                JOIN vxmlsession vs
+                  ON c.callguid = vs.callguid
+                 AND c.callstartdate = vs.callstartdate
+                WHERE c.startdatetime >= ?
+                  AND c.startdatetime < ?
+                GROUP BY DATE(c.startdatetime), HOUR(c.startdatetime)
+                ORDER BY call_date, call_hour
+                """;
+
+        public static final String CVP_IVR_NODES = """
+                SELECT FIRST 500
+                    c.callguid AS call_id,
+                    c.startdatetime AS call_start_time,
+                    c.enddatetime AS call_end_time,
+                    c.ani AS caller_number,
+                    vs.appname AS app_name,
+                    ((c.enddatetime - c.startdatetime)::interval second(6) to second) AS duration,
+                    vxmlelementflag.name AS flag,
+                    vs.causeid AS call_disposition_id,
+                    CASE vs.causeid
+                        WHEN 0 THEN 'None'
+                        WHEN 1 THEN 'Normal Completion'
+                        WHEN 13 THEN 'Called Party Disconnected'
+                        WHEN 18 THEN 'Error'
+                        WHEN 1001 THEN 'HangUp'
+                        WHEN 20 THEN 'Post Call Answer'
+                        WHEN 29 THEN 'Whisper Start'
+                        WHEN 30 THEN 'Whisper Done'
+                        WHEN 1044 THEN 'Error CVP No Session Error'
+                        WHEN 2 THEN 'Call Abandoned'
+                        ELSE CAST(vs.causeid AS varchar(10))
+                    END AS call_disposition_flag_desc
+                FROM call c
+                JOIN vxmlsession vs
+                  ON c.callguid = vs.callguid
+                 AND c.callstartdate = vs.callstartdate
+                JOIN vxmlelement
+                  ON vs.sessionid = vxmlelement.sessionid
+                JOIN vxmlelementflag
+                  ON vxmlelement.elementid = vxmlelementflag.elementid
+                WHERE c.startdatetime >= ?
+                  AND c.startdatetime < ?
+                  AND vxmlelement.elementtypeid = 9
+                  AND (? IS NULL OR vs.appname = ?)
+                ORDER BY c.startdatetime DESC
                 """;
     }
 }

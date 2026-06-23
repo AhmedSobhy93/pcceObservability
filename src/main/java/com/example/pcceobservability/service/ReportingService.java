@@ -7,6 +7,7 @@ import com.example.pcceobservability.model.CallMetric;
 import com.example.pcceobservability.model.CallFlowEvent;
 import com.example.pcceobservability.model.CallTypeMetric;
 import com.example.pcceobservability.model.ContactCenterSummary;
+import com.example.pcceobservability.model.CvpIvrNodeMetric;
 import com.example.pcceobservability.model.CuicReportView;
 import com.example.pcceobservability.model.DispositionBreakdown;
 import com.example.pcceobservability.model.DroppedCallMetric;
@@ -19,7 +20,10 @@ import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -80,7 +84,7 @@ public class ReportingService {
         log.warn("call_metrics_interval_empty using_tcd_fallback=true from={} to={} skillGroup={}",
                 from, to, normalizedSkillGroup);
         try {
-            return timedQuery("hds.callMetrics.tcdFallback", () -> hdsJdbcTemplate.query(
+            List<CallMetric> fallbackMetrics = timedQuery("hds.callMetrics.tcdFallback", () -> hdsJdbcTemplate.query(
                         pcceProperties.getQueries().getCallMetricsTcdFallback(),
                         this::mapCallMetric,
                         start(from),
@@ -88,6 +92,7 @@ public class ReportingService {
                         normalizedSkillGroup,
                         normalizedSkillGroup,
                         normalizedSkillGroup));
+            return enrichCallMetricLabels(fallbackMetrics);
         } catch (DataAccessException ex) {
             log.warn("call_metrics_tcd_fallback_unavailable error={}", ex.getMostSpecificCause().getMessage());
             return intervalMetrics;
@@ -109,7 +114,7 @@ public class ReportingService {
                 normalizedTeam,
                 normalizedTeam));
         if (!tcdStats.isEmpty()) {
-            return tcdStats;
+            return aggregateAgents(enrichAgentLabels(tcdStats));
         }
         return timedQuery("hds.agentStats.roster", () -> hdsJdbcTemplate.query(
                 pcceProperties.getQueries().getAgentStats(),
@@ -126,7 +131,7 @@ public class ReportingService {
         validateDateRange(from, to);
         String normalizedCallType = blankToNull(callType);
         String normalizedSkillGroup = blankToNull(skillGroup);
-        return timedQuery("hds.callTypeMetrics", () -> hdsJdbcTemplate.query(
+        List<CallTypeMetric> metrics = timedQuery("hds.callTypeMetrics", () -> hdsJdbcTemplate.query(
                 pcceProperties.getQueries().getCallTypeMetrics(),
                 (rs, rowNum) -> new CallTypeMetric(
                         rs.getObject("date", LocalDate.class),
@@ -143,6 +148,7 @@ public class ReportingService {
                 normalizedSkillGroup,
                 normalizedSkillGroup,
                 normalizedSkillGroup));
+        return enrichCallTypeLabels(metrics);
     }
 
     public List<CuicReportView> cuicReports() {
@@ -258,6 +264,32 @@ public class ReportingService {
                 rs.getString("value"),
                 rs.getString("label"),
                 rs.getString("detail"))));
+    }
+
+    public List<CvpIvrNodeMetric> cvpIvrNodes(LocalDate from, LocalDate to, String appName) {
+        validateDateRange(from, to);
+        String normalizedAppName = blankToNull(appName);
+        try {
+            return timedQuery("cvp.ivrNodes", () -> cvpReportingJdbcTemplate.query(
+                    PcceProperties.DefaultSql.CVP_IVR_NODES,
+                    (rs, rowNum) -> new CvpIvrNodeMetric(
+                            rs.getString("call_id"),
+                            toLocalDateTime(rs, "call_start_time"),
+                            toLocalDateTime(rs, "call_end_time"),
+                            rs.getString("caller_number"),
+                            rs.getString("app_name"),
+                            rs.getString("duration"),
+                            rs.getString("flag"),
+                            rs.getObject("call_disposition_id") == null ? null : rs.getInt("call_disposition_id"),
+                            rs.getString("call_disposition_flag_desc")),
+                    start(from),
+                    exclusiveEnd(to),
+                    normalizedAppName,
+                    normalizedAppName));
+        } catch (DataAccessException ex) {
+            log.warn("cvp_ivr_nodes_unavailable error={}", ex.getMostSpecificCause().getMessage());
+            return List.of();
+        }
     }
 
     public List<DroppedCallMetric> droppedCalls(LocalDate from, LocalDate to, String skillGroup) {
@@ -381,6 +413,160 @@ public class ReportingService {
                 rs.getString("skill_group"),
                 rs.getLong("dropped_calls"),
                 lastDropTime == null ? null : lastDropTime.toLocalDateTime());
+    }
+
+    private List<CallMetric> enrichCallMetricLabels(List<CallMetric> metrics) {
+        Map<String, String> skills = referenceMap("aw.reference.skillMap", "t_Skill_Group", "SkillTargetID");
+        return metrics.stream()
+                .map(metric -> new CallMetric(
+                        metric.date(),
+                        metric.hour(),
+                        resolveLabel(metric.skillGroup(), "SkillTarget ", skills),
+                        metric.callsOffered(),
+                        metric.callsHandled(),
+                        metric.callsAbandoned(),
+                        metric.serviceLevelPct(),
+                        metric.avgHandleTime(),
+                        metric.avgTalkTime(),
+                        metric.avgHoldTime(),
+                        metric.avgWrapTime(),
+                        metric.avgSpeedAnswer(),
+                        metric.avgQueueTime(),
+                        metric.maxQueueTime(),
+                        metric.transferRate(),
+                        metric.firstCallResolution(),
+                        metric.ivrContainmentRate(),
+                        metric.csatScore()))
+                .toList();
+    }
+
+    private List<CallTypeMetric> enrichCallTypeLabels(List<CallTypeMetric> metrics) {
+        Map<String, String> skills = referenceMap("aw.reference.skillMap", "t_Skill_Group", "SkillTargetID");
+        Map<String, String> callTypes = referenceMap("aw.reference.callTypeMap", "t_Call_Type", "CallTypeID");
+        return metrics.stream()
+                .map(metric -> new CallTypeMetric(
+                        metric.date(),
+                        metric.hour(),
+                        resolveLabel(metric.callType(), "CallType ", callTypes),
+                        resolveLabel(metric.skillGroup(), "SkillTarget ", skills),
+                        metric.calls(),
+                        metric.handledCalls()))
+                .toList();
+    }
+
+    private List<AgentStat> enrichAgentLabels(List<AgentStat> agents) {
+        Map<String, String> skills = referenceMap("aw.reference.skillMap", "t_Skill_Group", "SkillTargetID");
+        Map<String, String> agentNames = agentNameMap();
+        return agents.stream()
+                .map(agent -> new AgentStat(
+                        agent.date(),
+                        resolveMapValue(agent.agentName(), "Agent ", agentNames),
+                        agent.agentId(),
+                        agent.team(),
+                        resolveLabel(agent.skillGroup(), "SkillTarget ", skills),
+                        agent.status(),
+                        agent.callsHandled(),
+                        agent.avgHandleTime(),
+                        agent.avgTalkTime(),
+                        agent.avgHoldTime(),
+                        agent.avgWrapTime(),
+                        agent.occupancyPct(),
+                        agent.adherencePct(),
+                        agent.transfers(),
+                        agent.loginDurationMin(),
+                        agent.notReadyTimeMin()))
+                .toList();
+    }
+
+    private List<AgentStat> aggregateAgents(List<AgentStat> agents) {
+        Map<String, AgentStat> grouped = new LinkedHashMap<>();
+        for (AgentStat agent : agents) {
+            String key = agent.agentId() == null ? agent.agentName() : agent.agentId();
+            AgentStat existing = grouped.get(key);
+            if (existing == null) {
+                grouped.put(key, agent);
+            } else {
+                grouped.put(key, new AgentStat(
+                        existing.date(),
+                        existing.agentName(),
+                        existing.agentId(),
+                        firstText(existing.team(), agent.team()),
+                        firstText(existing.skillGroup(), agent.skillGroup()),
+                        existing.status(),
+                        nullToZero(existing.callsHandled()) + nullToZero(agent.callsHandled()),
+                        existing.avgHandleTime(),
+                        existing.avgTalkTime(),
+                        existing.avgHoldTime(),
+                        existing.avgWrapTime(),
+                        existing.occupancyPct(),
+                        existing.adherencePct(),
+                        nullToZero(existing.transfers()) + nullToZero(agent.transfers()),
+                        existing.loginDurationMin(),
+                        existing.notReadyTimeMin()));
+            }
+        }
+        return new ArrayList<>(grouped.values());
+    }
+
+    private String firstText(String first, String second) {
+        return StringUtils.hasText(first) && !"UNMAPPED".equalsIgnoreCase(first) ? first : second;
+    }
+
+    private Map<String, String> referenceMap(String queryName, String table, String idColumn) {
+        try {
+            return timedQuery(queryName, () -> awJdbcTemplate.query(
+                    "SELECT CAST(" + idColumn + " AS varchar(50)) AS id, EnterpriseName AS label FROM " + table + " WHERE EnterpriseName IS NOT NULL",
+                    rs -> {
+                        Map<String, String> values = new HashMap<>();
+                        while (rs.next()) {
+                            values.put(rs.getString("id"), rs.getString("label"));
+                        }
+                        return values;
+                    }));
+        } catch (DataAccessException ex) {
+            log.warn("reference_map_unavailable table={} error={}", table, ex.getMostSpecificCause().getMessage());
+            return Map.of();
+        }
+    }
+
+    private Map<String, String> agentNameMap() {
+        try {
+            return timedQuery("aw.reference.agentNameMap", () -> awJdbcTemplate.query("""
+                    SELECT
+                        CAST(a.SkillTargetID AS varchar(50)) AS id,
+                        COALESCE(p.FirstName + ' ' + p.LastName, p.LoginName, CAST(a.SkillTargetID AS varchar(50))) AS label
+                    FROM t_Agent a
+                    LEFT JOIN t_Person p ON p.PersonID = a.PersonID
+                    """, rs -> {
+                Map<String, String> values = new HashMap<>();
+                while (rs.next()) {
+                    values.put(rs.getString("id"), rs.getString("label"));
+                }
+                return values;
+            }));
+        } catch (DataAccessException ex) {
+            log.warn("agent_name_map_unavailable error={}", ex.getMostSpecificCause().getMessage());
+            return Map.of();
+        }
+    }
+
+    private String resolveLabel(String value, String prefix, Map<String, String> labels) {
+        if (value == null) {
+            return null;
+        }
+        if (value.startsWith(prefix)) {
+            return labels.getOrDefault(value.substring(prefix.length()).trim(), value);
+        }
+        return labels.getOrDefault(value, value);
+    }
+
+    private String resolveMapValue(String value, String prefix, Map<String, String> labels) {
+        return resolveLabel(value, prefix, labels);
+    }
+
+    private LocalDateTime toLocalDateTime(ResultSet rs, String column) throws SQLException {
+        Timestamp timestamp = rs.getTimestamp(column);
+        return timestamp == null ? null : timestamp.toLocalDateTime();
     }
 
     private LocalDateTime start(LocalDate date) {
