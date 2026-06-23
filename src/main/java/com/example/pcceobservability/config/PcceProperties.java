@@ -34,6 +34,9 @@ public class PcceProperties {
     @Valid
     private Notifications notifications = new Notifications();
 
+    @Valid
+    private Grafana grafana = new Grafana();
+
     public Queries getQueries() {
         return queries;
     }
@@ -88,6 +91,14 @@ public class PcceProperties {
 
     public void setNotifications(Notifications notifications) {
         this.notifications = notifications;
+    }
+
+    public Grafana getGrafana() {
+        return grafana;
+    }
+
+    public void setGrafana(Grafana grafana) {
+        this.grafana = grafana;
     }
 
     private static List<ComponentTarget> defaultComponents() {
@@ -643,6 +654,17 @@ public class PcceProperties {
     public static class Notifications {
         private boolean webhookEnabled;
         private String webhookUrl;
+        private boolean smtpEnabled;
+        private String smtpFrom = "pcce-observability@localhost";
+        private List<String> smtpRecipients = List.of();
+        private String smtpSubjectPrefix = "[PCCE Observability]";
+        private boolean smsEnabled;
+        private String smsUrl;
+        private String smsAuthorization;
+        private String smsUserAgent = "D-Tech / v1.6";
+        private List<String> smsRecipients = List.of();
+        private AlertSeverity smsMinimumSeverity = AlertSeverity.CRITICAL;
+        private int smsMaxAlertsPerAssessment = 5;
         private AlertSeverity minimumSeverity = AlertSeverity.CRITICAL;
         private Duration timeout = Duration.ofSeconds(10);
 
@@ -662,6 +684,94 @@ public class PcceProperties {
             this.webhookUrl = webhookUrl;
         }
 
+        public boolean isSmtpEnabled() {
+            return smtpEnabled;
+        }
+
+        public void setSmtpEnabled(boolean smtpEnabled) {
+            this.smtpEnabled = smtpEnabled;
+        }
+
+        public String getSmtpFrom() {
+            return smtpFrom;
+        }
+
+        public void setSmtpFrom(String smtpFrom) {
+            this.smtpFrom = smtpFrom;
+        }
+
+        public List<String> getSmtpRecipients() {
+            return smtpRecipients;
+        }
+
+        public void setSmtpRecipients(List<String> smtpRecipients) {
+            this.smtpRecipients = smtpRecipients;
+        }
+
+        public String getSmtpSubjectPrefix() {
+            return smtpSubjectPrefix;
+        }
+
+        public void setSmtpSubjectPrefix(String smtpSubjectPrefix) {
+            this.smtpSubjectPrefix = smtpSubjectPrefix;
+        }
+
+        public boolean isSmsEnabled() {
+            return smsEnabled;
+        }
+
+        public void setSmsEnabled(boolean smsEnabled) {
+            this.smsEnabled = smsEnabled;
+        }
+
+        public String getSmsUrl() {
+            return smsUrl;
+        }
+
+        public void setSmsUrl(String smsUrl) {
+            this.smsUrl = smsUrl;
+        }
+
+        public String getSmsAuthorization() {
+            return smsAuthorization;
+        }
+
+        public void setSmsAuthorization(String smsAuthorization) {
+            this.smsAuthorization = smsAuthorization;
+        }
+
+        public String getSmsUserAgent() {
+            return smsUserAgent;
+        }
+
+        public void setSmsUserAgent(String smsUserAgent) {
+            this.smsUserAgent = smsUserAgent;
+        }
+
+        public List<String> getSmsRecipients() {
+            return smsRecipients;
+        }
+
+        public void setSmsRecipients(List<String> smsRecipients) {
+            this.smsRecipients = smsRecipients;
+        }
+
+        public AlertSeverity getSmsMinimumSeverity() {
+            return smsMinimumSeverity;
+        }
+
+        public void setSmsMinimumSeverity(AlertSeverity smsMinimumSeverity) {
+            this.smsMinimumSeverity = smsMinimumSeverity;
+        }
+
+        public int getSmsMaxAlertsPerAssessment() {
+            return smsMaxAlertsPerAssessment;
+        }
+
+        public void setSmsMaxAlertsPerAssessment(int smsMaxAlertsPerAssessment) {
+            this.smsMaxAlertsPerAssessment = smsMaxAlertsPerAssessment;
+        }
+
         public AlertSeverity getMinimumSeverity() {
             return minimumSeverity;
         }
@@ -676,6 +786,75 @@ public class PcceProperties {
 
         public void setTimeout(Duration timeout) {
             this.timeout = timeout;
+        }
+    }
+
+    public static class Grafana {
+        private boolean enabled;
+        private List<GrafanaDashboard> dashboards = List.of();
+
+        public boolean isEnabled() {
+            return enabled;
+        }
+
+        public void setEnabled(boolean enabled) {
+            this.enabled = enabled;
+        }
+
+        public List<GrafanaDashboard> getDashboards() {
+            return dashboards;
+        }
+
+        public void setDashboards(List<GrafanaDashboard> dashboards) {
+            this.dashboards = dashboards;
+        }
+    }
+
+    public static class GrafanaDashboard {
+        private String name;
+        private String area;
+        private String url;
+        private boolean enabled = true;
+        private String description;
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(String name) {
+            this.name = name;
+        }
+
+        public String getArea() {
+            return area;
+        }
+
+        public void setArea(String area) {
+            this.area = area;
+        }
+
+        public String getUrl() {
+            return url;
+        }
+
+        public void setUrl(String url) {
+            this.url = url;
+        }
+
+        public boolean isEnabled() {
+            return enabled;
+        }
+
+        public void setEnabled(boolean enabled) {
+            this.enabled = enabled;
+        }
+
+        public String getDescription() {
+            return description;
+        }
+
+        public void setDescription(String description) {
+            this.description = description;
         }
     }
 
@@ -969,7 +1148,7 @@ public class PcceProperties {
                 FROM t_Skill_Group_Interval sgi
                 JOIN t_Skill_Group sg ON sg.SkillTargetID = sgi.SkillTargetID
                 WHERE sgi.DateTime >= ? AND sgi.DateTime < ?
-                  AND (? IS NULL OR sg.EnterpriseName = ?)
+                  AND (? IS NULL OR sg.EnterpriseName = ? OR CAST(sg.SkillTargetID AS varchar(50)) = ?)
                 GROUP BY CAST(sgi.DateTime AS date), DATEPART(hour, sgi.DateTime), sg.EnterpriseName
                 ORDER BY [date], [hour], skill_group
                 """;
@@ -998,7 +1177,7 @@ public class PcceProperties {
                 LEFT JOIN t_Skill_Group sg ON sg.SkillTargetID = tcd.SkillGroupSkillTargetID
                 WHERE tcd.DateTime >= ?
                   AND tcd.DateTime < ?
-                  AND (? IS NULL OR sg.EnterpriseName = ?)
+                  AND (? IS NULL OR sg.EnterpriseName = ? OR CAST(tcd.SkillGroupSkillTargetID AS varchar(50)) = ?)
                 GROUP BY
                     CAST(tcd.DateTime AS date),
                     DATEPART(hour, tcd.DateTime),
@@ -1083,8 +1262,8 @@ public class PcceProperties {
                 LEFT JOIN t_Call_Type ct ON ct.CallTypeID = tcd.CallTypeID
                 LEFT JOIN t_Skill_Group sg ON sg.SkillTargetID = tcd.SkillGroupSkillTargetID
                 WHERE tcd.DateTime >= ? AND tcd.DateTime < ?
-                  AND (? IS NULL OR ct.EnterpriseName = ?)
-                  AND (? IS NULL OR sg.EnterpriseName = ?)
+                  AND (? IS NULL OR ct.EnterpriseName = ? OR CAST(tcd.CallTypeID AS varchar(50)) = ?)
+                  AND (? IS NULL OR sg.EnterpriseName = ? OR CAST(tcd.SkillGroupSkillTargetID AS varchar(50)) = ?)
                 GROUP BY
                     CAST(tcd.DateTime AS date),
                     DATEPART(hour, tcd.DateTime),
@@ -1105,7 +1284,7 @@ public class PcceProperties {
                 WHERE tcd.DateTime >= ?
                   AND tcd.DateTime < ?
                   AND 1 = 0
-                  AND (? IS NULL OR sg.EnterpriseName = ?)
+                  AND (? IS NULL OR sg.EnterpriseName = ? OR CAST(sg.SkillTargetID AS varchar(50)) = ?)
                 GROUP BY CAST(tcd.DateTime AS date), DATEPART(hour, tcd.DateTime), COALESCE(sg.EnterpriseName, 'UNKNOWN')
                 ORDER BY [date], [hour], skill_group
                 """;

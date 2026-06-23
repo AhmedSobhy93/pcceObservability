@@ -6,6 +6,17 @@ spring:
     name: pcce-observability
   jackson:
     property-naming-strategy: SNAKE_CASE
+  mail:
+    host: ${PCCE_SMTP_HOST:}
+    port: ${PCCE_SMTP_PORT:25}
+    username: ${PCCE_SMTP_USERNAME:}
+    password: ${PCCE_SMTP_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: ${PCCE_SMTP_AUTH:false}
+          starttls:
+            enable: ${PCCE_SMTP_STARTTLS:false}
 
 management:
   endpoints:
@@ -185,8 +196,33 @@ pcce:
   notifications:
     webhook-enabled: false
     webhook-url: ${PCCE_ALERT_WEBHOOK_URL:}
+    smtp-enabled: ${PCCE_SMTP_ENABLED:false}
+    smtp-from: ${PCCE_SMTP_FROM:pcce-observability@localhost}
+    smtp-recipients: ${PCCE_SMTP_RECIPIENTS:}
+    smtp-subject-prefix: ${PCCE_SMTP_SUBJECT_PREFIX:[PCCE Observability]}
+    sms-enabled: ${PCCE_SMS_ENABLED:false}
+    sms-url: ${PCCE_SMS_URL:http://sms-microgateway.sit.apps.openshift.dev.mdi/mgw/v1/system/secure/sms-gateway/sms/immediate}
+    sms-authorization: ${PCCE_SMS_AUTHORIZATION:}
+    sms-user-agent: ${PCCE_SMS_USER_AGENT:D-Tech / v1.6}
+    sms-recipients: ${PCCE_SMS_RECIPIENTS:}
+    sms-minimum-severity: CRITICAL
+    sms-max-alerts-per-assessment: 5
     minimum-severity: CRITICAL
     timeout: 10s
+
+  grafana:
+    enabled: ${ELEVEO_GRAFANA_ENABLED:false}
+    dashboards:
+      - name: Eleveo QM Overview
+        area: QM
+        enabled: true
+        url: ${ELEVEO_GRAFANA_QM_URL:}
+        description: Quality management monitoring from Eleveo Grafana
+      - name: Eleveo Recording Overview
+        area: Recording
+        enabled: true
+        url: ${ELEVEO_GRAFANA_RECORDING_URL:}
+        description: Recording platform health, storage, and service telemetry
 
   security:
     role-permissions:

@@ -6,6 +6,7 @@ const state = {
     drops: [],
     ivr: [],
     components: [],
+    serverMetrics: [],
     assessment: null,
     user: null,
     queryPerformance: [],
@@ -18,7 +19,14 @@ const state = {
     spogCapabilities: [],
     smtpCapabilities: [],
     spogOps: [],
-    serverLogTargets: []
+    serverLogTargets: [],
+    grafanaDashboards: [],
+    skillGroups: [],
+    callTypeOptions: [],
+    agentOptions: [],
+    adminUsers: [],
+    adminRoles: [],
+    adminComponents: []
 };
 
 const pages = {
@@ -27,20 +35,40 @@ const pages = {
     agents: ["Agent Performance", "Workforce team and agent productivity view"],
     calls: ["Call Analytics", "Dropped calls, queue behavior, and skill group distribution"],
     system: ["System Health", "PCCE, CVP, CUIC, Finesse, PG, CTI, and gateway status"],
+    eleveo: ["Eleveo QM & Recording", "Grafana monitoring for quality management and recording platforms"],
     integration: ["PCCE Integration", "AW/HDS SQL Server and CVP Informix connectivity"],
-    smtp: ["SMTP Alerts", "Email alerting, escalation, and notification readiness"],
+    smtp: ["Alerts", "Webhook, SMTP, SMS thresholds, escalation, and notification readiness"],
     spog: ["SPOG Operations", "Single pane operations, graceful actions, and log collection"],
+    admin: ["Admin", "Users, role permissions, and runtime configuration"],
     app: ["Spring Boot App", "Operational alerts, readiness checks, and support status"],
     plan: ["Project Plan", "Production hardening and banking support checklist"]
 };
 
 const colors = ["#2ed3c2", "#3d82f6", "#f4a51c", "#8d6cf7", "#24e0a4", "#ff626c"];
+const planState = { view: "tasks", topic: "ALL", collapsed: new Set() };
+const planTasks = [
+    { topic: "PCCE", task: "Finalize AW/HDS/CVP reporting alignment", priority: "CRITICAL", priorityNum: 1, status: "IN_PROGRESS", resource: "Contact Center Team / DB Admin", start: "1-Feb-26", finish: "30-Apr-26", duration: 89, pct: 65, comments: "Align dashboard numbers with CUIC stock reports and Cisco schema." },
+    { topic: "PCCE", task: "PCCE API enablement and permissions", priority: "HIGH", priorityNum: 2, status: "IN_PROGRESS", resource: "Cisco Admin & App Owner", start: "10-Feb-26", finish: "15-Mar-26", duration: 34, pct: 55, comments: "Validate IIS auth, API user role, and supported actions." },
+    { topic: "PCCE", task: "RTMT-style component monitoring", priority: "HIGH", priorityNum: 3, status: "PLANNED", resource: "Infrastructure Team", start: "1-Mar-26", finish: "30-Apr-26", duration: 60, pct: 25, comments: "SNMP/WMI/exporter required for CPU, memory, disk, and services." },
+    { topic: "Eleveo", task: "Embed QM Grafana dashboards", priority: "HIGH", priorityNum: 1, status: "IN_PROGRESS", resource: "Eleveo Admin / App Owner", start: "15-Feb-26", finish: "15-Mar-26", duration: 29, pct: 45, comments: "Needs Grafana iframe URLs and allow_embedding enabled." },
+    { topic: "Eleveo", task: "Recording health and storage dashboard", priority: "CRITICAL", priorityNum: 2, status: "PLANNED", resource: "Recording Team & Storage Admin", start: "1-Mar-26", finish: "20-Mar-26", duration: 20, pct: 15, comments: "Monitor recorder services, archive backlog, free storage, and failed recordings." },
+    { topic: "Dtech", task: "SPOG support runbook", priority: "MEDIUM", priorityNum: 1, status: "PLANNED", resource: "Dtech / Operations", start: "15-Mar-26", finish: "30-Apr-26", duration: 46, pct: 10, comments: "Define approved graceful operations and escalation flow." },
+    { topic: "Cisco Portal", task: "Cisco entitlement and TAC documentation", priority: "MEDIUM", priorityNum: 1, status: "ON_HOLD", resource: "Cisco Admin", start: null, finish: null, duration: null, pct: 20, comments: "Waiting for support contract and portal access validation." },
+    { topic: "Survey", task: "CSAT feed integration", priority: "LOW", priorityNum: 1, status: "PLANNED", resource: "Business Team", start: "1-Apr-26", finish: "30-Apr-26", duration: 30, pct: 0, comments: "Source system and field mapping not finalized." },
+    { topic: "Chat", task: "Digital channel reporting placeholders", priority: "LOW", priorityNum: 1, status: "PLANNED", resource: "Digital Channels", start: "1-Apr-26", finish: "30-Apr-26", duration: 30, pct: 0, comments: "Prepare model for future chat metrics." },
+    { topic: "One Content", task: "Archive evidence and operations documents", priority: "MEDIUM", priorityNum: 1, status: "COMPLETED", resource: "App Owner & Operations", start: "1-Feb-26", finish: "20-Feb-26", duration: 20, pct: 100, comments: "Initial runbook and references captured." }
+];
 
 document.addEventListener("DOMContentLoaded", () => {
     const today = new Date().toISOString().slice(0, 10);
     qs("#fromDate").value = today;
     qs("#toDate").value = today;
     qs("#refreshBtn").addEventListener("click", refresh);
+    qs("#taskListMode")?.addEventListener("click", () => setPlanView("tasks"));
+    qs("#resourceMode")?.addEventListener("click", () => setPlanView("resources"));
+    ["#planTopicFilter", "#planStatusFilter", "#planPriorityFilter", "#planResourceFilter"].forEach(selector => {
+        qs(selector)?.addEventListener("change", renderPlan);
+    });
     qs("#collapseBtn").addEventListener("click", () => document.body.classList.toggle("collapsed"));
     qs("#logoutBtn").addEventListener("click", () => location.href = "/swagger-ui/index.html");
     document.querySelectorAll(".nav-item[data-view]").forEach(button => {
@@ -89,7 +117,9 @@ function dateParams() {
         to: qs("#toDate").value
     });
     const skill = qs("#skillFilter").value.trim();
+    const agent = qs("#agentFilter").value.trim();
     if (skill) params.set("skillGroup", skill);
+    if (agent) params.set("agentId", agent);
     return params.toString();
 }
 
@@ -143,7 +173,8 @@ async function refresh() {
         safeLoad("agents", `/api/v1/agents/stats?${params}`, [], { timeoutMs: 15000 }),
         safeLoad("drops", `/api/v1/calls/dropped?${params}`, []),
         safeLoad("ivr", `/api/v1/metrics/ivr-containment?${params}`, []),
-        safeLoad("components", "/api/v1/components/status", [], { timeoutMs: 16000 })
+        safeLoad("components", "/api/v1/components/status", [], { timeoutMs: 16000 }),
+        safeLoad("serverMetrics", "/api/v1/components/server-metrics", [], { timeoutMs: 8000 })
     ];
     const coreResults = await Promise.all(coreLoads);
     errors.push(...coreResults.filter(Boolean));
@@ -160,15 +191,28 @@ async function refresh() {
         safeLoad("spogCapabilities", "/api/v1/pcce-api/spog-capabilities", []),
         safeLoad("smtpCapabilities", "/api/v1/operations/smtp-capabilities", []),
         safeLoad("spogOps", "/api/v1/operations/spog-capabilities", []),
-        safeLoad("serverLogTargets", "/api/v1/operations/server-log-targets", [])
+        safeLoad("serverLogTargets", "/api/v1/operations/server-log-targets", []),
+        safeLoad("grafanaDashboards", "/api/v1/integrations/grafana/dashboards", []),
+        safeLoad("skillGroups", "/api/v1/reference/skill-groups", []),
+        safeLoad("callTypeOptions", "/api/v1/reference/call-types", []),
+        safeLoad("agentOptions", "/api/v1/reference/agents", [])
     ];
     const results = await Promise.all(supportLoads);
     errors.push(...results.filter(Boolean));
     if (hasPermission("SOLUTION_ADMIN")) {
         const logError = await safeLoad("logs", "/api/v1/monitoring/logs?limit=80", []);
         if (logError) errors.push(logError);
+        const adminResults = await Promise.all([
+            safeLoad("adminUsers", "/api/v1/admin/users", []),
+            safeLoad("adminRoles", "/api/v1/admin/roles", []),
+            safeLoad("adminComponents", "/api/v1/admin/components", [])
+        ]);
+        errors.push(...adminResults.filter(Boolean));
     } else {
         state.logs = ["Log tail is available for administrators."];
+        state.adminUsers = [];
+        state.adminRoles = [];
+        state.adminComponents = [];
     }
     renderAll(errors);
 }
@@ -185,11 +229,14 @@ function renderAll(errors) {
     renderDrops();
     renderCallTypes();
     renderComponents();
+    renderReferenceOptions();
     renderIntegration();
     renderSmtp();
     renderSpog();
+    renderEleveo();
     renderOperations();
     renderSupport();
+    renderAdmin();
     renderPlan();
 
     const componentDown = state.components.filter(c => String(pick(c, "state")).toUpperCase() === "DOWN").length;
@@ -358,6 +405,24 @@ function renderComponents() {
             </div>
         </article>`;
     }).join("");
+    qs("#serverMetricGrid").innerHTML = state.serverMetrics.map(metric => {
+        const stateValue = String(pick(metric, "state") || "UNKNOWN").toLowerCase();
+        const badgeClass = stateValue === "up" ? "up" : stateValue === "not_configured" ? "warn" : "down";
+        return `<article class="component-card">
+            <h3>${escapeHtml(pick(metric, "component") || "")}</h3>
+            <span class="badge ${badgeClass}">${escapeHtml(stateValue.replace("_", " "))}</span>
+            <p>${escapeHtml(pick(metric, "host") || "")} - ${escapeHtml(pick(metric, "method") || "")}</p>
+            <p>CPU ${metricPct(pick(metric, "cpu_pct", "cpuPct"))} | Memory ${metricPct(pick(metric, "memory_pct", "memoryPct"))} | Disk ${metricPct(pick(metric, "disk_pct", "diskPct"))}</p>
+            <p>${escapeHtml(pick(metric, "services") || "")}</p>
+            <p>${escapeHtml(pick(metric, "detail") || "")}</p>
+        </article>`;
+    }).join("") || `<article class="component-card"><h3>Server Metrics</h3><span class="badge warn">not configured</span><p>Configure SNMP/WMI/exporter collection for remote servers.</p></article>`;
+}
+
+function renderReferenceOptions() {
+    fillDatalist("#skillOptions", state.skillGroups);
+    fillDatalist("#callTypeOptions", state.callTypeOptions);
+    fillDatalist("#agentOptions", state.agentOptions);
 }
 
 function renderIntegration() {
@@ -426,8 +491,10 @@ function renderSmtp() {
     qs("#smtpStatusList").innerHTML = [
         metricRow("Alert Webhook", "Configured in pcce.notifications"),
         metricRow("SMTP Relay", "Configure approved bank SMTP relay"),
+        metricRow("SMS Gateway", "D-Tech SMS microgateway with X-Correlation-Id, User-Agent, Basic Authorization"),
         metricRow("Recipients", "Configure operations/support distribution lists"),
-        metricRow("Minimum Severity", "CRITICAL recommended for production")
+        metricRow("Minimum Severity", "Separate global and SMS thresholds; CRITICAL recommended for SMS"),
+        metricRow("SMS Rate Guard", "Max alerts per assessment avoids notification storms")
     ].join("");
 }
 
@@ -448,6 +515,25 @@ function renderSpog() {
         <td>${escapeHtml(pick(item, "collection_method", "collectionMethod") || "")}</td>
         <td>${pick(item, "enabled") ? "Enabled" : "Disabled"}</td>
     </tr>`).join("");
+}
+
+function renderEleveo() {
+    const enabled = state.grafanaDashboards.filter(item => pick(item, "enabled") && pick(item, "url"));
+    qs("#grafanaSummary").textContent = `${enabled.length} embedded dashboards`;
+    qs("#grafanaDashboardGrid").innerHTML = enabled.map(item => `<article class="grafana-card">
+        <div class="panel-head"><h2>${escapeHtml(pick(item, "name") || "")}</h2><span>${escapeHtml(pick(item, "area") || "")}</span></div>
+        <p>${escapeHtml(pick(item, "description") || "")}</p>
+        <iframe src="${escapeHtml(pick(item, "url") || "")}" loading="lazy" referrerpolicy="no-referrer"></iframe>
+    </article>`).join("") || `<div class="empty-state">
+        <strong>No Eleveo Grafana panels configured</strong>
+        <span>Set ELEVEO_GRAFANA_ENABLED=true and provide iframe/share URLs for QM and Recording dashboards.</span>
+    </div>`;
+    qs("#grafanaChecklist").innerHTML = [
+        metricRow("Grafana embedding", "Set allow_embedding=true on Eleveo Grafana"),
+        metricRow("Authentication", "Use anonymous/viewer auth, SSO, or reverse proxy session"),
+        metricRow("Browser policy", "Check X-Frame-Options and Content-Security-Policy"),
+        metricRow("URLs", "Use panel/d-solo iframe links for stable layout")
+    ].join("");
 }
 
 async function executePcceAction(id) {
@@ -492,15 +578,222 @@ function renderSupport() {
     qs("#logBox").textContent = (state.logs || []).slice(-80).join("\n") || "No log lines found yet.";
 }
 
+function renderAdmin() {
+    if (!hasPermission("SOLUTION_ADMIN")) {
+        qs("#adminUserCount").textContent = "Admin permission required";
+        qs("#adminUsersTable").innerHTML = "";
+        qs("#adminRolesList").innerHTML = metricRow("Access", "PERM_SOLUTION_ADMIN required");
+        qs("#adminComponentsTable").innerHTML = "";
+        return;
+    }
+    qs("#adminUserCount").textContent = `${state.adminUsers.length} users`;
+    qs("#adminUsersTable").innerHTML = state.adminUsers.map(user => `<tr>
+        <td>${escapeHtml(pick(user, "username") || "")}</td>
+        <td>${escapeHtml(pick(user, "display_name", "displayName") || "")}</td>
+        <td>${escapeHtml((pick(user, "roles") || []).join(", "))}</td>
+        <td>${escapeHtml((pick(user, "allowed_teams", "allowedTeams") || []).join(", "))}</td>
+        <td><span class="badge ${pick(user, "enabled") ? "up" : "down"}">${pick(user, "enabled") ? "enabled" : "disabled"}</span></td>
+    </tr>`).join("");
+    qs("#adminRolesList").innerHTML = state.adminRoles.map(role =>
+        metricRow(pick(role, "role") || "", (pick(role, "permissions") || []).join(", "))
+    ).join("");
+    qs("#adminComponentsTable").innerHTML = state.adminComponents.map(component => `<tr>
+        <td>${escapeHtml(pick(component, "name") || "")}</td>
+        <td>${pick(component, "enabled") ? "true" : "false"}</td>
+        <td>${escapeHtml(pick(component, "probe") || "")}</td>
+        <td>${escapeHtml(pick(component, "url") || pick(component, "host") || "")}${pick(component, "port") ? `:${pick(component, "port")}` : ""}</td>
+        <td>${escapeHtml(pick(component, "timeout") || "")}</td>
+        <td>${pick(component, "trust_all_certificates", "trustAllCertificates") ? "trust all" : "default"}</td>
+    </tr>`).join("");
+}
+
 function renderPlan() {
-    const items = [
-        ["1", "Validate Cisco SQL mappings for AW/HDS and CVP Informix"],
-        ["2", "Enable probes for all redundant production components"],
-        ["3", "Replace default passwords and configure HTTPS"],
-        ["4", "Forward logs and Prometheus metrics to enterprise monitoring"],
-        ["5", "Define dropped-call and SLA thresholds with operations"]
-    ];
-    qs("#planList").innerHTML = items.map(([step, text]) => `<div class="plan-row"><strong>${step}</strong><span>${escapeHtml(text)}</span></div>`).join("");
+    populatePlanFilters();
+    const filtered = filteredPlanTasks();
+    renderPlanKpis(filtered);
+    renderTopicCards();
+    qs("#planFilteredCount").textContent = `${filtered.length} tasks`;
+    qs("#taskListMode").classList.toggle("active", planState.view === "tasks");
+    qs("#resourceMode").classList.toggle("active", planState.view === "resources");
+    qs("#planTaskView").style.display = planState.view === "tasks" ? "grid" : "none";
+    qs("#planResourceView").style.display = planState.view === "resources" ? "grid" : "none";
+    renderPlanTaskGroups(filtered);
+    renderResourceView();
+}
+
+function populatePlanFilters() {
+    fillSelect("#planTopicFilter", ["ALL", ...unique(planTasks.map(task => task.topic))], planState.topic);
+    fillSelect("#planStatusFilter", ["ALL", "COMPLETED", "IN_PROGRESS", "ON_HOLD", "PLANNED"]);
+    fillSelect("#planPriorityFilter", ["ALL", "CRITICAL", "HIGH", "MEDIUM", "LOW"]);
+    fillSelect("#planResourceFilter", ["ALL", ...unique(planTasks.flatMap(task => resourcesFor(task.resource)))]);
+}
+
+function fillSelect(selector, values, forcedValue) {
+    const select = qs(selector);
+    if (!select) return;
+    const current = forcedValue || select.value || "ALL";
+    select.innerHTML = values.map(value => `<option value="${escapeHtml(value)}">${escapeHtml(value === "ALL" ? "All" : value.replace("_", " "))}</option>`).join("");
+    select.value = values.includes(current) ? current : "ALL";
+}
+
+function filteredPlanTasks() {
+    planState.topic = qs("#planTopicFilter")?.value || planState.topic || "ALL";
+    const topic = planState.topic;
+    const status = qs("#planStatusFilter")?.value || "ALL";
+    const priority = qs("#planPriorityFilter")?.value || "ALL";
+    const resource = qs("#planResourceFilter")?.value || "ALL";
+    return planTasks.filter(task =>
+        (topic === "ALL" || task.topic === topic)
+        && (status === "ALL" || task.status === status)
+        && (priority === "ALL" || task.priority === priority)
+        && (resource === "ALL" || resourcesFor(task.resource).includes(resource)));
+}
+
+function renderPlanKpis(tasks) {
+    const total = planTasks.length;
+    const completed = planTasks.filter(task => task.status === "COMPLETED").length;
+    const inProgress = planTasks.filter(task => task.status === "IN_PROGRESS").length;
+    const onHold = planTasks.filter(task => task.status === "ON_HOLD").length;
+    const criticalOpen = planTasks.filter(task => task.priority === "CRITICAL" && task.status !== "COMPLETED").length;
+    qs("#planKpis").innerHTML = [
+        planKpi("Total Tasks", total, `${tasks.length} shown`, ""),
+        planKpi("Completed", completed, `${Math.round(completed / total * 100)}% done`, "emerald"),
+        planKpi("In Progress", inProgress, "active work", "blue"),
+        planKpi("On Hold", onHold, "blocked or waiting", "amber"),
+        planKpi("Critical Open", criticalOpen, "not completed", "red")
+    ].join("");
+}
+
+function renderTopicCards() {
+    const topics = unique(planTasks.map(task => task.topic));
+    qs("#topicSummaryCards").innerHTML = topics.map(topic => {
+        const tasks = planTasks.filter(task => task.topic === topic);
+        const done = tasks.filter(task => task.status === "COMPLETED").length;
+        const critical = tasks.filter(task => task.priority === "CRITICAL").length;
+        const pctDone = Math.round(done / tasks.length * 100);
+        return `<button class="topic-card ${planState.topic === topic ? "active" : ""}" data-topic="${escapeHtml(topic)}">
+            <strong>${escapeHtml(topic)}</strong>
+            <span>${tasks.length} tasks | ${critical} critical</span>
+            <i><b style="width:${pctDone}%"></b></i>
+            <em>${pctDone}% complete</em>
+        </button>`;
+    }).join("");
+    document.querySelectorAll(".topic-card").forEach(card => card.addEventListener("click", () => {
+        planState.topic = planState.topic === card.dataset.topic ? "ALL" : card.dataset.topic;
+        renderPlan();
+    }));
+}
+
+function renderPlanTaskGroups(tasks) {
+    const topics = unique(tasks.map(task => task.topic));
+    qs("#planTaskView").innerHTML = topics.map(topic => {
+        const topicTasks = tasks.filter(task => task.topic === topic);
+        const pctDone = Math.round(average(topicTasks, "pct") || 0);
+        const collapsed = planState.collapsed.has(topic);
+        return `<article class="plan-group panel ${collapsed ? "collapsed" : ""}">
+            <button class="plan-group-head" data-collapse-topic="${escapeHtml(topic)}">
+                <span>${collapsed ? ">" : "v"} ${escapeHtml(topic)}</span>
+                <strong>${topicTasks.length} tasks</strong>
+                ${statusMiniBadges(topicTasks)}
+                <i><b style="width:${pctDone}%"></b></i>
+                <em>${pctDone}%</em>
+            </button>
+            <div class="table-wrap plan-group-body"><table><thead><tr><th>Task</th><th>Priority</th><th>Status</th><th>Resource</th><th>Timeline</th><th>Progress</th></tr></thead><tbody>
+                ${topicTasks.map(planTaskRow).join("")}
+            </tbody></table></div>
+        </article>`;
+    }).join("") || `<article class="panel"><h2>No tasks match filters</h2></article>`;
+    document.querySelectorAll("[data-collapse-topic]").forEach(button => button.addEventListener("click", () => {
+        const topic = button.dataset.collapseTopic;
+        planState.collapsed.has(topic) ? planState.collapsed.delete(topic) : planState.collapsed.add(topic);
+        renderPlan();
+    }));
+}
+
+function planTaskRow(task) {
+    const criticalOpen = task.priority === "CRITICAL" && task.status !== "COMPLETED";
+    return `<tr class="${criticalOpen ? "critical-row" : ""}">
+        <td><strong>${escapeHtml(task.task)}</strong>${task.priorityNum ? `<span class="subline">Priority #${task.priorityNum}</span>` : ""}</td>
+        <td>${badge(task.priority, priorityClass(task.priority))}</td>
+        <td>${badge(task.status.replace("_", " "), statusClass(task.status))}</td>
+        <td>${escapeHtml(task.resource)}</td>
+        <td>${escapeHtml(task.start || "--")} / ${escapeHtml(task.finish || "--")}<span class="subline">${task.duration ?? "--"} days</span></td>
+        <td>${inlineProgress(task.pct)}<span class="subline">${escapeHtml(task.comments)}</span></td>
+    </tr>`;
+}
+
+function renderResourceView() {
+    const people = unique(planTasks.flatMap(task => resourcesFor(task.resource)));
+    const cards = people.map(name => {
+        const tasks = planTasks.filter(task => resourcesFor(task.resource).includes(name));
+        return { name, tasks };
+    }).sort((a, b) => b.tasks.length - a.tasks.length);
+    qs("#planResourceView").innerHTML = cards.map(({ name, tasks }) => {
+        const done = tasks.filter(task => task.status === "COMPLETED").length;
+        const active = tasks.filter(task => task.status === "IN_PROGRESS").length;
+        const hold = tasks.filter(task => task.status === "ON_HOLD").length;
+        const critical = tasks.filter(task => task.priority === "CRITICAL" && task.status !== "COMPLETED");
+        return `<article class="resource-card">
+            <div class="resource-head"><span class="avatar">${escapeHtml(name.slice(0, 1))}</span><div><h3>${escapeHtml(name)}</h3><small>${critical.length} critical open</small></div></div>
+            <div class="resource-stats"><b>${tasks.length}</b><span>total</span><b>${done}</b><span>done</span><b>${active}</b><span>active</span><b>${hold}</b><span>hold</span></div>
+            ${stackedProgress(tasks)}
+            <h4>Active Work</h4>
+            <div class="chip-list">${tasks.filter(task => task.status !== "COMPLETED").map(taskChip).join("") || "<span class='muted-value'>No active work</span>"}</div>
+            ${critical.length ? `<div class="critical-box"><h4>Critical Open</h4>${critical.map(task => `<p><strong>${escapeHtml(task.task)}</strong><span>${escapeHtml(task.topic)} - ${escapeHtml(task.comments)}</span></p>`).join("")}</div>` : ""}
+        </article>`;
+    }).join("");
+}
+
+function setPlanView(view) {
+    planState.view = view;
+    renderPlan();
+}
+
+function unique(values) {
+    return [...new Set(values.filter(Boolean))].sort();
+}
+
+function resourcesFor(value) {
+    return String(value || "").split(/,|\/|&/).map(item => item.trim()).filter(Boolean);
+}
+
+function planKpi(label, value, detail, tone) {
+    return `<article class="kpi-card compact plan-kpi ${tone}"><div class="kpi-top"><span>${escapeHtml(label)}</span></div><strong>${fmt(value)}</strong><small>${escapeHtml(detail)}</small></article>`;
+}
+
+function statusMiniBadges(tasks) {
+    return ["COMPLETED", "IN_PROGRESS", "ON_HOLD", "PLANNED"].map(status => {
+        const count = tasks.filter(task => task.status === status).length;
+        return count ? `<span class="mini-badge ${statusClass(status)}">${count} ${status.replace("_", " ")}</span>` : "";
+    }).join("");
+}
+
+function badge(label, tone) {
+    return `<span class="badge ${tone}">${escapeHtml(label)}</span>`;
+}
+
+function priorityClass(priority) {
+    return { CRITICAL: "down", HIGH: "high", MEDIUM: "warn", LOW: "low" }[priority] || "low";
+}
+
+function statusClass(status) {
+    return { COMPLETED: "up", IN_PROGRESS: "on_call", ON_HOLD: "warn", PLANNED: "planned" }[status] || "low";
+}
+
+function inlineProgress(value) {
+    return `<span class="progress-value">${fmt(value)}%</span><span class="progress-track"><i class="${value >= 90 ? "good" : value >= 40 ? "warn" : "bad"}" style="width:${value}%"></i></span>`;
+}
+
+function stackedProgress(tasks) {
+    const total = tasks.length || 1;
+    const done = tasks.filter(task => task.status === "COMPLETED").length / total * 100;
+    const active = tasks.filter(task => task.status === "IN_PROGRESS").length / total * 100;
+    const hold = tasks.filter(task => task.status === "ON_HOLD").length / total * 100;
+    return `<div class="stacked"><i class="done" style="width:${done}%"></i><i class="active" style="width:${active}%"></i><i class="hold" style="width:${hold}%"></i></div>`;
+}
+
+function taskChip(task) {
+    return `<span class="work-chip ${priorityClass(task.priority)}">${escapeHtml(task.task)} <small>${escapeHtml(task.topic)}</small></span>`;
 }
 
 function switchView(view) {
@@ -517,6 +810,21 @@ function hasPermission(permission) {
 
 function metricRow(label, value) {
     return `<div class="metric-row"><span>${escapeHtml(label)}</span><strong>${escapeHtml(String(value ?? "--"))}</strong></div>`;
+}
+
+function fillDatalist(selector, rows) {
+    const list = qs(selector);
+    if (!list) return;
+    list.innerHTML = (rows || []).map(row => {
+        const value = pick(row, "value") || "";
+        const label = pick(row, "label") || value;
+        const detail = pick(row, "detail") || "";
+        return `<option value="${escapeHtml(value)}" label="${escapeHtml(label)}">${escapeHtml(detail)}</option>`;
+    }).join("");
+}
+
+function metricPct(value) {
+    return value === null || value === undefined ? "--" : `${Number(value).toFixed(1)}%`;
 }
 
 function systemKpi(label, value, detail) {

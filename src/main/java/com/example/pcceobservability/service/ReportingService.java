@@ -8,6 +8,7 @@ import com.example.pcceobservability.model.CallTypeMetric;
 import com.example.pcceobservability.model.ContactCenterSummary;
 import com.example.pcceobservability.model.DispositionBreakdown;
 import com.example.pcceobservability.model.DroppedCallMetric;
+import com.example.pcceobservability.model.ReferenceOption;
 import com.example.pcceobservability.security.AccessControlService;
 import java.math.BigDecimal;
 import java.sql.ResultSet;
@@ -31,6 +32,7 @@ public class ReportingService {
     private static final Logger log = LoggerFactory.getLogger(ReportingService.class);
 
     private final JdbcTemplate hdsJdbcTemplate;
+    private final JdbcTemplate awJdbcTemplate;
     private final JdbcTemplate cvpReportingJdbcTemplate;
     private final PcceProperties pcceProperties;
     private final ComponentStatusService componentStatusService;
@@ -39,6 +41,7 @@ public class ReportingService {
     private final QueryPerformanceService queryPerformanceService;
 
     public ReportingService(
+            @Qualifier("awJdbcTemplate") JdbcTemplate awJdbcTemplate,
             @Qualifier("hdsJdbcTemplate") JdbcTemplate hdsJdbcTemplate,
             @Qualifier("cvpReportingJdbcTemplate") JdbcTemplate cvpReportingJdbcTemplate,
             PcceProperties pcceProperties,
@@ -46,6 +49,7 @@ public class ReportingService {
             AccessControlService accessControlService,
             DispositionCodeService dispositionCodeService,
             QueryPerformanceService queryPerformanceService) {
+        this.awJdbcTemplate = awJdbcTemplate;
         this.hdsJdbcTemplate = hdsJdbcTemplate;
         this.cvpReportingJdbcTemplate = cvpReportingJdbcTemplate;
         this.pcceProperties = pcceProperties;
@@ -64,6 +68,7 @@ public class ReportingService {
                     start(from),
                     exclusiveEnd(to),
                     normalizedSkillGroup,
+                    normalizedSkillGroup,
                     normalizedSkillGroup));
         if (!pcceProperties.getQueries().isCallMetricsTcdFallbackEnabled()
                 || intervalMetrics.stream().mapToLong(metric -> nullToZero(metric.callsOffered())).sum() > 0) {
@@ -77,6 +82,7 @@ public class ReportingService {
                         this::mapCallMetric,
                         start(from),
                         exclusiveEnd(to),
+                        normalizedSkillGroup,
                         normalizedSkillGroup,
                         normalizedSkillGroup));
         } catch (DataAccessException ex) {
@@ -130,8 +136,55 @@ public class ReportingService {
                 exclusiveEnd(to),
                 normalizedCallType,
                 normalizedCallType,
+                normalizedCallType,
+                normalizedSkillGroup,
                 normalizedSkillGroup,
                 normalizedSkillGroup));
+    }
+
+    public List<ReferenceOption> skillGroups() {
+        return timedQuery("aw.reference.skillGroups", () -> awJdbcTemplate.query("""
+                SELECT TOP 500
+                    CAST(SkillTargetID AS varchar(50)) AS value,
+                    EnterpriseName AS label,
+                    CAST(SkillTargetID AS varchar(50)) AS detail
+                FROM t_Skill_Group
+                WHERE EnterpriseName IS NOT NULL
+                ORDER BY EnterpriseName
+                """, (rs, rowNum) -> new ReferenceOption(
+                rs.getString("value"),
+                rs.getString("label"),
+                rs.getString("detail"))));
+    }
+
+    public List<ReferenceOption> callTypes() {
+        return timedQuery("aw.reference.callTypes", () -> awJdbcTemplate.query("""
+                SELECT TOP 500
+                    CAST(CallTypeID AS varchar(50)) AS value,
+                    EnterpriseName AS label,
+                    CAST(CallTypeID AS varchar(50)) AS detail
+                FROM t_Call_Type
+                WHERE EnterpriseName IS NOT NULL
+                ORDER BY EnterpriseName
+                """, (rs, rowNum) -> new ReferenceOption(
+                rs.getString("value"),
+                rs.getString("label"),
+                rs.getString("detail"))));
+    }
+
+    public List<ReferenceOption> agents() {
+        return timedQuery("aw.reference.agents", () -> awJdbcTemplate.query("""
+                SELECT TOP 1000
+                    COALESCE(p.LoginName, CAST(a.SkillTargetID AS varchar(50))) AS value,
+                    COALESCE(p.FirstName + ' ' + p.LastName, p.LoginName, CAST(a.SkillTargetID AS varchar(50))) AS label,
+                    CAST(a.SkillTargetID AS varchar(50)) AS detail
+                FROM t_Agent a
+                LEFT JOIN t_Person p ON p.PersonID = a.PersonID
+                ORDER BY label
+                """, (rs, rowNum) -> new ReferenceOption(
+                rs.getString("value"),
+                rs.getString("label"),
+                rs.getString("detail"))));
     }
 
     public List<DroppedCallMetric> droppedCalls(LocalDate from, LocalDate to, String skillGroup) {
@@ -145,6 +198,7 @@ public class ReportingService {
                     this::mapDroppedCallMetric,
                     start(from),
                     exclusiveEnd(to),
+                    normalizedSkillGroup,
                     normalizedSkillGroup,
                     normalizedSkillGroup));
     }

@@ -1,9 +1,11 @@
 package com.example.pcceobservability.web;
 
 import com.example.pcceobservability.model.ComponentStatus;
+import com.example.pcceobservability.model.ServerMetric;
 import com.example.pcceobservability.config.PcceProperties.ComponentName;
 import com.example.pcceobservability.service.ComponentHistoryService;
 import com.example.pcceobservability.service.ComponentStatusService;
+import com.example.pcceobservability.service.ServerMetricService;
 import java.util.List;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -18,18 +20,27 @@ public class ComponentController {
 
     private final ComponentStatusService componentStatusService;
     private final ComponentHistoryService componentHistoryService;
+    private final ServerMetricService serverMetricService;
 
     public ComponentController(
             ComponentStatusService componentStatusService,
-            ComponentHistoryService componentHistoryService) {
+            ComponentHistoryService componentHistoryService,
+            ServerMetricService serverMetricService) {
         this.componentStatusService = componentStatusService;
         this.componentHistoryService = componentHistoryService;
+        this.serverMetricService = serverMetricService;
     }
 
     @GetMapping("/status")
     @PreAuthorize("hasAuthority('PERM_COMPONENT_STATUS_READ')")
     public List<ComponentStatus> status() {
         return componentStatusService.status();
+    }
+
+    @GetMapping("/server-metrics")
+    @PreAuthorize("hasAuthority('PERM_COMPONENT_STATUS_READ')")
+    public List<ServerMetric> serverMetrics() {
+        return serverMetricService.metrics();
     }
 
     @GetMapping("/history")

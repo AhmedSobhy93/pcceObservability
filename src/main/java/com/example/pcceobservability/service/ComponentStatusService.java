@@ -44,7 +44,7 @@ public class ComponentStatusService {
     }
 
     public List<ComponentStatus> status() {
-        return pcceProperties.getComponents().stream()
+        return pcceProperties.getComponents().parallelStream()
                 .map(this::probe)
                 .toList();
     }

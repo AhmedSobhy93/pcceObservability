@@ -87,8 +87,10 @@ public class PcceApiMonitoringService {
         String target = target(api, action.getPath());
         long start = System.nanoTime();
         try {
-            HttpURLConnection connection = open(api, action.getMethod(), target, action.getContentType());
-            if (hasBody(action.getMethod()) && body != null) {
+            boolean requestHasBody = hasBody(action.getMethod()) && body != null && !body.isBlank();
+            HttpURLConnection connection = open(api, action.getMethod(), target,
+                    requestHasBody ? action.getContentType() : null);
+            if (requestHasBody) {
                 connection.setDoOutput(true);
                 try (OutputStream outputStream = connection.getOutputStream()) {
                     outputStream.write(body.getBytes(StandardCharsets.UTF_8));
@@ -158,7 +160,7 @@ public class PcceApiMonitoringService {
     }
 
     private int request(PcceProperties.PcceApi api, ApiMonitor monitor, String target) throws IOException {
-        HttpURLConnection connection = open(api, monitor.getMethod(), target, "application/json");
+        HttpURLConnection connection = open(api, monitor.getMethod(), target, null);
         return connection.getResponseCode();
     }
 
@@ -175,7 +177,9 @@ public class PcceApiMonitoringService {
         connection.setReadTimeout((int) api.getTimeout().toMillis());
         connection.setRequestMethod(StringUtils.hasText(method) ? method : "GET");
         connection.setRequestProperty("Accept", "application/json");
-        connection.setRequestProperty("Content-Type", StringUtils.hasText(contentType) ? contentType : "application/json");
+        if (StringUtils.hasText(contentType)) {
+            connection.setRequestProperty("Content-Type", contentType);
+        }
         applyAuthentication(api, connection);
         return connection;
     }
