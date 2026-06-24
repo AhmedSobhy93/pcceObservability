@@ -243,6 +243,15 @@ td { color: #dce7f7; }
 .badge.low { color: #cbd5e1; background: #26303d; }
 .badge.planned { color: #a78bfa; background: #211936; }
 
+.table-pager {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 12px;
+    margin-top: 14px;
+    color: var(--muted);
+}
+
 .metric-list, .alert-list, .timeline { display: grid; gap: 12px; }
 .metric-row, .alert-row, .plan-row {
     display: flex;

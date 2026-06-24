@@ -12,6 +12,8 @@ import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
@@ -27,6 +29,8 @@ import org.springframework.util.StringUtils;
 
 @Service
 public class FinesseIntegrationService {
+
+    private static final Pattern FINESSE_USER_ID_PATTERN = Pattern.compile("<id>\\s*([^<]+?)\\s*</id>", Pattern.CASE_INSENSITIVE);
 
     private final PcceProperties pcceProperties;
     private final JdbcTemplate awJdbcTemplate;
@@ -54,8 +58,11 @@ public class FinesseIntegrationService {
 
     public List<FinesseEndpointResult> agents() {
         List<FinesseEndpointResult> results = new ArrayList<>();
-        results.add(request("Users Directory", "/finesse/api/Users"));
-        results.addAll(configuredUserIds().stream()
+        FinesseEndpointResult directory = request("Users Directory", "/finesse/api/Users");
+        results.add(directory);
+        Set<String> userIds = new LinkedHashSet<>(userIdsFromDirectory(directory.body()));
+        userIds.addAll(configuredUserIds());
+        results.addAll(userIds.parallelStream()
                 .limit(25)
                 .map(userId -> request("User " + userId, "/finesse/api/User/" + encodePath(userId)))
                 .toList());
@@ -63,7 +70,9 @@ public class FinesseIntegrationService {
     }
 
     public List<FinesseEndpointResult> dialogs() {
-        return configuredUserIds().stream()
+        Set<String> userIds = new LinkedHashSet<>(userIdsFromDirectory(request("Users Directory", "/finesse/api/Users").body()));
+        userIds.addAll(configuredUserIds());
+        return userIds.parallelStream()
                 .limit(50)
                 .map(userId -> request("Dialogs " + userId, "/finesse/api/User/" + encodePath(userId) + "/Dialogs"))
                 .toList();
@@ -74,7 +83,7 @@ public class FinesseIntegrationService {
         if (teamIds.isEmpty()) {
             return List.of(request("Teams Directory", "/finesse/api/Teams"));
         }
-        return teamIds.stream()
+        return teamIds.parallelStream()
                 .map(teamId -> request("Team " + teamId, "/finesse/api/Team/" + encodePath(teamId)))
                 .toList();
     }
@@ -84,7 +93,7 @@ public class FinesseIntegrationService {
         if (queueIds.isEmpty()) {
             return List.of(request("Queues Directory", "/finesse/api/Queues"));
         }
-        return queueIds.stream()
+        return queueIds.parallelStream()
                 .map(queueId -> request("Queue " + queueId, "/finesse/api/Queue/" + encodePath(queueId)))
                 .toList();
     }
@@ -199,6 +208,21 @@ public class FinesseIntegrationService {
         } catch (Exception ex) {
             return List.of();
         }
+    }
+
+    private List<String> userIdsFromDirectory(String body) {
+        if (!StringUtils.hasText(body)) {
+            return List.of();
+        }
+        Matcher matcher = FINESSE_USER_ID_PATTERN.matcher(body);
+        List<String> ids = new ArrayList<>();
+        while (matcher.find()) {
+            String id = matcher.group(1);
+            if (StringUtils.hasText(id)) {
+                ids.add(id.trim());
+            }
+        }
+        return ids;
     }
 
     private List<String> filtered(List<String> values) {

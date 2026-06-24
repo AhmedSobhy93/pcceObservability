@@ -56,7 +56,7 @@ const pages = {
 };
 
 const colors = ["#2ed3c2", "#3d82f6", "#f4a51c", "#8d6cf7", "#24e0a4", "#ff626c"];
-const uiState = { ivrNodePage: 0, ivrNodePageSize: 50 };
+const uiState = { ivrNodePage: 0, ivrNodePageSize: 50, agentPage: 0, agentPageSize: 25 };
 const businessSettings = loadBusinessSettings();
 const planState = { view: "tasks", topic: "ALL", collapsed: new Set() };
 const permissionCatalog = [
@@ -98,6 +98,14 @@ document.addEventListener("DOMContentLoaded", () => {
         uiState.ivrNodePage += 1;
         renderCvpIvrNodes();
     });
+    qs("#agentPrevPage")?.addEventListener("click", () => {
+        uiState.agentPage = Math.max(0, uiState.agentPage - 1);
+        renderAgents();
+    });
+    qs("#agentNextPage")?.addEventListener("click", () => {
+        uiState.agentPage += 1;
+        renderAgents();
+    });
     qs("#adminQuickBtn")?.addEventListener("click", () => switchView("admin"));
     qs("#adminSaveUserBtn")?.addEventListener("click", saveAdminUser);
     qs("#adminSaveRoleBtn")?.addEventListener("click", saveAdminRole);
@@ -122,11 +130,21 @@ document.addEventListener("DOMContentLoaded", () => {
         const element = qs(selector);
         element?.addEventListener(element.type === "date" ? "change" : "input", debouncedRefresh);
     });
-    ["#businessSlTarget", "#businessAhtTarget", "#businessFallbackMode"].forEach(selector => {
+    ["#businessSlTarget", "#businessAhtTarget", "#businessFallbackMode", "#businessAhtProxyMode", "#businessMinCalls"].forEach(selector => {
         qs(selector)?.addEventListener("change", () => {
             saveBusinessSettings();
             renderBusiness();
             renderKpis();
+        });
+    });
+    ["#agentStatusFilter", "#agentSearchFilter"].forEach(selector => {
+        qs(selector)?.addEventListener("input", debounce(() => {
+            uiState.agentPage = 0;
+            renderAgents();
+        }, 250));
+        qs(selector)?.addEventListener("change", () => {
+            uiState.agentPage = 0;
+            renderAgents();
         });
     });
     ["#ivrCallIdFilter", "#ivrCallerFilter"].forEach(selector => {
@@ -259,10 +277,12 @@ function loadBusinessSettings() {
             slTarget: 80,
             ahtTarget: 300,
             fallbackMode: "derived",
+            ahtProxyMode: "none",
+            minCalls: 0,
             ...JSON.parse(localStorage.getItem("pcceBusinessSettings") || "{}")
         };
     } catch {
-        return { slTarget: 80, ahtTarget: 300, fallbackMode: "derived" };
+        return { slTarget: 80, ahtTarget: 300, fallbackMode: "derived", ahtProxyMode: "none", minCalls: 0 };
     }
 }
 
@@ -270,12 +290,16 @@ function initBusinessSettings() {
     if (qs("#businessSlTarget")) qs("#businessSlTarget").value = businessSettings.slTarget;
     if (qs("#businessAhtTarget")) qs("#businessAhtTarget").value = businessSettings.ahtTarget;
     if (qs("#businessFallbackMode")) qs("#businessFallbackMode").value = businessSettings.fallbackMode;
+    if (qs("#businessAhtProxyMode")) qs("#businessAhtProxyMode").value = businessSettings.ahtProxyMode;
+    if (qs("#businessMinCalls")) qs("#businessMinCalls").value = businessSettings.minCalls;
 }
 
 function saveBusinessSettings() {
     businessSettings.slTarget = Number(qs("#businessSlTarget")?.value || businessSettings.slTarget || 80);
     businessSettings.ahtTarget = Number(qs("#businessAhtTarget")?.value || businessSettings.ahtTarget || 300);
     businessSettings.fallbackMode = qs("#businessFallbackMode")?.value || businessSettings.fallbackMode || "derived";
+    businessSettings.ahtProxyMode = qs("#businessAhtProxyMode")?.value || businessSettings.ahtProxyMode || "none";
+    businessSettings.minCalls = Number(qs("#businessMinCalls")?.value || 0);
     localStorage.setItem("pcceBusinessSettings", JSON.stringify(businessSettings));
 }
 
@@ -351,10 +375,10 @@ async function refresh() {
         safeLoad("integrationCapabilities", "/api/v1/integrations/capabilities", []),
         safeLoad("finesseCapabilities", "/api/v1/finesse/capabilities", []),
         safeLoad("finesseSystem", "/api/v1/finesse/system", [], { timeoutMs: 12000 }),
-        safeLoad("finesseAgents", "/api/v1/finesse/agents", [], { timeoutMs: 14000 }),
-        safeLoad("finesseDialogs", "/api/v1/finesse/dialogs", [], { timeoutMs: 14000 }),
-        safeLoad("finesseTeams", "/api/v1/finesse/teams", [], { timeoutMs: 14000 }),
-        safeLoad("finesseQueues", "/api/v1/finesse/queues", [], { timeoutMs: 14000 }),
+        safeLoad("finesseAgents", "/api/v1/finesse/agents", [], { timeoutMs: 45000 }),
+        safeLoad("finesseDialogs", "/api/v1/finesse/dialogs", [], { timeoutMs: 45000 }),
+        safeLoad("finesseTeams", "/api/v1/finesse/teams", [], { timeoutMs: 30000 }),
+        safeLoad("finesseQueues", "/api/v1/finesse/queues", [], { timeoutMs: 30000 }),
         safeLoad("skillGroups", "/api/v1/reference/skill-groups", []),
         safeLoad("callTypeOptions", "/api/v1/reference/call-types", []),
         safeLoad("agentOptions", "/api/v1/reference/agents", [])
@@ -423,7 +447,7 @@ function renderKpis() {
     const abandoned = sum(state.calls, "calls_abandoned", "callsAbandoned");
     const dropped = sum(state.drops, "dropped_calls", "droppedCalls");
     const service = businessServiceLevel(state.calls).value;
-    const aht = weightedAverage(state.calls, "avg_handle_time", "avgHandleTime", "calls_handled", "callsHandled");
+    const aht = businessAht(state.calls).value;
 
     qs("#kpiOffered").textContent = fmt(offered);
     qs("#kpiHandled").textContent = fmt(handled);
@@ -433,7 +457,7 @@ function renderKpis() {
     qs("#kpiService").textContent = pct(service);
     qs("#kpiAht").textContent = seconds(aht);
     qs("#trendService").textContent = businessServiceLevel(state.calls).source;
-    qs("#kpiAht").nextElementSibling.textContent = aht === null ? "Interval data unavailable" : "Seconds";
+    qs("#kpiAht").nextElementSibling.textContent = businessAht(state.calls).source;
     qs("#chartRange").textContent = `${qs("#fromDate").value} to ${qs("#toDate").value}`;
     const skillLabel = firstFilterValue("#overviewSkillFilter", "#businessSkillFilter", "#callsSkillFilter");
     if (skillLabel) {
@@ -604,11 +628,30 @@ function ivrDispositionClass(code) {
 function renderAgents() {
     renderAgentFilters();
     const selectedTeam = document.querySelector(".team-filter.active")?.dataset.team || "ALL";
-    const agents = selectedTeam === "ALL"
+    const statusFilter = firstFilterValue("#agentStatusFilter").toLowerCase();
+    const search = firstFilterValue("#agentSearchFilter").toLowerCase();
+    const agents = (selectedTeam === "ALL"
         ? state.agents
-        : state.agents.filter(agent => (pick(agent, "team") || "UNKNOWN") === selectedTeam);
+        : state.agents.filter(agent => (pick(agent, "team") || "UNKNOWN") === selectedTeam))
+        .filter(agent => !statusFilter || String(pick(agent, "status") || "").toLowerCase() === statusFilter)
+        .filter(agent => {
+            if (!search) return true;
+            return [
+                pick(agent, "agent_name", "agentName"),
+                pick(agent, "agent_id", "agentId"),
+                pick(agent, "team"),
+                pick(agent, "skill_group", "skillGroup")
+            ].join(" ").toLowerCase().includes(search);
+        });
+    const totalPages = Math.max(1, Math.ceil(agents.length / uiState.agentPageSize));
+    uiState.agentPage = Math.min(uiState.agentPage, totalPages - 1);
+    const start = uiState.agentPage * uiState.agentPageSize;
+    const pageRows = agents.slice(start, start + uiState.agentPageSize);
     qs("#agentCount").textContent = `${agents.length} rows`;
-    qs("#agentsTable").innerHTML = agents.slice(0, 300).map(agent => {
+    qs("#agentPageInfo").textContent = `Page ${uiState.agentPage + 1}/${totalPages}`;
+    qs("#agentPrevPage").disabled = uiState.agentPage === 0;
+    qs("#agentNextPage").disabled = uiState.agentPage >= totalPages - 1;
+    qs("#agentsTable").innerHTML = pageRows.map(agent => {
         const status = String(pick(agent, "status") || "offline");
         const occupancy = pick(agent, "occupancy_pct", "occupancyPct");
         const adherence = pick(agent, "adherence_pct", "adherencePct");
@@ -622,7 +665,7 @@ function renderAgents() {
             <td>${fmt(pick(agent, "transfers"))}</td>
             <td>${minutes(pick(agent, "not_ready_time_min", "notReadyTimeMin"))}</td>
         </tr>`;
-    }).join("");
+    }).join("") || `<tr><td colspan="8">No agents match current filters.</td></tr>`;
 }
 
 function renderFinesse() {
@@ -858,6 +901,9 @@ function finesseBodyPreview(item) {
         return count === null ? snippet(body, 420) : `${count} users returned by /finesse/api/Users`;
     }
     if (body.includes("custom Cisco error page") || body.includes("<title> Cisco System")) {
+        if (name.toLowerCase().includes("queues directory")) {
+            return "Queue directory endpoint is not exposed on this Finesse deployment. Use Teams, Users, Dialogs, and HDS/CUIC queue metrics.";
+        }
         return "Cisco error page returned. For /User/{id}, verify the value is the Finesse login ID from AW LoginName, not only SkillTargetID.";
     }
     return snippet(body, 420);
@@ -1524,7 +1570,7 @@ function groupSkillMetrics() {
         }
         map.set(skill, existing);
     });
-    return [...map.values()].map(item => ({
+    return [...map.values()].filter(item => item.offered >= num(businessSettings.minCalls)).map(item => ({
         ...item,
         service: item.serviceWeight ? item.weightedService / item.serviceWeight : derivedPct(item.handled, item.offered),
         aht: item.ahtWeight ? item.weightedAht / item.ahtWeight : null,
@@ -1592,9 +1638,16 @@ function businessServiceLevel(rows) {
 
 function businessAht(rows) {
     const real = weightedAverage(rows, "avg_handle_time", "avgHandleTime", "calls_handled", "callsHandled");
-    return real === null
-        ? { value: null, source: "Needs HDS interval AHT fields", short: "missing" }
-        : { value: real, source: "Cisco interval AHT", short: "Cisco" };
+    if (real !== null) {
+        return { value: real, source: "Cisco interval AHT", short: "Cisco" };
+    }
+    if (businessSettings.ahtProxyMode === "ivr_duration") {
+        const proxy = averageCvpDuration();
+        if (proxy !== null) {
+            return { value: proxy, source: "Derived IVR duration proxy", short: "proxy" };
+        }
+    }
+    return { value: null, source: "Needs HDS interval AHT fields", short: "missing" };
 }
 
 function businessAsa(rows) {
@@ -1662,6 +1715,13 @@ function derivedPct(numerator, denominator) {
     return denominator ? numerator / denominator * 100 : null;
 }
 
+function averageCvpDuration() {
+    const values = cvpJourneys()
+        .map(journey => Number(journey.duration))
+        .filter(value => Number.isFinite(value) && value >= 0);
+    return values.length ? values.reduce((a, b) => a + b, 0) / values.length : null;
+}
+
 function renderAgentFilters() {
     const teams = ["ALL", ...new Set(state.agents.map(agent => pick(agent, "team") || "UNKNOWN"))];
     const active = document.querySelector(".team-filter.active")?.dataset.team || "ALL";
@@ -1670,6 +1730,7 @@ function renderAgentFilters() {
         button.addEventListener("click", () => {
             document.querySelectorAll(".team-filter").forEach(item => item.classList.remove("active"));
             button.classList.add("active");
+            uiState.agentPage = 0;
             renderAgents();
         });
     });

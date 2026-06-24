@@ -97,6 +97,8 @@
             <label class="date-field"><span>SL Target %</span><input type="number" id="businessSlTarget" min="0" max="100" step="1"></label>
             <label class="date-field"><span>AHT Target Sec</span><input type="number" id="businessAhtTarget" min="1" step="1"></label>
             <label class="date-field"><span>Fallback</span><select id="businessFallbackMode"><option value="derived">Derived when interval empty</option><option value="strict">Cisco interval only</option></select></label>
+            <label class="date-field"><span>AHT Proxy</span><select id="businessAhtProxyMode"><option value="none">Cisco only</option><option value="ivr_duration">Use IVR duration proxy</option></select></label>
+            <label class="date-field"><span>Min Calls</span><input type="number" id="businessMinCalls" min="0" step="1"></label>
         </div>
         <div class="business-card-grid" id="businessSkillCards"></div>
         <div class="content-grid">
@@ -135,12 +137,15 @@
         <div class="filter-bar page-filter">
             <label class="date-field"><span>Agent</span><input type="text" id="agentPageFilter" list="agentOptions" placeholder="All"></label>
             <label class="date-field"><span>Team</span><input type="text" id="agentTeamInput" placeholder="All"></label>
+            <label class="date-field"><span>Status</span><select id="agentStatusFilter"><option value="">All</option><option value="available">Available</option><option value="on_call">On call</option><option value="wrap_up">Wrap up</option><option value="not_ready">Not ready</option><option value="offline">Offline</option></select></label>
+            <label class="date-field"><span>Search</span><input type="text" id="agentSearchFilter" placeholder="Name, ID, skill"></label>
             <button class="primary-btn" id="agentFilterBtn">Apply</button>
         </div>
         <div class="filter-bar" id="agentTeamFilters"></div>
         <article class="panel full">
             <div class="panel-head"><h2>Agent Performance</h2><span id="agentCount"></span></div>
             <div class="table-wrap"><table><thead><tr><th>Agent</th><th>Status</th><th>Calls</th><th>AHT</th><th>Occupancy</th><th>Adherence</th><th>Transfers</th><th>Not Ready</th></tr></thead><tbody id="agentsTable"></tbody></table></div>
+            <div class="table-pager"><button class="small-btn" id="agentPrevPage">Previous</button><span id="agentPageInfo"></span><button class="small-btn" id="agentNextPage">Next</button></div>
         </article>
         <div class="content-grid support-grid">
             <article class="panel wide">
