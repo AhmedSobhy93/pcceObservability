@@ -94,6 +94,9 @@
         <div class="filter-bar page-filter">
             <label class="date-field"><span>Skill Group</span><input type="text" id="businessSkillFilter" list="skillOptions" placeholder="All"></label>
             <label class="date-field"><span>IVR App</span><input type="text" id="ivrAppFilter" value="OneBank_Main_IVR"></label>
+            <label class="date-field"><span>SL Target %</span><input type="number" id="businessSlTarget" min="0" max="100" step="1"></label>
+            <label class="date-field"><span>AHT Target Sec</span><input type="number" id="businessAhtTarget" min="1" step="1"></label>
+            <label class="date-field"><span>Fallback</span><select id="businessFallbackMode"><option value="derived">Derived when interval empty</option><option value="strict">Cisco interval only</option></select></label>
         </div>
         <div class="business-card-grid" id="businessSkillCards"></div>
         <div class="content-grid">
@@ -104,6 +107,18 @@
             <article class="panel wide"><h2>Business Metrics</h2><div class="metric-list" id="businessMetrics"></div></article>
             <article class="panel"><h2>IVR Containment</h2><canvas id="ivrChart" height="250"></canvas></article>
         </div>
+        <div class="content-grid support-grid">
+            <article class="panel wide"><h2>First Call Resolution by Skill Group</h2><canvas id="fcrBySkillChart" height="260"></canvas></article>
+            <article class="panel"><h2>IVR Containment Rate</h2><canvas id="ivrBySkillChart" height="260"></canvas></article>
+        </div>
+        <article class="panel full api-functions-panel">
+            <div class="panel-head"><h2>Calculation Rules</h2><span id="businessCalcSummary"></span></div>
+            <div class="metric-list" id="businessCalcRules"></div>
+        </article>
+        <article class="panel full api-functions-panel">
+            <div class="panel-head"><h2>CVP Customer Journey</h2><span id="cvpJourneyCount"></span></div>
+            <div class="journey-grid" id="cvpJourneyGrid"></div>
+        </article>
         <article class="panel full api-functions-panel">
             <div class="panel-head"><h2>CVP IVR Customer Nodes</h2><span id="cvpIvrNodeCount"></span></div>
             <div class="filter-bar page-filter compact-filter">

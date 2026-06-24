@@ -57,6 +57,7 @@ const pages = {
 
 const colors = ["#2ed3c2", "#3d82f6", "#f4a51c", "#8d6cf7", "#24e0a4", "#ff626c"];
 const uiState = { ivrNodePage: 0, ivrNodePageSize: 50 };
+const businessSettings = loadBusinessSettings();
 const planState = { view: "tasks", topic: "ALL", collapsed: new Set() };
 const permissionCatalog = [
     "CALL_METRICS_READ",
@@ -85,6 +86,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const today = new Date().toISOString().slice(0, 10);
     qs("#fromDate").value = today;
     qs("#toDate").value = today;
+    initBusinessSettings();
     qs("#refreshBtn").addEventListener("click", refresh);
     qs("#agentFilterBtn")?.addEventListener("click", refresh);
     qs("#callsFilterBtn")?.addEventListener("click", refresh);
@@ -119,6 +121,13 @@ document.addEventListener("DOMContentLoaded", () => {
     ].forEach(selector => {
         const element = qs(selector);
         element?.addEventListener(element.type === "date" ? "change" : "input", debouncedRefresh);
+    });
+    ["#businessSlTarget", "#businessAhtTarget", "#businessFallbackMode"].forEach(selector => {
+        qs(selector)?.addEventListener("change", () => {
+            saveBusinessSettings();
+            renderBusiness();
+            renderKpis();
+        });
     });
     ["#ivrCallIdFilter", "#ivrCallerFilter"].forEach(selector => {
         qs(selector)?.addEventListener("input", debounce(() => {
@@ -242,6 +251,32 @@ function debounce(fn, waitMs) {
         clearTimeout(timer);
         timer = setTimeout(() => fn(...args), waitMs);
     };
+}
+
+function loadBusinessSettings() {
+    try {
+        return {
+            slTarget: 80,
+            ahtTarget: 300,
+            fallbackMode: "derived",
+            ...JSON.parse(localStorage.getItem("pcceBusinessSettings") || "{}")
+        };
+    } catch {
+        return { slTarget: 80, ahtTarget: 300, fallbackMode: "derived" };
+    }
+}
+
+function initBusinessSettings() {
+    if (qs("#businessSlTarget")) qs("#businessSlTarget").value = businessSettings.slTarget;
+    if (qs("#businessAhtTarget")) qs("#businessAhtTarget").value = businessSettings.ahtTarget;
+    if (qs("#businessFallbackMode")) qs("#businessFallbackMode").value = businessSettings.fallbackMode;
+}
+
+function saveBusinessSettings() {
+    businessSettings.slTarget = Number(qs("#businessSlTarget")?.value || businessSettings.slTarget || 80);
+    businessSettings.ahtTarget = Number(qs("#businessAhtTarget")?.value || businessSettings.ahtTarget || 300);
+    businessSettings.fallbackMode = qs("#businessFallbackMode")?.value || businessSettings.fallbackMode || "derived";
+    localStorage.setItem("pcceBusinessSettings", JSON.stringify(businessSettings));
 }
 
 async function api(path, options = {}) {
@@ -387,7 +422,7 @@ function renderKpis() {
     const handled = sum(state.calls, "calls_handled", "callsHandled");
     const abandoned = sum(state.calls, "calls_abandoned", "callsAbandoned");
     const dropped = sum(state.drops, "dropped_calls", "droppedCalls");
-    const service = weightedAverage(state.calls, "service_level_pct", "serviceLevelPct", "calls_offered", "callsOffered");
+    const service = businessServiceLevel(state.calls).value;
     const aht = weightedAverage(state.calls, "avg_handle_time", "avgHandleTime", "calls_handled", "callsHandled");
 
     qs("#kpiOffered").textContent = fmt(offered);
@@ -397,7 +432,7 @@ function renderKpis() {
     qs("#trendDropped").textContent = dropped ? "Disposition based" : "Not configured";
     qs("#kpiService").textContent = pct(service);
     qs("#kpiAht").textContent = seconds(aht);
-    qs("#trendService").textContent = service === null ? "Interval data unavailable" : "Target tracked";
+    qs("#trendService").textContent = businessServiceLevel(state.calls).source;
     qs("#kpiAht").nextElementSibling.textContent = aht === null ? "Interval data unavailable" : "Seconds";
     qs("#chartRange").textContent = `${qs("#fromDate").value} to ${qs("#toDate").value}`;
     const skillLabel = firstFilterValue("#overviewSkillFilter", "#businessSkillFilter", "#callsSkillFilter");
@@ -435,19 +470,40 @@ function renderCharts() {
 function renderBusiness() {
     renderBusinessCards();
     renderCvpIvrNodes();
+    renderCvpJourney();
+    renderBusinessRules();
+    const offered = sum(state.calls, "calls_offered", "callsOffered");
+    const handled = sum(state.calls, "calls_handled", "callsHandled");
+    const abandoned = sum(state.calls, "calls_abandoned", "callsAbandoned");
+    const dropped = sum(state.drops, "dropped_calls", "droppedCalls");
+    const service = businessServiceLevel(state.calls);
+    const aht = businessAht(state.calls);
+    const asa = businessAsa(state.calls);
+    const ivrContainment = businessIvrContainment();
+    const fcr = businessFcr(state.calls);
     const rows = [
-        ["Calls Offered", fmt(sum(state.calls, "calls_offered", "callsOffered"))],
-        ["Calls Handled", fmt(sum(state.calls, "calls_handled", "callsHandled"))],
-        ["Calls Abandoned", fmt(sum(state.calls, "calls_abandoned", "callsAbandoned"))],
-        ["Dropped Calls", fmt(sum(state.drops, "dropped_calls", "droppedCalls"))],
-        ["Service Level", pct(weightedAverage(state.calls, "service_level_pct", "serviceLevelPct", "calls_offered", "callsOffered"))],
-        ["Average Speed Answer", metricSeconds(weightedAverage(state.calls, "avg_speed_answer", "avgSpeedAnswer", "calls_handled", "callsHandled"))]
+        ["Calls Offered", fmt(offered)],
+        ["Calls Handled", fmt(handled)],
+        ["Calls Abandoned", fmt(abandoned)],
+        ["Dropped Calls", fmt(dropped)],
+        ["Answer Rate", pct(offered ? handled / offered * 100 : null)],
+        ["Abandon Rate", pct(offered ? abandoned / offered * 100 : null)],
+        ["Drop Rate", pct(offered ? dropped / offered * 100 : null)],
+        ["Service Level", `${pct(service.value)} (${service.short})`],
+        ["Avg Handle Time", `${metricSeconds(aht.value)} (${aht.short})`],
+        ["Average Speed Answer", `${metricSeconds(asa.value)} (${asa.short})`],
+        ["IVR Containment", `${pct(ivrContainment.value)} (${ivrContainment.short})`],
+        ["First Call Resolution", `${pct(fcr.value)} (${fcr.short})`]
     ];
     qs("#businessMetrics").innerHTML = rows.map(([label, value]) => metricRow(label, value)).join("");
 
     const trend = serviceTrendByHour();
     drawLineChart(qs("#serviceTrendChart"), trend.labels, trend.series, 100);
     drawRadar(qs("#performanceRadar"), radarMetrics());
+    const fcrBars = fcrBySkill();
+    drawHorizontalBarChart(qs("#fcrBySkillChart"), fcrBars.labels, fcrBars.values, colors);
+    const ivrBars = ivrByApp();
+    drawHorizontalBarChart(qs("#ivrBySkillChart"), ivrBars.labels, ivrBars.values, colors);
 }
 
 function renderCvpIvrNodes() {
@@ -489,6 +545,53 @@ function renderCvpIvrNodes() {
             refresh();
         });
     });
+}
+
+function renderCvpJourney() {
+    const grid = qs("#cvpJourneyGrid");
+    const count = qs("#cvpJourneyCount");
+    if (!grid || !count) return;
+    const journeys = cvpJourneys();
+    count.textContent = `${journeys.length} calls`;
+    grid.innerHTML = journeys.slice(0, 20).map(journey => `<article class="journey-card">
+        <div class="journey-head">
+            <div>
+                <strong>${escapeHtml(journey.caller || "Unknown caller")}</strong>
+                <span>${escapeHtml(journey.callId)}</span>
+            </div>
+            <span class="badge ${ivrDispositionClass(journey.dispositionId)}">${escapeHtml(journey.disposition || "Unknown")}</span>
+        </div>
+        <div class="journey-meta">
+            <span>${escapeHtml(journey.app || "Unknown app")}</span>
+            <span>${escapeHtml(journey.start || "")}</span>
+            <span>${escapeHtml(journey.duration || "")} sec</span>
+        </div>
+        <div class="journey-path">
+            ${journey.nodes.map(node => `<span>${escapeHtml(node)}</span>`).join("<i>-&gt;</i>")}
+        </div>
+        <button class="small-btn" data-trace-call="${escapeHtml(journey.callId)}">Open Trace</button>
+    </article>`).join("") || `<div class="empty-state"><strong>No CVP journey rows</strong><span>Select a date/app with CVP Reporting data.</span></div>`;
+}
+
+function cvpJourneys() {
+    const map = new Map();
+    state.cvpIvrNodes.forEach(row => {
+        const callId = pick(row, "call_id", "callId") || "UNKNOWN";
+        const existing = map.get(callId) || {
+            callId,
+            caller: pick(row, "caller_number", "callerNumber"),
+            start: pick(row, "call_start_time", "callStartTime"),
+            app: pick(row, "app_name", "appName"),
+            duration: pick(row, "duration"),
+            disposition: pick(row, "call_disposition_flag_desc", "callDispositionFlagDesc"),
+            dispositionId: pick(row, "call_disposition_id", "callDispositionId"),
+            nodes: []
+        };
+        const flag = pick(row, "flag");
+        if (flag && !existing.nodes.includes(flag)) existing.nodes.push(flag);
+        map.set(callId, existing);
+    });
+    return [...map.values()].sort((a, b) => String(b.start || "").localeCompare(String(a.start || "")));
 }
 
 function ivrDispositionClass(code) {
@@ -1390,9 +1493,11 @@ function renderBusinessCards() {
         <div class="business-metrics">
             <span>Offered<strong>${fmt(item.offered)}</strong></span>
             <span>SL%<strong class="teal">${pct(item.service)}</strong></span>
+            <span>Answer<strong>${pct(item.answerRate)}</strong></span>
             <span>Handled<strong>${fmt(item.handled)}</strong></span>
             <span>AHT<strong>${seconds(item.aht)}s</strong></span>
             <span>Abandoned<strong class="red">${fmt(item.abandoned)}</strong></span>
+            <span>Abandon %<strong class="red">${pct(item.abandonRate)}</strong></span>
         </div>
     </article>`).join("") || `<article class="business-card"><h3>No skill group data</h3><p>Check HDS query mapping and selected date range.</p></article>`;
 }
@@ -1421,8 +1526,10 @@ function groupSkillMetrics() {
     });
     return [...map.values()].map(item => ({
         ...item,
-        service: item.serviceWeight ? item.weightedService / item.serviceWeight : null,
-        aht: item.ahtWeight ? item.weightedAht / item.ahtWeight : null
+        service: item.serviceWeight ? item.weightedService / item.serviceWeight : derivedPct(item.handled, item.offered),
+        aht: item.ahtWeight ? item.weightedAht / item.ahtWeight : null,
+        answerRate: derivedPct(item.handled, item.offered),
+        abandonRate: derivedPct(item.abandoned, item.offered)
     })).sort((a, b) => b.offered - a.offered);
 }
 
@@ -1440,9 +1547,21 @@ function serviceTrendByHour() {
         byHour.set(hour, existing);
     });
     const entries = [...byHour.entries()].sort((a, b) => a[0] - b[0]);
+    const labels = entries.map(([hour]) => `${hour}:00`);
+    const values = entries.map(([hour, v]) => {
+        if (v.weight) return v.weighted / v.weight;
+        if (businessSettings.fallbackMode !== "derived") return 0;
+        const matching = state.calls.filter(row => num(pick(row, "hour")) === hour);
+        const offered = sum(matching, "calls_offered", "callsOffered");
+        const handled = sum(matching, "calls_handled", "callsHandled");
+        return derivedPct(handled, offered) || 0;
+    });
     return {
-        labels: entries.map(([hour]) => `${hour}:00`),
-        series: [{ label: "Service Level", color: "#2ed3c2", values: entries.map(([, v]) => v.weight ? v.weighted / v.weight : 0) }]
+        labels,
+        series: [
+            { label: businessSettings.fallbackMode === "derived" ? "SL / Answer Proxy" : "Service Level", color: "#2ed3c2", values },
+            { label: "Target", color: "#f4a51c", values: labels.map(() => businessSettings.slTarget) }
+        ]
     };
 }
 
@@ -1450,15 +1569,97 @@ function radarMetrics() {
     const offered = sum(state.calls, "calls_offered", "callsOffered");
     const handled = sum(state.calls, "calls_handled", "callsHandled");
     const abandoned = sum(state.calls, "calls_abandoned", "callsAbandoned");
-    const service = weightedAverage(state.calls, "service_level_pct", "serviceLevelPct", "calls_offered", "callsOffered");
-    const aht = weightedAverage(state.calls, "avg_handle_time", "avgHandleTime", "calls_handled", "callsHandled");
+    const service = businessServiceLevel(state.calls).value;
+    const aht = businessAht(state.calls).value;
     return [
         { label: "Service Level", value: service ?? 0 },
+        { label: "FCR", value: businessFcr(state.calls).value ?? 0 },
         { label: "Handled", value: offered ? handled / offered * 100 : 0 },
         { label: "Low Abandon", value: offered ? Math.max(0, 100 - abandoned / offered * 100) : 0 },
-        { label: "AHT", value: aht ? Math.max(0, 100 - Math.min(100, aht / 10)) : 0 },
-        { label: "IVR", value: average(state.ivr, "ivr_containment_rate", "ivrContainmentRate") ?? 0 }
+        { label: "AHT", value: aht ? Math.max(0, 100 - Math.min(100, aht / Math.max(1, businessSettings.ahtTarget) * 100)) : 0 },
+        { label: "IVR", value: businessIvrContainment().value ?? 0 }
     ];
+}
+
+function businessServiceLevel(rows) {
+    const real = weightedAverage(rows, "service_level_pct", "serviceLevelPct", "calls_offered", "callsOffered");
+    if (real !== null) return { value: real, source: "Cisco interval ServiceLevel", short: "Cisco" };
+    if (businessSettings.fallbackMode !== "derived") return { value: null, source: "Cisco interval unavailable", short: "missing" };
+    const offered = sum(rows, "calls_offered", "callsOffered");
+    const handled = sum(rows, "calls_handled", "callsHandled");
+    return { value: derivedPct(handled, offered), source: "Derived handled/offered fallback", short: "derived" };
+}
+
+function businessAht(rows) {
+    const real = weightedAverage(rows, "avg_handle_time", "avgHandleTime", "calls_handled", "callsHandled");
+    return real === null
+        ? { value: null, source: "Needs HDS interval AHT fields", short: "missing" }
+        : { value: real, source: "Cisco interval AHT", short: "Cisco" };
+}
+
+function businessAsa(rows) {
+    const real = weightedAverage(rows, "avg_speed_answer", "avgSpeedAnswer", "calls_handled", "callsHandled");
+    return real === null
+        ? { value: null, source: "Needs HDS interval ASA/AnswerWaitTime", short: "missing" }
+        : { value: real, source: "Cisco interval ASA", short: "Cisco" };
+}
+
+function businessIvrContainment() {
+    const real = average(state.ivr, "ivr_containment_rate", "ivrContainmentRate");
+    if (real !== null) return { value: real, source: "CVP Reporting containment query", short: "CVP" };
+    const journeys = cvpJourneys();
+    if (!journeys.length || businessSettings.fallbackMode !== "derived") return { value: null, source: "CVP containment unavailable", short: "missing" };
+    const contained = journeys.filter(j => !/agent routing/i.test(j.nodes.join(" ")) && ![2, 18, 1001, 1044].includes(Number(j.dispositionId))).length;
+    return { value: contained / journeys.length * 100, source: "Derived from CVP node journey", short: "derived" };
+}
+
+function businessFcr(rows) {
+    const real = weightedAverage(rows, "first_call_resolution", "firstCallResolution", "calls_handled", "callsHandled");
+    if (real !== null) return { value: real, source: "Configured FCR field", short: "Cisco" };
+    if (businessSettings.fallbackMode !== "derived") return { value: null, source: "FCR source not configured", short: "missing" };
+    const offered = sum(rows, "calls_offered", "callsOffered");
+    const handled = sum(rows, "calls_handled", "callsHandled");
+    const abandoned = sum(rows, "calls_abandoned", "callsAbandoned");
+    const proxy = offered ? Math.max(0, (handled - abandoned * 0.15) / offered * 100) : null;
+    return { value: proxy, source: "Derived proxy until CRM/repeat-call source is mapped", short: "proxy" };
+}
+
+function renderBusinessRules() {
+    qs("#businessCalcSummary").textContent = `SL target ${businessSettings.slTarget}% | AHT target ${businessSettings.ahtTarget}s | ${businessSettings.fallbackMode}`;
+    const sl = businessServiceLevel(state.calls);
+    const aht = businessAht(state.calls);
+    const asa = businessAsa(state.calls);
+    const ivr = businessIvrContainment();
+    const fcr = businessFcr(state.calls);
+    qs("#businessCalcRules").innerHTML = [
+        metricRow("Service Level", `${sl.source}. Formula: Cisco ServiceLevelCalls / ServiceLevelCallsOffered; fallback: handled / offered.`),
+        metricRow("AHT", `${aht.source}. Formula: Cisco interval talk + wrap (+ hold when mapped) / handled.`),
+        metricRow("ASA", `${asa.source}. Formula: AnswerWaitTime / handled.`),
+        metricRow("IVR Containment", `${ivr.source}. Normal/Error/Hangup cause IDs configurable in CVP SQL.`),
+        metricRow("First Call Resolution", `${fcr.source}. Recommended production source: CRM repeat-contact or survey resolution flag.`)
+    ].join("");
+}
+
+function fcrBySkill() {
+    const items = groupSkillMetrics().slice(0, 8);
+    return { labels: items.map(item => item.skill), values: items.map(item => businessFcr(state.calls.filter(row => (pick(row, "skill_group", "skillGroup") || "UNKNOWN") === item.skill)).value || 0) };
+}
+
+function ivrByApp() {
+    const map = new Map();
+    cvpJourneys().forEach(journey => {
+        const app = journey.app || "UNKNOWN";
+        const item = map.get(app) || { total: 0, contained: 0 };
+        item.total += 1;
+        if (!/agent routing/i.test(journey.nodes.join(" ")) && ![2, 18, 1001, 1044].includes(Number(journey.dispositionId))) item.contained += 1;
+        map.set(app, item);
+    });
+    const entries = [...map.entries()].slice(0, 8);
+    return { labels: entries.map(([label]) => label), values: entries.map(([, item]) => derivedPct(item.contained, item.total) || 0) };
+}
+
+function derivedPct(numerator, denominator) {
+    return denominator ? numerator / denominator * 100 : null;
 }
 
 function renderAgentFilters() {
@@ -1651,6 +1852,49 @@ function drawBarChart(canvas, labels, values, color) {
         ctx.fillRect(pad.left + index * slot + slot * .2, height - pad.bottom - barHeight, slot * .6, barHeight);
     });
     drawLabels(ctx, labels, width, height, pad);
+}
+
+function drawHorizontalBarChart(canvas, labels, values, palette) {
+    if (!canvas) return;
+    const ctx = setupCanvas(canvas);
+    const { width, height } = canvas.getBoundingClientRect();
+    const pad = { left: 130, right: 38, top: 28, bottom: 34 };
+    ctx.clearRect(0, 0, width, height);
+    drawGrid(ctx, width, height, pad);
+    const rows = labels.length || 1;
+    const slot = (height - pad.top - pad.bottom) / rows;
+    const max = 100;
+    ctx.font = "14px Segoe UI";
+    labels.forEach((label, index) => {
+        const y = pad.top + index * slot + slot * .28;
+        const barWidth = Math.max(0, Math.min(100, num(values[index]))) / max * (width - pad.left - pad.right);
+        ctx.fillStyle = "#87a1c2";
+        ctx.textAlign = "right";
+        ctx.fillText(String(label).slice(0, 18), pad.left - 14, y + 10);
+        ctx.fillStyle = palette[index % palette.length];
+        roundRect(ctx, pad.left, y, barWidth, Math.max(16, slot * .38), 7);
+        ctx.fill();
+        ctx.textAlign = "left";
+        ctx.fillStyle = "#f6f8fb";
+        ctx.fillText(`${Math.round(num(values[index]))}%`, pad.left + barWidth + 8, y + 12);
+    });
+    ctx.textAlign = "left";
+    ctx.fillStyle = "#87a1c2";
+    [0, 25, 50, 75, 100].forEach(mark => {
+        const x = pad.left + mark / 100 * (width - pad.left - pad.right);
+        ctx.fillText(String(mark), x - 5, height - 10);
+    });
+}
+
+function roundRect(ctx, x, y, width, height, radius) {
+    const r = Math.min(radius, width / 2, height / 2);
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + width, y, x + width, y + height, r);
+    ctx.arcTo(x + width, y + height, x, y + height, r);
+    ctx.arcTo(x, y + height, x, y, r);
+    ctx.arcTo(x, y, x + width, y, r);
+    ctx.closePath();
 }
 
 function drawDoughnut(canvas, labels, values, palette) {
