@@ -26,6 +26,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/actuator/health").permitAll()
                         .requestMatchers("/login", "/login.html", "/logout.html", "/login.css").permitAll()
+                        .requestMatchers("/h2-console/**").hasAuthority("PERM_SOLUTION_ADMIN")
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").hasAuthority("PERM_SOLUTION_ADMIN")
                         .anyRequest().authenticated())
                 .formLogin(form -> form
@@ -40,6 +41,7 @@ public class SecurityConfig {
                         .invalidateHttpSession(true)
                         .clearAuthentication(true)
                         .deleteCookies("JSESSIONID"))
+                .headers(headers -> headers.frameOptions(frameOptions -> frameOptions.sameOrigin()))
                 .httpBasic(withDefaults());
         return http.build();
     }

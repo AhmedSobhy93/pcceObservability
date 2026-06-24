@@ -6,6 +6,7 @@ import org.springframework.boot.autoconfigure.jdbc.DataSourceProperties;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 @Configuration
@@ -15,6 +16,20 @@ public class DataSourceConfig {
 
     public DataSourceConfig(PcceProperties pcceProperties) {
         this.pcceProperties = pcceProperties;
+    }
+
+    @Bean
+    @Primary
+    @ConfigurationProperties("spring.datasource")
+    DataSourceProperties appDataSourceProperties() {
+        return new DataSourceProperties();
+    }
+
+    @Bean
+    @Primary
+    @ConfigurationProperties("spring.datasource.hikari")
+    DataSource appDataSource() {
+        return appDataSourceProperties().initializeDataSourceBuilder().type(HikariDataSource.class).build();
     }
 
     @Bean

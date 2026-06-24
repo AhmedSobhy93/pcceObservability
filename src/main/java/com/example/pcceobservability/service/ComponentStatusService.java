@@ -54,7 +54,8 @@ public class ComponentStatusService {
         long start = System.nanoTime();
         ComponentStatus status;
         if (!target.isEnabled()) {
-            status = new ComponentStatus(target.getName(), ComponentState.DISABLED, target.getProbe(), describeTarget(target), 0,
+            status = new ComponentStatus(target.getName(), displayName(target), target.getSide(), target.getSite(), target.getTier(),
+                    ComponentState.DISABLED, target.getProbe(), describeTarget(target), 0,
                     "Probe disabled in configuration", checkedAt);
             componentHistoryService.record(status);
             return status;
@@ -69,10 +70,12 @@ public class ComponentStatusService {
                 case JDBC_HDS -> jdbcProbe(hdsJdbcTemplate, "SELECT 1");
                 case JDBC_CVP_REPORTING -> jdbcProbe(cvpReportingJdbcTemplate, "SELECT FIRST 1 1 FROM systables");
             }
-            status = new ComponentStatus(target.getName(), ComponentState.UP, target.getProbe(), describeTarget(target),
+            status = new ComponentStatus(target.getName(), displayName(target), target.getSide(), target.getSite(), target.getTier(),
+                    ComponentState.UP, target.getProbe(), describeTarget(target),
                     elapsedMs(start), "OK", checkedAt);
         } catch (Exception ex) {
-            status = new ComponentStatus(target.getName(), ComponentState.DOWN, target.getProbe(), describeTarget(target),
+            status = new ComponentStatus(target.getName(), displayName(target), target.getSide(), target.getSite(), target.getTier(),
+                    ComponentState.DOWN, target.getProbe(), describeTarget(target),
                     elapsedMs(start), ex.getMessage(), checkedAt);
         }
         componentHistoryService.record(status);
@@ -154,6 +157,12 @@ public class ComponentStatusService {
             case JDBC_HDS -> "HDS database";
             case JDBC_CVP_REPORTING -> "CVP reporting database";
         };
+    }
+
+    private String displayName(ComponentTarget target) {
+        return org.springframework.util.StringUtils.hasText(target.getDisplayName())
+                ? target.getDisplayName()
+                : target.getName().name();
     }
 
     private long elapsedMs(long startNanos) {

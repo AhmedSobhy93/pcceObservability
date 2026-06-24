@@ -4,6 +4,10 @@ import com.example.pcceobservability.config.PcceProperties.ProbeType;
 
 public record UpdateComponentRequest(
         Boolean enabled,
+        String displayName,
+        String side,
+        String site,
+        String tier,
         ProbeType probe,
         String host,
         Integer port,

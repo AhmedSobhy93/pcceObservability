@@ -6,6 +6,29 @@ spring:
     name: pcce-observability
   jackson:
     property-naming-strategy: SNAKE_CASE
+  datasource:
+    url: ${APP_DB_URL:jdbc:h2:file:./data/pcce-observability;AUTO_SERVER=TRUE;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH}
+    username: ${APP_DB_USERNAME:sa}
+    password: ${APP_DB_PASSWORD:}
+    driver-class-name: ${APP_DB_DRIVER:org.h2.Driver}
+    hikari:
+      maximum-pool-size: ${APP_DB_MAX_POOL_SIZE:5}
+      minimum-idle: ${APP_DB_MIN_IDLE:1}
+      connection-timeout: ${APP_DB_CONNECTION_TIMEOUT_MS:5000}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: false
+  flyway:
+    enabled: ${APP_DB_FLYWAY_ENABLED:true}
+    locations: classpath:db/migration
+  h2:
+    console:
+      enabled: ${H2_CONSOLE_ENABLED:true}
+      path: /h2-console
   mail:
     host: ${PCCE_SMTP_HOST:}
     port: ${PCCE_SMTP_PORT:25}
@@ -318,15 +341,27 @@ pcce:
 
   components:
     - name: ICM_Router
+      display-name: Lab Rogger / Router
+      side: LAB
+      site: SIT
+      tier: ICM
       enabled: true
       probe: HOST
       host: 10.10.90.191
       port: 4000
       timeout: 5s
     - name: ICM_Logger
+      display-name: Lab Logger / AW DB
+      side: LAB
+      site: SIT
+      tier: ICM
       enabled: true
       probe: JDBC_AW
     - name: CVP_CallServer
+      display-name: Lab CVP Call Server
+      side: LAB
+      site: SIT
+      tier: CVP
       enabled: true
       probe: HTTP
       url: http://10.10.90.194:8000/cvp/diag
@@ -334,31 +369,55 @@ pcce:
       expected-status-min: 200
       expected-status-max: 499
     - name: CVP_ReportingServer
+      display-name: Lab CVP Reporting
+      side: LAB
+      site: SIT
+      tier: CVP
       enabled: true
       probe: JDBC_CVP_REPORTING
     - name: CTI_Server
+      display-name: Lab CTI Server
+      side: LAB
+      site: SIT
+      tier: PG
       enabled: true
       probe: TCP
       host: 10.10.90.192
       port: 42027
     - name: PG_CUCM
+      display-name: Lab CUCM PG
+      side: LAB
+      site: SIT
+      tier: PG
       enabled: true
       probe: HOST
       host: 10.10.90.192
       port: 42028
       timeout: 5s
     - name: PG_CVP
+      display-name: Lab CVP PG
+      side: LAB
+      site: SIT
+      tier: PG
       enabled: true
       probe: HOST
       host: 10.10.90.192
       port: 42029
       timeout: 5s
     - name: VoIP_Gateway
+      display-name: Lab Voice Gateway
+      side: SHARED
+      site: SIT
+      tier: VOICE
       enabled: true
       probe: TCP
       host: 10.10.141.60
       port: 5060
     - name: Finesse
+      display-name: Lab Finesse
+      side: LAB
+      site: SIT
+      tier: DESKTOP
       enabled: true
       probe: HTTP
       url: https://vssitfin01.dev.mdi:8445/desktop
@@ -367,10 +426,18 @@ pcce:
       expected-status-min: 200
       expected-status-max: 499
     - name: MediaSense
+      display-name: MediaSense
+      side: SHARED
+      site: SIT
+      tier: RECORDING
       enabled: false
       probe: HTTP
       url: https://mediasense.example.local
     - name: CUIC
+      display-name: Lab CUIC
+      side: LAB
+      site: SIT
+      tier: REPORTING
       enabled: true
       probe: HTTP
       url: https://vssitcuic01.dev.mdi/cuic

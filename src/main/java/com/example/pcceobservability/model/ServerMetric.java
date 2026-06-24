@@ -5,6 +5,10 @@ import java.time.Instant;
 
 public record ServerMetric(
         ComponentName component,
+        String displayName,
+        String side,
+        String site,
+        String tier,
         String host,
         String method,
         String state,

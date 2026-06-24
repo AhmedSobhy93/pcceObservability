@@ -151,6 +151,18 @@ public class AdminController {
         if (request.enabled() != null) {
             target.setEnabled(request.enabled());
         }
+        if (request.displayName() != null) {
+            target.setDisplayName(request.displayName());
+        }
+        if (request.side() != null) {
+            target.setSide(request.side());
+        }
+        if (request.site() != null) {
+            target.setSite(request.site());
+        }
+        if (request.tier() != null) {
+            target.setTier(request.tier());
+        }
         if (request.probe() != null) {
             target.setProbe(request.probe());
         }
@@ -178,6 +190,10 @@ public class AdminController {
 
         Map<String, Object> details = new LinkedHashMap<>();
         details.put("enabled", target.isEnabled());
+        details.put("displayName", target.getDisplayName());
+        details.put("side", target.getSide());
+        details.put("site", target.getSite());
+        details.put("tier", target.getTier());
         details.put("probe", target.getProbe());
         details.put("host", target.getHost());
         details.put("port", target.getPort());

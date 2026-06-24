@@ -218,6 +218,10 @@ public class PcceProperties {
 
     public static class ComponentTarget {
         private ComponentName name;
+        private String displayName;
+        private String side;
+        private String site;
+        private String tier;
         private boolean enabled;
         private ProbeType probe = ProbeType.TCP;
         private String host;
@@ -234,6 +238,38 @@ public class PcceProperties {
 
         public void setName(ComponentName name) {
             this.name = name;
+        }
+
+        public String getDisplayName() {
+            return displayName;
+        }
+
+        public void setDisplayName(String displayName) {
+            this.displayName = displayName;
+        }
+
+        public String getSide() {
+            return side;
+        }
+
+        public void setSide(String side) {
+            this.side = side;
+        }
+
+        public String getSite() {
+            return site;
+        }
+
+        public void setSite(String site) {
+            this.site = site;
+        }
+
+        public String getTier() {
+            return tier;
+        }
+
+        public void setTier(String tier) {
+            this.tier = tier;
         }
 
         public boolean isEnabled() {
@@ -321,15 +357,35 @@ public class PcceProperties {
     public enum ComponentName {
         ICM_Router,
         ICM_Logger,
+        ICM_Distributor_AW,
+        HDS,
+        Live_Data,
         CVP_CallServer,
         CVP_ReportingServer,
+        CVP_VXMLServer,
+        CVP_OAMP,
+        VVB,
         CTI_Server,
         PG_CUCM,
         PG_CVP,
+        PG_ECE,
         VoIP_Gateway,
+        SIP_Proxy,
+        Load_Balancer,
         Finesse,
         MediaSense,
-        CUIC
+        CUIC,
+        CUCM_Publisher,
+        CUCM_Subscriber,
+        IM_P,
+        ECE,
+        Eleveo_QM,
+        Eleveo_Recording,
+        Eleveo_WFM,
+        Database_SQL,
+        Domain_Controller,
+        DNS,
+        NTP
     }
 
     public enum AppRole {

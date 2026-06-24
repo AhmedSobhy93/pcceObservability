@@ -6,6 +6,10 @@ import java.time.Instant;
 
 public record ComponentStatus(
         ComponentName name,
+        String displayName,
+        String side,
+        String site,
+        String tier,
         ComponentState state,
         ProbeType probe,
         String target,

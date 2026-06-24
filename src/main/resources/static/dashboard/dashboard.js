@@ -102,6 +102,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
     qs("#collapseBtn").addEventListener("click", () => document.body.classList.toggle("collapsed"));
     qs("#logoutBtn").addEventListener("click", logout);
+    qs("#projectPlanLink")?.addEventListener("click", () => location.href = "/project");
     document.querySelectorAll(".nav-item[data-view]").forEach(button => {
         button.addEventListener("click", () => switchView(button.dataset.view));
     });
@@ -552,8 +553,9 @@ function renderComponents() {
         return `<article class="component-card">
             <div class="component-row">
                 <div>
-                    <h3>${escapeHtml(pick(component, "name") || "")}</h3>
+                    <h3>${escapeHtml(pick(component, "display_name", "displayName") || pick(component, "name") || "")}</h3>
                     <span class="badge ${badgeClass}">${escapeHtml(stateValue)}</span>
+                    <p>${componentMeta(component)}</p>
                     <p>${escapeHtml(pick(component, "probe") || "")} - ${escapeHtml(pick(component, "target") || "")}</p>
                     <p>${fmt(latency)} ms - ${escapeHtml(pick(component, "detail") || "")}</p>
                     <p>${componentProbeHint(component)}</p>
@@ -566,14 +568,20 @@ function renderComponents() {
         const stateValue = String(pick(metric, "state") || "UNKNOWN").toLowerCase();
         const badgeClass = stateValue === "up" ? "up" : stateValue === "not_configured" ? "warn" : "down";
         return `<article class="component-card">
-            <h3>${escapeHtml(pick(metric, "component") || "")}</h3>
+            <h3>${escapeHtml(pick(metric, "display_name", "displayName") || pick(metric, "component") || "")}</h3>
             <span class="badge ${badgeClass}">${escapeHtml(stateValue.replace("_", " "))}</span>
+            <p>${componentMeta(metric)}</p>
             <p>${escapeHtml(pick(metric, "host") || "")} - ${escapeHtml(pick(metric, "method") || "")}</p>
             <p>CPU ${metricPct(pick(metric, "cpu_pct", "cpuPct"))} | Memory ${metricPct(pick(metric, "memory_pct", "memoryPct"))} | Disk ${metricPct(pick(metric, "disk_pct", "diskPct"))}</p>
             <p>${escapeHtml(pick(metric, "services") || "")}</p>
             <p>${escapeHtml(pick(metric, "detail") || "")}</p>
         </article>`;
     }).join("") || `<article class="component-card"><h3>Server Metrics</h3><span class="badge warn">not configured</span><p>Configure SNMP/WMI/exporter collection for remote servers.</p></article>`;
+}
+
+function componentMeta(item) {
+    const parts = [pick(item, "site"), pick(item, "side"), pick(item, "tier")].filter(Boolean);
+    return parts.length ? parts.map(part => escapeHtml(part)).join(" | ") : "Topology metadata not set";
 }
 
 function componentProbeHint(component) {
@@ -886,7 +894,8 @@ function renderAdmin() {
     populateAdminRoleSelect();
     renderPermissionEditor();
     qs("#adminComponentsTable").innerHTML = state.adminComponents.map(component => `<tr>
-        <td>${escapeHtml(pick(component, "name") || "")}</td>
+        <td><strong>${escapeHtml(pick(component, "display_name", "displayName") || pick(component, "name") || "")}</strong><span class="subline">${escapeHtml(pick(component, "name") || "")}</span></td>
+        <td>${escapeHtml(componentMeta(component))}</td>
         <td>${pick(component, "enabled") ? "true" : "false"}</td>
         <td>${escapeHtml(pick(component, "probe") || "")}</td>
         <td>${escapeHtml(pick(component, "url") || pick(component, "host") || "")}${pick(component, "port") ? `:${pick(component, "port")}` : ""}</td>

@@ -90,24 +90,24 @@ public class OperationsService {
                 alerts.add(alert(
                         AlertSeverity.CRITICAL,
                         "COMPONENT",
-                        component.name().name(),
-                        component.name() + " is DOWN: " + component.detail(),
+                        component.displayName(),
+                        component.displayName() + " is DOWN: " + component.detail(),
                         "Check service state, network path, firewall rules, and Cisco component logs."));
             } else if (component.state() == ComponentState.UP
                     && component.latencyMs() >= pcceProperties.getOperations().getComponentLatencyCriticalMs()) {
                 alerts.add(alert(
                         AlertSeverity.CRITICAL,
                         "LATENCY",
-                        component.name().name(),
-                        component.name() + " latency is " + component.latencyMs() + "ms",
+                        component.displayName(),
+                        component.displayName() + " latency is " + component.latencyMs() + "ms",
                         "Investigate network latency, SQL blocking, CPU pressure, and disk latency."));
             } else if (component.state() == ComponentState.UP
                     && component.latencyMs() >= pcceProperties.getOperations().getComponentLatencyWarningMs()) {
                 alerts.add(alert(
                         AlertSeverity.WARNING,
                         "LATENCY",
-                        component.name().name(),
-                        component.name() + " latency is " + component.latencyMs() + "ms",
+                        component.displayName(),
+                        component.displayName() + " latency is " + component.latencyMs() + "ms",
                         "Review trend and validate no active incident is developing."));
             }
         }
