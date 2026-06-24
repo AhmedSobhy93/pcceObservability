@@ -340,17 +340,17 @@ pcce:
     aw:
       url: ${PCCE_AW_JDBC_URL:jdbc:sqlserver://10.10.90.193:1433;databaseName=pcce_awdb;encrypt=true;trustServerCertificate=true}
       username: ${PCCE_AW_USERNAME:obser_user}
-      password: ${PCCE_AW_PASSWORD:MDI@bank1}
+      password: ${PCCE_AW_PASSWORD:}
       driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
     hds:
       url: ${PCCE_HDS_JDBC_URL:jdbc:sqlserver://10.10.90.193:1433;databaseName=pcce_hds;encrypt=true;trustServerCertificate=true}
       username: ${PCCE_HDS_USERNAME:obser_user}
-      password: ${PCCE_HDS_PASSWORD:MDI@bank1}
+      password: ${PCCE_HDS_PASSWORD:}
       driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
     cvp-reporting:
       url: ${CVP_REPORTING_JDBC_URL:jdbc:informix-sqli://10.10.90.198:1526/cvp_data:INFORMIXSERVER=cvp;DELIMIDENT=y;}
       username: ${CVP_REPORTING_USERNAME:cvp_dbuser}
-      password: ${CVP_REPORTING_PASSWORD:MDI@bank12345}
+      password: ${CVP_REPORTING_PASSWORD:}
       driver-class-name: com.informix.jdbc.IfxDriver
 
   components:

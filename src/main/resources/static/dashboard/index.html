@@ -386,7 +386,7 @@
             </div>
         </article>
         <article class="panel full api-functions-panel">
-            <div class="panel-head"><h2>Task Editor</h2><span>Saved in this browser for team planning</span></div>
+            <div class="panel-head"><h2>Task Editor</h2><span>Saved in the app database and shared with /project</span></div>
             <div class="admin-form plan-editor-form">
                 <label class="date-field"><span>Topic</span><select id="planEditTopic"><option>PCCE</option><option>Eleveo</option><option>Dtech</option><option>Cisco Portal</option><option>Survey</option><option>Chat</option><option>One Content</option></select></label>
                 <label class="date-field"><span>Task</span><input id="planEditTask" placeholder="Task name"></label>
@@ -396,7 +396,8 @@
                 <label class="date-field"><span>Progress %</span><input id="planEditPct" type="number" min="0" max="100" value="0"></label>
                 <label class="date-field editor-wide"><span>Comments</span><input id="planEditComments" placeholder="Notes"></label>
                 <button class="primary-btn" id="planAddTaskBtn">Add Task</button>
-                <button class="primary-btn" id="planResetBtn">Reset Plan</button>
+                <button class="primary-btn" id="planResetBtn">Reload Plan</button>
+                <pre class="log-box action-result editor-wide" id="planActionResult">Project plan changes are persisted in the app database.</pre>
             </div>
         </article>
         <div id="planTaskView"></div>

@@ -38,7 +38,8 @@ const state = {
     adminUsers: [],
     adminRoles: [],
     adminComponents: [],
-    notificationSettings: null
+    notificationSettings: null,
+    projectTasks: []
 };
 
 const pages = {
@@ -69,19 +70,7 @@ const permissionCatalog = [
     "OPERATIONS_READ",
     "SOLUTION_ADMIN"
 ];
-const defaultPlanTasks = [
-    { topic: "PCCE", task: "Finalize AW/HDS/CVP reporting alignment", priority: "CRITICAL", priorityNum: 1, status: "IN_PROGRESS", resource: "Contact Center Team / DB Admin", start: "1-Feb-26", finish: "30-Apr-26", duration: 89, pct: 65, comments: "Align dashboard numbers with CUIC stock reports and Cisco schema." },
-    { topic: "PCCE", task: "PCCE API enablement and permissions", priority: "HIGH", priorityNum: 2, status: "IN_PROGRESS", resource: "Cisco Admin & App Owner", start: "10-Feb-26", finish: "15-Mar-26", duration: 34, pct: 55, comments: "Validate IIS auth, API user role, and supported actions." },
-    { topic: "PCCE", task: "RTMT-style component monitoring", priority: "HIGH", priorityNum: 3, status: "PLANNED", resource: "Infrastructure Team", start: "1-Mar-26", finish: "30-Apr-26", duration: 60, pct: 25, comments: "SNMP/WMI/exporter required for CPU, memory, disk, and services." },
-    { topic: "Eleveo", task: "Embed QM Grafana dashboards", priority: "HIGH", priorityNum: 1, status: "IN_PROGRESS", resource: "Eleveo Admin / App Owner", start: "15-Feb-26", finish: "15-Mar-26", duration: 29, pct: 45, comments: "Needs Grafana iframe URLs and allow_embedding enabled." },
-    { topic: "Eleveo", task: "Recording health and storage dashboard", priority: "CRITICAL", priorityNum: 2, status: "PLANNED", resource: "Recording Team & Storage Admin", start: "1-Mar-26", finish: "20-Mar-26", duration: 20, pct: 15, comments: "Monitor recorder services, archive backlog, free storage, and failed recordings." },
-    { topic: "Dtech", task: "SPOG support runbook", priority: "MEDIUM", priorityNum: 1, status: "PLANNED", resource: "Dtech / Operations", start: "15-Mar-26", finish: "30-Apr-26", duration: 46, pct: 10, comments: "Define approved graceful operations and escalation flow." },
-    { topic: "Cisco Portal", task: "Cisco entitlement and TAC documentation", priority: "MEDIUM", priorityNum: 1, status: "ON_HOLD", resource: "Cisco Admin", start: null, finish: null, duration: null, pct: 20, comments: "Waiting for support contract and portal access validation." },
-    { topic: "Survey", task: "CSAT feed integration", priority: "LOW", priorityNum: 1, status: "PLANNED", resource: "Business Team", start: "1-Apr-26", finish: "30-Apr-26", duration: 30, pct: 0, comments: "Source system and field mapping not finalized." },
-    { topic: "Chat", task: "Digital channel reporting placeholders", priority: "LOW", priorityNum: 1, status: "PLANNED", resource: "Digital Channels", start: "1-Apr-26", finish: "30-Apr-26", duration: 30, pct: 0, comments: "Prepare model for future chat metrics." },
-    { topic: "One Content", task: "Archive evidence and operations documents", priority: "MEDIUM", priorityNum: 1, status: "COMPLETED", resource: "App Owner & Operations", start: "1-Feb-26", finish: "20-Feb-26", duration: 20, pct: 100, comments: "Initial runbook and references captured." }
-];
-let planTasks = loadPlanTasks();
+let planTasks = [];
 
 document.addEventListener("DOMContentLoaded", () => {
     const today = new Date().toISOString().slice(0, 10);
@@ -405,7 +394,8 @@ async function refresh() {
         safeLoad("finesseQueues", "/api/v1/finesse/queues", [], { timeoutMs: 30000 }),
         safeLoad("skillGroups", "/api/v1/reference/skill-groups", []),
         safeLoad("callTypeOptions", "/api/v1/reference/call-types", []),
-        safeLoad("agentOptions", "/api/v1/reference/agents", [])
+        safeLoad("agentOptions", "/api/v1/reference/agents", []),
+        safeLoad("projectTasks", "/api/v1/project/tasks", [], { timeoutMs: 8000 })
     ];
     const results = await Promise.all(supportLoads);
     errors.push(...results.filter(Boolean));
@@ -450,6 +440,7 @@ function renderAll(errors) {
     renderOperations();
     renderSupport();
     renderAdmin();
+    planTasks = state.projectTasks || [];
     renderPlan();
 
     const componentDown = state.components.filter(c => String(pick(c, "state")).toUpperCase() === "DOWN").length;
@@ -674,22 +665,8 @@ function ivrDispositionClass(code) {
 
 function renderAgents() {
     renderAgentFilters();
-    const selectedTeam = document.querySelector(".team-filter.active")?.dataset.team || "ALL";
-    const statusFilter = firstFilterValue("#agentStatusFilter").toLowerCase();
-    const search = firstFilterValue("#agentSearchFilter").toLowerCase();
-    const agents = (selectedTeam === "ALL"
-        ? state.agents
-        : state.agents.filter(agent => (pick(agent, "team") || "UNKNOWN") === selectedTeam))
-        .filter(agent => !statusFilter || String(pick(agent, "status") || "").toLowerCase() === statusFilter)
-        .filter(agent => {
-            if (!search) return true;
-            return [
-                pick(agent, "agent_name", "agentName"),
-                pick(agent, "agent_id", "agentId"),
-                pick(agent, "team"),
-                pick(agent, "skill_group", "skillGroup")
-            ].join(" ").toLowerCase().includes(search);
-        });
+    const agents = filteredAgents();
+    renderAgentVisuals(agents);
     const totalPages = Math.max(1, Math.ceil(agents.length / uiState.agentPageSize));
     uiState.agentPage = Math.min(uiState.agentPage, totalPages - 1);
     const start = uiState.agentPage * uiState.agentPageSize;
@@ -713,6 +690,139 @@ function renderAgents() {
             <td>${minutes(pick(agent, "not_ready_time_min", "notReadyTimeMin"))}</td>
         </tr>`;
     }).join("") || `<tr><td colspan="8">No agents match current filters.</td></tr>`;
+}
+
+function filteredAgents() {
+    const selectedTeam = document.querySelector(".team-filter.active")?.dataset.team || "ALL";
+    const statusFilter = firstFilterValue("#agentStatusFilter").toLowerCase();
+    const search = firstFilterValue("#agentSearchFilter").toLowerCase();
+    return (selectedTeam === "ALL"
+        ? state.agents
+        : state.agents.filter(agent => (pick(agent, "team") || "UNKNOWN") === selectedTeam))
+        .filter(agent => !statusFilter || String(pick(agent, "status") || "").toLowerCase() === statusFilter)
+        .filter(agent => {
+            if (!search) return true;
+            return [
+                pick(agent, "agent_name", "agentName"),
+                pick(agent, "agent_id", "agentId"),
+                pick(agent, "team"),
+                pick(agent, "skill_group", "skillGroup")
+            ].join(" ").toLowerCase().includes(search);
+        });
+}
+
+function renderAgentVisuals(agents) {
+    renderAgentKpis(agents);
+    renderAgentCards(agents);
+    renderAgentCharts(agents);
+    renderAgentApiWorkspace();
+}
+
+function renderAgentKpis(agents) {
+    const total = agents.length;
+    const active = agents.filter(agent => num(pick(agent, "calls_handled", "callsHandled")) > 0).length;
+    const handled = sum(agents, "calls_handled", "callsHandled");
+    const aht = average(agents.filter(agent => pick(agent, "avg_handle_time", "avgHandleTime") !== null), "avg_handle_time", "avgHandleTime");
+    const teams = unique(agents.map(agent => pick(agent, "team") || "UNKNOWN")).length;
+    const finesseUsers = finesseDirectoryCount();
+    qs("#agentKpis").innerHTML = [
+        agentKpi("Agents", total, `${teams} teams`),
+        agentKpi("Active", active, "handled calls in range"),
+        agentKpi("Handled", fmt(handled), "selected interval"),
+        agentKpi("AHT", metricSeconds(aht), "Cisco interval/proxy"),
+        agentKpi("Finesse Users", finesseUsers ?? "--", "live directory")
+    ].join("");
+}
+
+function agentKpi(label, value, detail) {
+    return `<article class="kpi-card compact agent-kpi"><div class="kpi-top"><span>${escapeHtml(label)}</span></div><strong>${escapeHtml(String(value))}</strong><small>${escapeHtml(detail)}</small></article>`;
+}
+
+function renderAgentCards(agents) {
+    const top = [...agents]
+        .sort((a, b) => num(pick(b, "calls_handled", "callsHandled")) - num(pick(a, "calls_handled", "callsHandled")))
+        .slice(0, 8);
+    qs("#agentVisualCards").innerHTML = top.map(agent => {
+        const status = String(pick(agent, "status") || "offline");
+        const calls = num(pick(agent, "calls_handled", "callsHandled"));
+        const occupancy = pick(agent, "occupancy_pct", "occupancyPct");
+        const adherence = pick(agent, "adherence_pct", "adherencePct");
+        return `<article class="agent-card">
+            <div class="agent-avatar">${escapeHtml(agentInitials(agent))}</div>
+            <div class="agent-card-main">
+                <div class="agent-card-head">
+                    <div><strong>${escapeHtml(pick(agent, "agent_name", "agentName") || "Unknown Agent")}</strong><span>${escapeHtml(pick(agent, "agent_id", "agentId") || "")} - ${escapeHtml(pick(agent, "team") || "UNKNOWN")}</span></div>
+                    <span class="badge ${status}">${escapeHtml(status.replace("_", " "))}</span>
+                </div>
+                <div class="agent-card-stats">
+                    <span>Calls <b>${fmt(calls)}</b></span>
+                    <span>AHT <b>${seconds(pick(agent, "avg_handle_time", "avgHandleTime"))}s</b></span>
+                    <span>Transfers <b>${fmt(pick(agent, "transfers"))}</b></span>
+                    <span>Not Ready <b>${minutes(pick(agent, "not_ready_time_min", "notReadyTimeMin"))}</b></span>
+                </div>
+                <div class="agent-mini-bars">
+                    <label>Occupancy ${pct(occupancy)}</label>${miniBar(occupancy)}
+                    <label>Adherence ${pct(adherence)}</label>${miniBar(adherence)}
+                </div>
+            </div>
+        </article>`;
+    }).join("") || `<div class="empty-state"><strong>No agents</strong><span>Change filters or date range.</span></div>`;
+}
+
+function renderAgentCharts(agents) {
+    const top = [...agents]
+        .sort((a, b) => num(pick(b, "calls_handled", "callsHandled")) - num(pick(a, "calls_handled", "callsHandled")))
+        .slice(0, 10);
+    const labels = top.map(shortAgentName);
+    drawStackedBarChart(qs("#agentAhtChart"), labels, [
+        { label: "Talk", color: "#2ed3c2", values: top.map(agent => num(pick(agent, "avg_talk_time", "avgTalkTime")) || num(pick(agent, "avg_handle_time", "avgHandleTime"))) },
+        { label: "Hold", color: "#f4a51c", values: top.map(agent => num(pick(agent, "avg_hold_time", "avgHoldTime"))) },
+        { label: "Wrap", color: "#3d82f6", values: top.map(agent => num(pick(agent, "avg_wrap_time", "avgWrapTime"))) }
+    ]);
+    drawHorizontalBarChart(qs("#agentOccupancyChart"), labels, top.map(agent => pick(agent, "occupancy_pct", "occupancyPct") ?? derivedAgentOccupancy(agent)), colors);
+}
+
+function renderAgentApiWorkspace() {
+    const finesseUsers = finesseDirectoryCount();
+    const finesseTeams = countXmlTags((state.finesseTeams.find(item => String(pick(item, "name") || "").toLowerCase().includes("teams directory")) || {}).body, "Team");
+    const agentActions = state.pcceActions.filter(action => /agent|team|skill|precision|attribute/i.test(`${pick(action, "id")} ${pick(action, "name")} ${pick(action, "category")}`));
+    qs("#agentApiWorkspace").innerHTML = [
+        apiWorkspaceCard("Finesse Users", finesseUsers ?? "--", "GET /finesse/api/Users", "Live agent directory and desktop-visible users"),
+        apiWorkspaceCard("Finesse Teams", finesseTeams ?? "--", "GET /finesse/api/Teams", "Supervisor/team inventory from Finesse"),
+        apiWorkspaceCard("Dialogs", state.finesseDialogs.length, "GET /finesse/api/User/{id}/Dialogs", "Live call/dialog state per user"),
+        apiWorkspaceCard("PCCE Agent Config", agentActions.length, "Unified Config", "Agent, team, skill group, attributes, precision queues")
+    ].join("") + `<div class="api-chip-row">${agentActions.slice(0, 10).map(action => `<button class="small-btn" data-action-id="${escapeHtml(pick(action, "id") || "")}" ${pick(action, "enabled") ? "" : "disabled"}>${escapeHtml(pick(action, "name") || pick(action, "id") || "")}</button>`).join("")}</div>`;
+    document.querySelectorAll("#agentApiWorkspace [data-action-id]").forEach(button => {
+        button.addEventListener("click", () => executePcceAction(button.dataset.actionId));
+    });
+}
+
+function apiWorkspaceCard(title, value, method, detail) {
+    return `<article class="agent-api-card"><span>${escapeHtml(title)}</span><strong>${escapeHtml(String(value))}</strong><small>${escapeHtml(method)}</small><p>${escapeHtml(detail)}</p></article>`;
+}
+
+function finesseDirectoryCount() {
+    const directory = state.finesseAgents.find(item => String(pick(item, "name") || "").toLowerCase().includes("users directory"));
+    return directory ? countXmlTags(pick(directory, "body"), "User") : null;
+}
+
+function agentInitials(agent) {
+    const name = pick(agent, "agent_name", "agentName") || pick(agent, "agent_id", "agentId") || "?";
+    return String(name).split(/\s+/).filter(Boolean).slice(0, 2).map(part => part[0]).join("").toUpperCase();
+}
+
+function shortAgentName(agent) {
+    return String(pick(agent, "agent_name", "agentName") || pick(agent, "agent_id", "agentId") || "Agent").split(/\s+/)[0].slice(0, 12);
+}
+
+function miniBar(value) {
+    const width = value === null || value === undefined ? 0 : Math.max(0, Math.min(100, num(value)));
+    return `<span class="mini-track"><i style="width:${width}%"></i></span>`;
+}
+
+function derivedAgentOccupancy(agent) {
+    const calls = num(pick(agent, "calls_handled", "callsHandled"));
+    return Math.min(100, calls * 5);
 }
 
 function renderFinesse() {
@@ -1368,10 +1478,17 @@ function renderPermissionEditor() {
     const roleName = qs("#adminRoleSelect")?.value;
     const role = state.adminRoles.find(item => pick(item, "role") === roleName);
     const selected = new Set(pick(role, "permissions") || []);
-    qs("#adminPermissionGrid").innerHTML = permissionCatalog.map(permission => `<label class="check-card">
+    qs("#adminPermissionGrid").innerHTML = currentPermissionCatalog().map(permission => `<label class="check-card">
         <input type="checkbox" value="${escapeHtml(permission)}" ${selected.has(permission) ? "checked" : ""}>
         <span>${escapeHtml(permission.replaceAll("_", " "))}</span>
     </label>`).join("");
+}
+
+function currentPermissionCatalog() {
+    return unique([
+        ...permissionCatalog,
+        ...state.adminRoles.flatMap(role => pick(role, "permissions") || [])
+    ]);
 }
 
 function fillAdminUserForm() {
@@ -1438,9 +1555,11 @@ function adminCapabilityCards() {
         ["RBAC", "Create/update app users, assign roles, scope teams and agents."],
         ["Role Permissions", "Tune permissions for Admin, Workforce, Supervisor, Agent, and Viewer."],
         ["Components", "Review probes, target URLs, TLS trust, timeout and enabled state."],
-        ["Audit", "User and permission changes are recorded by the in-memory audit service."],
-        ["Alerts", "Webhook, SMTP and SMS thresholds are configurable in application.yml/env."],
-        ["Diagnostics", "Use /api/v1/admin/diagnostics for AW/HDS/CVP schema checks."]
+        ["App Database", "Project plan and portal data use the app DB, not browser-only cache."],
+        ["Environment Profiles", "Use application-local.yml for SIT and application-prod.yml for A/B-side production topology."],
+        ["Alerts", "Webhook, SMTP and SMS thresholds are runtime configurable, then should be persisted through env/YAML."],
+        ["Diagnostics", "Use /api/v1/admin/diagnostics for AW/HDS/CVP schema checks."],
+        ["Cisco Inventory", "Use PCCE machineinventory from SPOG Ops to validate nodes, services, ports, and versions."]
     ];
     return cards.map(([title, detail]) => `<article class="business-card"><h3>${escapeHtml(title)}</h3><p>${escapeHtml(detail)}</p></article>`).join("");
 }
@@ -1495,7 +1614,7 @@ function renderPlanKpis(tasks) {
     const criticalOpen = planTasks.filter(task => task.priority === "CRITICAL" && task.status !== "COMPLETED").length;
     qs("#planKpis").innerHTML = [
         planKpi("Total Tasks", total, `${tasks.length} shown`, ""),
-        planKpi("Completed", completed, `${Math.round(completed / total * 100)}% done`, "emerald"),
+        planKpi("Completed", completed, `${total ? Math.round(completed / total * 100) : 0}% done`, "emerald"),
         planKpi("In Progress", inProgress, "active work", "blue"),
         planKpi("On Hold", onHold, "blocked or waiting", "amber"),
         planKpi("Critical Open", criticalOpen, "not completed", "red")
@@ -1594,40 +1713,26 @@ function setPlanView(view) {
     renderPlan();
 }
 
-function loadPlanTasks() {
-    try {
-        const stored = localStorage.getItem("pcce.planTasks");
-        return stored ? JSON.parse(stored) : defaultPlanTasks.map(task => ({ ...task }));
-    } catch {
-        return defaultPlanTasks.map(task => ({ ...task }));
-    }
-}
-
-function savePlanTasks() {
-    localStorage.setItem("pcce.planTasks", JSON.stringify(planTasks));
-}
-
 function bindPlanEditors() {
     document.querySelectorAll("[data-plan-save]").forEach(button => {
         button.addEventListener("click", () => savePlanTask(Number(button.dataset.planSave)));
     });
 }
 
-function savePlanTask(index) {
-    const task = planTasks[index];
+async function savePlanTask(index) {
+    const task = { ...planTasks[index] };
     if (!task) return;
     document.querySelectorAll(`[data-plan-index="${index}"]`).forEach(input => {
         const field = input.dataset.planField;
         task[field] = field === "pct" ? Math.max(0, Math.min(100, Number(input.value || 0))) : input.value;
     });
-    savePlanTasks();
-    renderPlan();
+    await persistPlanTask(index, task, "PUT");
 }
 
-function addPlanTask() {
+async function addPlanTask() {
     const name = qs("#planEditTask").value.trim();
     if (!name) return;
-    planTasks.push({
+    await persistPlanTask(null, {
         topic: qs("#planEditTopic").value,
         task: name,
         priority: qs("#planEditPriority").value,
@@ -1639,18 +1744,43 @@ function addPlanTask() {
         duration: null,
         pct: Math.max(0, Math.min(100, Number(qs("#planEditPct").value || 0))),
         comments: qs("#planEditComments").value.trim()
-    });
-    savePlanTasks();
+    }, "POST");
     qs("#planEditTask").value = "";
     qs("#planEditComments").value = "";
-    renderPlan();
 }
 
-function resetPlanTasks() {
-    if (!confirm("Reset project plan tasks to the default template?")) return;
-    planTasks = defaultPlanTasks.map(task => ({ ...task }));
-    savePlanTasks();
+async function resetPlanTasks() {
+    const error = await safeLoad("projectTasks", "/api/v1/project/tasks", [], { timeoutMs: 8000 });
+    if (error) {
+        showPlanMessage(error);
+        return;
+    }
+    planTasks = state.projectTasks || [];
     renderPlan();
+    showPlanMessage("Project plan reloaded from app database.");
+}
+
+async function persistPlanTask(index, task, method) {
+    const target = method === "POST" ? "/api/v1/project/tasks" : `/api/v1/project/tasks/${index}`;
+    showPlanMessage("Saving project plan...");
+    try {
+        await api(target, { method, body: JSON.stringify(task) });
+        const error = await safeLoad("projectTasks", "/api/v1/project/tasks", [], { timeoutMs: 8000 });
+        if (error) {
+            showPlanMessage(error);
+            return;
+        }
+        planTasks = state.projectTasks || [];
+        renderPlan();
+        showPlanMessage("Project plan saved in app database.");
+    } catch (error) {
+        showPlanMessage(error.message);
+    }
+}
+
+function showPlanMessage(message) {
+    const result = qs("#planActionResult") || qs("#planFilteredCount");
+    if (result) result.textContent = message;
 }
 
 function unique(values) {
@@ -2163,6 +2293,30 @@ function drawHorizontalBarChart(canvas, labels, values, palette) {
         const x = pad.left + mark / 100 * (width - pad.left - pad.right);
         ctx.fillText(String(mark), x - 5, height - 10);
     });
+}
+
+function drawStackedBarChart(canvas, labels, series) {
+    if (!canvas) return;
+    const ctx = setupCanvas(canvas);
+    const { width, height } = canvas.getBoundingClientRect();
+    const pad = { left: 58, right: 24, top: 28, bottom: 54 };
+    ctx.clearRect(0, 0, width, height);
+    drawGrid(ctx, width, height, pad);
+    const totals = labels.map((_, index) => series.reduce((total, item) => total + num(item.values[index]), 0));
+    const max = Math.max(10, ...totals);
+    const slot = (width - pad.left - pad.right) / Math.max(1, labels.length);
+    labels.forEach((label, index) => {
+        let yBase = height - pad.bottom;
+        series.forEach(item => {
+            const value = num(item.values[index]);
+            const barHeight = value / max * (height - pad.top - pad.bottom);
+            ctx.fillStyle = item.color;
+            ctx.fillRect(pad.left + index * slot + slot * .18, yBase - barHeight, slot * .64, barHeight);
+            yBase -= barHeight;
+        });
+    });
+    drawLabels(ctx, labels, width, height, pad);
+    drawChartLegend(ctx, series.map(item => item.label), series.map(item => item.color), width, height);
 }
 
 function drawChartLegend(ctx, labels, palette, width, height) {
