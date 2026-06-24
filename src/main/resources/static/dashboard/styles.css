@@ -70,7 +70,40 @@ body {
 }
 .nav-item:hover, .nav-item.active { background: #0e2727; color: var(--teal); }
 .nav-item.muted:hover { background: #121923; color: var(--text); }
-.icon { width: 28px; color: currentColor; font-size: 13px; font-weight: 900; letter-spacing: 0; }
+.icon {
+    width: 24px;
+    height: 24px;
+    color: currentColor;
+    position: relative;
+    display: inline-block;
+    flex: 0 0 24px;
+}
+.icon::before, .icon::after {
+    content: "";
+    position: absolute;
+    border-color: currentColor;
+}
+.icon-overview::before { inset: 3px; border: 2px solid currentColor; border-radius: 4px; box-shadow: 10px 0 0 -2px currentColor, 0 10px 0 -2px currentColor, 10px 10px 0 -2px currentColor; }
+.icon-business::before { left: 2px; right: 2px; top: 11px; height: 2px; background: currentColor; transform: rotate(-18deg); }
+.icon-business::after { left: 2px; top: 7px; width: 5px; height: 5px; border: 2px solid currentColor; border-radius: 50%; box-shadow: 8px 5px 0 -1px currentColor, 16px -2px 0 -1px currentColor; }
+.icon-agents::before { left: 3px; top: 4px; width: 7px; height: 7px; border: 2px solid currentColor; border-radius: 50%; box-shadow: 10px 0 0 -1px currentColor; }
+.icon-agents::after { left: 2px; bottom: 3px; width: 18px; height: 8px; border: 2px solid currentColor; border-radius: 12px 12px 0 0; border-bottom: 0; }
+.icon-calls::before { left: 5px; top: 3px; width: 12px; height: 18px; border: 2px solid currentColor; border-radius: 9px; transform: rotate(-35deg); }
+.icon-system::before { left: 3px; top: 4px; width: 18px; height: 5px; border: 2px solid currentColor; border-radius: 3px; box-shadow: 0 9px 0 -1px transparent, 0 9px 0 0 currentColor; }
+.icon-eleveo::before, .icon-app::before { inset: 4px; border: 2px solid currentColor; border-radius: 4px; transform: rotate(45deg); }
+.icon-integration::before { left: 10px; top: 3px; width: 4px; height: 18px; background: currentColor; }
+.icon-integration::after { left: 5px; top: 7px; width: 14px; height: 10px; border: 2px solid currentColor; border-radius: 6px; }
+.icon-alerts::before { left: 4px; top: 3px; width: 16px; height: 16px; border: 2px solid currentColor; border-radius: 50%; }
+.icon-alerts::after { left: 11px; top: 7px; width: 2px; height: 7px; background: currentColor; box-shadow: 0 9px 0 0 currentColor; }
+.icon-spog::before { inset: 3px; border: 2px solid currentColor; border-radius: 50%; }
+.icon-spog::after { left: 6px; right: 6px; top: 11px; height: 2px; background: currentColor; box-shadow: 0 -5px 0 -1px currentColor, 0 5px 0 -1px currentColor; }
+.icon-admin::before { left: 5px; top: 3px; width: 14px; height: 9px; border: 2px solid currentColor; border-radius: 8px 8px 4px 4px; }
+.icon-admin::after { left: 3px; bottom: 3px; width: 18px; height: 9px; border: 2px solid currentColor; border-radius: 4px; }
+.icon-plan::before { left: 5px; top: 3px; width: 14px; height: 18px; border: 2px solid currentColor; border-radius: 3px; }
+.icon-plan::after { left: 9px; top: 8px; width: 7px; height: 2px; background: currentColor; box-shadow: 0 5px 0 0 currentColor, 0 10px 0 0 currentColor; }
+.icon-logout::before { left: 3px; top: 5px; width: 11px; height: 14px; border: 2px solid currentColor; border-right: 0; border-radius: 3px; }
+.icon-logout::after { right: 2px; top: 11px; width: 12px; height: 2px; background: currentColor; box-shadow: -3px -3px 0 -1px currentColor, -3px 3px 0 -1px currentColor; }
+.icon-collapse::before { left: 7px; top: 6px; width: 10px; height: 10px; border-left: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(45deg); }
 .sidebar-footer { margin-top: auto; padding: 18px 12px; border-top: 1px solid #1d2631; }
 
 .shell {
@@ -195,14 +228,10 @@ p { margin: 8px 0 0; color: var(--muted); font-size: 20px; }
     background: var(--panel);
     border: 1px solid var(--border);
     border-radius: 16px;
-    padding: 24px 30px;
+    padding: 26px 30px;
 }
-.business-card h3 { margin: 0 0 24px; font-size: 20px; }
-.business-metrics {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 20px 28px;
-}
+.business-card h3 { margin: 0 0 26px; font-size: 20px; display: flex; align-items: center; gap: 10px; }
+.business-metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 26px 34px; }
 .business-metrics span {
     color: var(--muted);
     font-size: 13px;
@@ -552,6 +581,9 @@ pre { white-space: pre-wrap; margin: 0; color: #d9e5f7; }
     margin-bottom: 16px;
 }
 .journey-path span {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
     border: 1px solid #1b5c57;
     background: #0d2a2a;
     color: var(--teal);
@@ -559,6 +591,22 @@ pre { white-space: pre-wrap; margin: 0; color: #d9e5f7; }
     padding: 7px 10px;
     font-size: 13px;
 }
+.journey-path span b {
+    display: inline-grid;
+    place-items: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    color: #001412;
+    background: var(--teal);
+    font-size: 11px;
+}
+.journey-path span.terminal {
+    border-color: #315f9f;
+    background: #10213c;
+    color: #8db8ff;
+}
+.journey-path span.terminal b { background: var(--blue); color: white; }
 .journey-path i { color: var(--muted); font-style: normal; }
 
 .grafana-grid {

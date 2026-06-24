@@ -56,7 +56,7 @@ const pages = {
 };
 
 const colors = ["#2ed3c2", "#3d82f6", "#f4a51c", "#8d6cf7", "#24e0a4", "#ff626c"];
-const uiState = { ivrNodePage: 0, ivrNodePageSize: 50, agentPage: 0, agentPageSize: 25 };
+const uiState = { ivrNodePage: 0, ivrNodePageSize: 50, agentPage: 0, agentPageSize: 25, journeyPage: 0, journeyPageSize: 12, callTypePage: 0, callTypePageSize: 50 };
 const businessSettings = loadBusinessSettings();
 const planState = { view: "tasks", topic: "ALL", collapsed: new Set() };
 const permissionCatalog = [
@@ -106,6 +106,22 @@ document.addEventListener("DOMContentLoaded", () => {
         uiState.agentPage += 1;
         renderAgents();
     });
+    qs("#journeyPrevPage")?.addEventListener("click", () => {
+        uiState.journeyPage = Math.max(0, uiState.journeyPage - 1);
+        renderCvpJourney();
+    });
+    qs("#journeyNextPage")?.addEventListener("click", () => {
+        uiState.journeyPage += 1;
+        renderCvpJourney();
+    });
+    qs("#callTypePrevPage")?.addEventListener("click", () => {
+        uiState.callTypePage = Math.max(0, uiState.callTypePage - 1);
+        renderCallTypes();
+    });
+    qs("#callTypeNextPage")?.addEventListener("click", () => {
+        uiState.callTypePage += 1;
+        renderCallTypes();
+    });
     qs("#adminQuickBtn")?.addEventListener("click", () => switchView("admin"));
     qs("#adminSaveUserBtn")?.addEventListener("click", saveAdminUser);
     qs("#adminSaveRoleBtn")?.addEventListener("click", saveAdminRole);
@@ -121,6 +137,8 @@ document.addEventListener("DOMContentLoaded", () => {
     });
     const debouncedRefresh = debounce(() => {
         uiState.ivrNodePage = 0;
+        uiState.journeyPage = 0;
+        uiState.callTypePage = 0;
         refresh();
     }, 450);
     [
@@ -576,8 +594,15 @@ function renderCvpJourney() {
     const count = qs("#cvpJourneyCount");
     if (!grid || !count) return;
     const journeys = cvpJourneys();
+    const totalPages = Math.max(1, Math.ceil(journeys.length / uiState.journeyPageSize));
+    uiState.journeyPage = Math.min(uiState.journeyPage, totalPages - 1);
+    const start = uiState.journeyPage * uiState.journeyPageSize;
+    const pageRows = journeys.slice(start, start + uiState.journeyPageSize);
     count.textContent = `${journeys.length} calls`;
-    grid.innerHTML = journeys.slice(0, 20).map(journey => `<article class="journey-card">
+    qs("#journeyPageInfo").textContent = `Page ${uiState.journeyPage + 1}/${totalPages}`;
+    qs("#journeyPrevPage").disabled = uiState.journeyPage === 0;
+    qs("#journeyNextPage").disabled = uiState.journeyPage >= totalPages - 1;
+    grid.innerHTML = pageRows.map(journey => `<article class="journey-card">
         <div class="journey-head">
             <div>
                 <strong>${escapeHtml(journey.caller || "Unknown caller")}</strong>
@@ -591,7 +616,7 @@ function renderCvpJourney() {
             <span>${escapeHtml(journey.duration || "")} sec</span>
         </div>
         <div class="journey-path">
-            ${journey.nodes.map(node => `<span>${escapeHtml(node)}</span>`).join("<i>-&gt;</i>")}
+            ${journey.nodes.map((node, index) => `<span class="${/agent routing/i.test(node) ? "terminal" : ""}"><b>${index + 1}</b>${escapeHtml(node)}</span>`).join("<i>-&gt;</i>")}
         </div>
         <button class="small-btn" data-trace-call="${escapeHtml(journey.callId)}">Open Trace</button>
     </article>`).join("") || `<div class="empty-state"><strong>No CVP journey rows</strong><span>Select a date/app with CVP Reporting data.</span></div>`;
@@ -615,7 +640,23 @@ function cvpJourneys() {
         if (flag && !existing.nodes.includes(flag)) existing.nodes.push(flag);
         map.set(callId, existing);
     });
-    return [...map.values()].sort((a, b) => String(b.start || "").localeCompare(String(a.start || "")));
+    return [...map.values()]
+        .map(journey => ({ ...journey, nodes: orderJourneyNodes(journey.nodes) }))
+        .sort((a, b) => String(b.start || "").localeCompare(String(a.start || "")));
+}
+
+function orderJourneyNodes(nodes) {
+    return [...nodes].sort((left, right) => journeyNodeRank(left) - journeyNodeRank(right));
+}
+
+function journeyNodeRank(node) {
+    const value = String(node || "").toLowerCase();
+    if (value.includes("language")) return 10;
+    if (value.includes("mainmenu") || value.includes("main menu")) return 20;
+    if (value.includes("menu")) return 30;
+    if (value.includes("product")) return 35;
+    if (value.includes("agent routing")) return 90;
+    return 50;
 }
 
 function ivrDispositionClass(code) {
@@ -703,15 +744,22 @@ function renderDrops() {
 function renderCallTypes() {
     renderCallFunnel();
     renderCallFlow();
+    const totalPages = Math.max(1, Math.ceil(state.callTypes.length / uiState.callTypePageSize));
+    uiState.callTypePage = Math.min(uiState.callTypePage, totalPages - 1);
+    const start = uiState.callTypePage * uiState.callTypePageSize;
+    const rows = state.callTypes.slice(start, start + uiState.callTypePageSize);
     qs("#callTypeCount").textContent = `${state.callTypes.length} rows`;
-    qs("#callTypeTable").innerHTML = state.callTypes.slice(0, 300).map(row => `<tr>
+    qs("#callTypePageInfo").textContent = `Page ${uiState.callTypePage + 1}/${totalPages}`;
+    qs("#callTypePrevPage").disabled = uiState.callTypePage === 0;
+    qs("#callTypeNextPage").disabled = uiState.callTypePage >= totalPages - 1;
+    qs("#callTypeTable").innerHTML = rows.map(row => `<tr>
         <td>${escapeHtml(pick(row, "date") || "")}</td>
         <td>${escapeHtml(pick(row, "hour") ?? "")}</td>
         <td>${escapeHtml(pick(row, "call_type", "callType") || "")}</td>
         <td>${escapeHtml(pick(row, "skill_group", "skillGroup") || "")}</td>
         <td>${fmt(pick(row, "calls"))}</td>
         <td>${fmt(pick(row, "handled_calls", "handledCalls"))}</td>
-    </tr>`).join("");
+    </tr>`).join("") || `<tr><td colspan="6">No call type rows for current filters.</td></tr>`;
     const abandonment = abandonmentByHour();
     drawLineChart(qs("#abandonmentChart"), abandonment.labels, abandonment.series, 100);
     const queue = queueByHour();
@@ -1539,11 +1587,10 @@ function renderBusinessCards() {
         <div class="business-metrics">
             <span>Offered<strong>${fmt(item.offered)}</strong></span>
             <span>SL%<strong class="teal">${pct(item.service)}</strong></span>
-            <span>Answer<strong>${pct(item.answerRate)}</strong></span>
+            <span>FCR<strong>${pct(item.fcr)}</strong></span>
             <span>Handled<strong>${fmt(item.handled)}</strong></span>
             <span>AHT<strong>${seconds(item.aht)}s</strong></span>
             <span>Abandoned<strong class="red">${fmt(item.abandoned)}</strong></span>
-            <span>Abandon %<strong class="red">${pct(item.abandonRate)}</strong></span>
         </div>
     </article>`).join("") || `<article class="business-card"><h3>No skill group data</h3><p>Check HDS query mapping and selected date range.</p></article>`;
 }
@@ -1573,58 +1620,55 @@ function groupSkillMetrics() {
     return [...map.values()].filter(item => item.offered >= num(businessSettings.minCalls)).map(item => ({
         ...item,
         service: item.serviceWeight ? item.weightedService / item.serviceWeight : derivedPct(item.handled, item.offered),
-        aht: item.ahtWeight ? item.weightedAht / item.ahtWeight : null,
+        aht: item.ahtWeight ? item.weightedAht / item.ahtWeight : businessAht(state.calls).value,
+        fcr: businessFcrForCounts(item.offered, item.handled, item.abandoned),
         answerRate: derivedPct(item.handled, item.offered),
         abandonRate: derivedPct(item.abandoned, item.offered)
     })).sort((a, b) => b.offered - a.offered);
 }
 
 function serviceTrendByHour() {
-    const byHour = new Map();
-    state.calls.forEach(row => {
-        const hour = num(pick(row, "hour"));
-        const offered = num(pick(row, "calls_offered", "callsOffered"));
-        const service = pick(row, "service_level_pct", "serviceLevelPct");
-        const existing = byHour.get(hour) || { weighted: 0, weight: 0 };
-        if (service !== null && offered > 0) {
-            existing.weighted += num(service) * offered;
-            existing.weight += offered;
-        }
-        byHour.set(hour, existing);
-    });
-    const entries = [...byHour.entries()].sort((a, b) => a[0] - b[0]);
-    const labels = entries.map(([hour]) => `${hour}:00`);
-    const values = entries.map(([hour, v]) => {
-        if (v.weight) return v.weighted / v.weight;
-        if (businessSettings.fallbackMode !== "derived") return 0;
-        const matching = state.calls.filter(row => num(pick(row, "hour")) === hour);
-        const offered = sum(matching, "calls_offered", "callsOffered");
-        const handled = sum(matching, "calls_handled", "callsHandled");
-        return derivedPct(handled, offered) || 0;
-    });
+    const topSkills = groupSkillMetrics().slice(0, 3).map(item => item.skill);
+    const hours = unique(state.calls.map(row => num(pick(row, "hour")))).sort((a, b) => a - b);
+    const labels = hours.map(hour => `${hour}:00`);
     return {
         labels,
-        series: [
-            { label: businessSettings.fallbackMode === "derived" ? "SL / Answer Proxy" : "Service Level", color: "#2ed3c2", values },
-            { label: "Target", color: "#f4a51c", values: labels.map(() => businessSettings.slTarget) }
-        ]
+        series: topSkills.map((skill, index) => ({
+            label: skill,
+            color: colors[index % colors.length],
+            values: hours.map(hour => skillHourService(skill, hour))
+        })).concat([{ label: "Target", color: "#f4a51c", values: labels.map(() => businessSettings.slTarget) }])
     };
 }
 
+function skillHourService(skill, hour) {
+    const rows = state.calls.filter(row => (pick(row, "skill_group", "skillGroup") || "UNKNOWN") === skill && num(pick(row, "hour")) === hour);
+    const real = weightedAverage(rows, "service_level_pct", "serviceLevelPct", "calls_offered", "callsOffered");
+    if (real !== null) return real;
+    if (businessSettings.fallbackMode !== "derived") return 0;
+    return derivedPct(sum(rows, "calls_handled", "callsHandled"), sum(rows, "calls_offered", "callsOffered")) || 0;
+}
+
 function radarMetrics() {
-    const offered = sum(state.calls, "calls_offered", "callsOffered");
-    const handled = sum(state.calls, "calls_handled", "callsHandled");
-    const abandoned = sum(state.calls, "calls_abandoned", "callsAbandoned");
-    const service = businessServiceLevel(state.calls).value;
-    const aht = businessAht(state.calls).value;
-    return [
-        { label: "Service Level", value: service ?? 0 },
-        { label: "FCR", value: businessFcr(state.calls).value ?? 0 },
-        { label: "Handled", value: offered ? handled / offered * 100 : 0 },
-        { label: "Low Abandon", value: offered ? Math.max(0, 100 - abandoned / offered * 100) : 0 },
-        { label: "AHT", value: aht ? Math.max(0, 100 - Math.min(100, aht / Math.max(1, businessSettings.ahtTarget) * 100)) : 0 },
-        { label: "IVR", value: businessIvrContainment().value ?? 0 }
-    ];
+    return groupSkillMetrics().slice(0, 3).map((skill, index) => {
+        const rows = state.calls.filter(row => (pick(row, "skill_group", "skillGroup") || "UNKNOWN") === skill.skill);
+        const offered = sum(rows, "calls_offered", "callsOffered");
+        const handled = sum(rows, "calls_handled", "callsHandled");
+        const abandoned = sum(rows, "calls_abandoned", "callsAbandoned");
+        const service = businessServiceLevel(rows).value;
+        const aht = businessAht(rows).value;
+        return {
+            label: skill.skill,
+            color: colors[index % colors.length],
+            metrics: [
+                { label: "Service Level", value: service ?? 0 },
+                { label: "FCR", value: businessFcr(rows).value ?? 0 },
+                { label: "Handled", value: offered ? handled / offered * 100 : 0 },
+                { label: "Low Abandon", value: offered ? Math.max(0, 100 - abandoned / offered * 100) : 0 },
+                { label: "AHT", value: aht ? Math.max(0, 100 - Math.min(100, aht / Math.max(1, businessSettings.ahtTarget) * 100)) : 0 }
+            ]
+        };
+    });
 }
 
 function businessServiceLevel(rows) {
@@ -1675,6 +1719,10 @@ function businessFcr(rows) {
     const abandoned = sum(rows, "calls_abandoned", "callsAbandoned");
     const proxy = offered ? Math.max(0, (handled - abandoned * 0.15) / offered * 100) : null;
     return { value: proxy, source: "Derived proxy until CRM/repeat-call source is mapped", short: "proxy" };
+}
+
+function businessFcrForCounts(offered, handled, abandoned) {
+    return offered ? Math.max(0, (handled - abandoned * 0.15) / offered * 100) : null;
 }
 
 function renderBusinessRules() {
@@ -1947,6 +1995,22 @@ function drawHorizontalBarChart(canvas, labels, values, palette) {
     });
 }
 
+function drawChartLegend(ctx, labels, palette, width, height) {
+    if (!labels.length) return;
+    ctx.font = "14px Segoe UI";
+    let x = Math.max(16, width / 2 - labels.length * 56);
+    const y = height - 18;
+    labels.forEach((label, index) => {
+        ctx.fillStyle = palette[index % palette.length];
+        ctx.beginPath();
+        ctx.arc(x, y - 4, 6, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "#87a1c2";
+        ctx.fillText(String(label).slice(0, 14), x + 12, y);
+        x += 110;
+    });
+}
+
 function roundRect(ctx, x, y, width, height, radius) {
     const r = Math.min(radius, width / 2, height / 2);
     ctx.beginPath();
@@ -1989,10 +2053,12 @@ function drawRadar(canvas, metrics) {
     const ctx = setupCanvas(canvas);
     const { width, height } = canvas.getBoundingClientRect();
     ctx.clearRect(0, 0, width, height);
+    const series = Array.isArray(metrics) && metrics[0]?.metrics ? metrics : [{ label: "Metrics", color: "#2ed3c2", metrics }];
+    const axes = series[0]?.metrics || [];
     const cx = width / 2;
-    const cy = height / 2 + 10;
-    const radius = Math.min(width, height) * .32;
-    const count = metrics.length || 1;
+    const cy = height / 2;
+    const radius = Math.min(width, height) * .28;
+    const count = axes.length || 1;
     ctx.strokeStyle = "#263241";
     ctx.fillStyle = "#87a1c2";
     ctx.font = "13px Segoe UI";
@@ -2008,7 +2074,7 @@ function drawRadar(canvas, metrics) {
         ctx.closePath();
         ctx.stroke();
     }
-    metrics.forEach((metric, i) => {
+    axes.forEach((metric, i) => {
         const angle = -Math.PI / 2 + i * Math.PI * 2 / count;
         ctx.beginPath();
         ctx.moveTo(cx, cy);
@@ -2016,20 +2082,23 @@ function drawRadar(canvas, metrics) {
         ctx.stroke();
         ctx.fillText(metric.label, cx + Math.cos(angle) * (radius + 18) - 28, cy + Math.sin(angle) * (radius + 18));
     });
-    ctx.beginPath();
-    metrics.forEach((metric, i) => {
-        const angle = -Math.PI / 2 + i * Math.PI * 2 / count;
-        const value = Math.max(0, Math.min(100, num(metric.value))) / 100;
-        const x = cx + Math.cos(angle) * radius * value;
-        const y = cy + Math.sin(angle) * radius * value;
-        i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+    series.forEach((entry, seriesIndex) => {
+        ctx.beginPath();
+        entry.metrics.forEach((metric, i) => {
+            const angle = -Math.PI / 2 + i * Math.PI * 2 / count;
+            const value = Math.max(0, Math.min(100, num(metric.value))) / 100;
+            const x = cx + Math.cos(angle) * radius * value;
+            const y = cy + Math.sin(angle) * radius * value;
+            i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+        });
+        ctx.closePath();
+        ctx.fillStyle = `${entry.color || colors[seriesIndex % colors.length]}33`;
+        ctx.strokeStyle = entry.color || colors[seriesIndex % colors.length];
+        ctx.lineWidth = 3;
+        ctx.fill();
+        ctx.stroke();
     });
-    ctx.closePath();
-    ctx.fillStyle = "#2ed3c244";
-    ctx.strokeStyle = "#2ed3c2";
-    ctx.lineWidth = 3;
-    ctx.fill();
-    ctx.stroke();
+    drawChartLegend(ctx, series.map(entry => entry.label), series.map((entry, index) => entry.color || colors[index % colors.length]), width, height);
 }
 
 function setupCanvas(canvas) {

@@ -17,23 +17,23 @@
     </div>
 
     <nav class="nav">
-        <button class="nav-item active" data-view="overview"><span class="icon">OV</span>Overview</button>
-        <button class="nav-item" data-view="business"><span class="icon">BM</span>Business Metrics</button>
-        <button class="nav-item" data-view="agents"><span class="icon">AP</span>Agent Performance</button>
-        <button class="nav-item" data-view="calls"><span class="icon">CA</span>Call Analytics</button>
-        <button class="nav-item" data-view="system"><span class="icon">SH</span>System Health</button>
-        <button class="nav-item" data-view="eleveo"><span class="icon">EV</span>Eleveo QM</button>
-        <button class="nav-item" data-view="integration"><span class="icon">PI</span>PCCE Integration</button>
-        <button class="nav-item" data-view="smtp"><span class="icon">AL</span>Alerts</button>
-        <button class="nav-item" data-view="spog"><span class="icon">SP</span>SPOG Ops</button>
-        <button class="nav-item" data-view="admin"><span class="icon">AD</span>Admin</button>
-        <button class="nav-item" data-view="app"><span class="icon">SB</span>Spring Boot App</button>
-        <button class="nav-item" id="projectPlanLink"><span class="icon">PL</span>Project Plan</button>
+        <button class="nav-item active" data-view="overview"><span class="icon icon-overview"></span>Overview</button>
+        <button class="nav-item" data-view="business"><span class="icon icon-business"></span>Business Metrics</button>
+        <button class="nav-item" data-view="agents"><span class="icon icon-agents"></span>Agent Performance</button>
+        <button class="nav-item" data-view="calls"><span class="icon icon-calls"></span>Call Analytics</button>
+        <button class="nav-item" data-view="system"><span class="icon icon-system"></span>System Health</button>
+        <button class="nav-item" data-view="eleveo"><span class="icon icon-eleveo"></span>Eleveo QM</button>
+        <button class="nav-item" data-view="integration"><span class="icon icon-integration"></span>PCCE Integration</button>
+        <button class="nav-item" data-view="smtp"><span class="icon icon-alerts"></span>Alerts</button>
+        <button class="nav-item" data-view="spog"><span class="icon icon-spog"></span>SPOG Ops</button>
+        <button class="nav-item" data-view="admin"><span class="icon icon-admin"></span>Admin</button>
+        <button class="nav-item" data-view="app"><span class="icon icon-app"></span>Spring Boot App</button>
+        <button class="nav-item" id="projectPlanLink"><span class="icon icon-plan"></span>Project Plan</button>
     </nav>
 
     <div class="sidebar-footer">
-        <button class="nav-item muted" id="logoutBtn"><span class="icon">LO</span>Logout</button>
-        <button class="nav-item muted" id="collapseBtn"><span class="icon">&lt;</span>Collapse</button>
+        <button class="nav-item muted" id="logoutBtn"><span class="icon icon-logout"></span>Logout</button>
+        <button class="nav-item muted" id="collapseBtn"><span class="icon icon-collapse"></span>Collapse</button>
     </div>
 </aside>
 
@@ -120,6 +120,7 @@
         <article class="panel full api-functions-panel">
             <div class="panel-head"><h2>CVP Customer Journey</h2><span id="cvpJourneyCount"></span></div>
             <div class="journey-grid" id="cvpJourneyGrid"></div>
+            <div class="table-pager"><button class="small-btn" id="journeyPrevPage">Previous</button><span id="journeyPageInfo"></span><button class="small-btn" id="journeyNextPage">Next</button></div>
         </article>
         <article class="panel full api-functions-panel">
             <div class="panel-head"><h2>CVP IVR Customer Nodes</h2><span id="cvpIvrNodeCount"></span></div>
@@ -181,6 +182,7 @@
         <article class="panel full api-functions-panel">
             <div class="panel-head"><h2>Calls by Call Type and Skill Group</h2><span id="callTypeCount"></span></div>
             <div class="table-wrap"><table><thead><tr><th>Date</th><th>Hour</th><th>Call Type</th><th>Skill Group</th><th>Calls</th><th>Handled</th></tr></thead><tbody id="callTypeTable"></tbody></table></div>
+            <div class="table-pager"><button class="small-btn" id="callTypePrevPage">Previous</button><span id="callTypePageInfo"></span><button class="small-btn" id="callTypeNextPage">Next</button></div>
         </article>
         <article class="panel full api-functions-panel">
             <div class="panel-head"><h2>Readable Call Flow Trace</h2><span id="callFlowCount"></span></div>
