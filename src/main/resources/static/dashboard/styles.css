@@ -307,6 +307,55 @@ td { color: #dce7f7; }
 .component-card { border: 1px solid #263242; border-radius: 14px; padding: 18px; background: var(--panel-2); }
 .component-card h3 { margin: 0 0 12px; font-size: 18px; }
 .component-card p { margin: 6px 0 0; font-size: 14px; }
+.inventory-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 16px;
+}
+.inventory-card {
+    border: 1px solid #2b3747;
+    border-radius: 12px;
+    background: #121923;
+    padding: 18px 20px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, .18);
+}
+.inventory-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 10px;
+}
+.inventory-card h3 { margin: 0; font-size: 18px; }
+.inventory-card p { margin: 0 0 12px; font-size: 14px; }
+.inventory-facts {
+    display: grid;
+    gap: 8px;
+    color: var(--muted);
+    font-size: 14px;
+}
+.inventory-facts span {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    border-bottom: 1px solid #202b39;
+    padding-bottom: 6px;
+}
+.inventory-facts b { color: #dce7f7; font-weight: 700; text-align: right; }
+.service-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+    margin-top: 14px;
+}
+.service-chips span {
+    border: 1px solid #1b5c57;
+    color: var(--teal);
+    background: #0d2a2a;
+    border-radius: 999px;
+    padding: 5px 8px;
+    font-size: 12px;
+}
 .body-preview {
     max-height: 150px;
     margin: 12px 0 0;

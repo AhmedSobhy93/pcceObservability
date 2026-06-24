@@ -143,10 +143,20 @@
             <button class="primary-btn" id="agentFilterBtn">Apply</button>
         </div>
         <div class="filter-bar" id="agentTeamFilters"></div>
+        <div class="agent-kpi-grid" id="agentKpis"></div>
+        <div class="agent-card-grid" id="agentVisualCards"></div>
         <article class="panel full">
             <div class="panel-head"><h2>Agent Performance</h2><span id="agentCount"></span></div>
             <div class="table-wrap"><table><thead><tr><th>Agent</th><th>Status</th><th>Calls</th><th>AHT</th><th>Occupancy</th><th>Adherence</th><th>Transfers</th><th>Not Ready</th></tr></thead><tbody id="agentsTable"></tbody></table></div>
             <div class="table-pager"><button class="small-btn" id="agentPrevPage">Previous</button><span id="agentPageInfo"></span><button class="small-btn" id="agentNextPage">Next</button></div>
+        </article>
+        <div class="content-grid support-grid">
+            <article class="panel wide"><h2>AHT Breakdown by Agent</h2><canvas id="agentAhtChart" height="300"></canvas></article>
+            <article class="panel"><h2>Occupancy Rate</h2><canvas id="agentOccupancyChart" height="300"></canvas></article>
+        </div>
+        <article class="panel full api-functions-panel">
+            <div class="panel-head"><h2>Agent API Workspace</h2><span>Finesse live state + PCCE configuration actions</span></div>
+            <div class="agent-api-grid" id="agentApiWorkspace"></div>
         </article>
         <div class="content-grid support-grid">
             <article class="panel wide">
@@ -277,6 +287,15 @@
     </section>
 
     <section class="view" id="view-spog">
+        <article class="panel full api-functions-panel">
+            <div class="panel-head"><h2>Environment Inventory</h2><span id="inventorySummary">Run machine inventory to load</span></div>
+            <div class="filter-bar page-filter compact-filter">
+                <label class="date-field"><span>Search</span><input id="inventorySearch" placeholder="host, IP, service, type"></label>
+                <label class="date-field"><span>Type</span><select id="inventoryTypeFilter"><option value="">All</option></select></label>
+                <button class="primary-btn" id="loadInventoryBtn">Load From PCCE</button>
+            </div>
+            <div class="inventory-grid" id="inventoryGrid"></div>
+        </article>
         <div class="content-grid">
             <article class="panel wide"><h2>SPOG Operational Capabilities</h2><div class="metric-list" id="spogOpsList"></div></article>
             <article class="panel"><h2>Graceful Operations</h2><div class="metric-list" id="gracefulOpsList"></div></article>

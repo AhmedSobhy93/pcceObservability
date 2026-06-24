@@ -21,6 +21,7 @@ const state = {
     smtpCapabilities: [],
     spogOps: [],
     serverLogTargets: [],
+    machineInventory: [],
     grafanaDashboards: [],
     cuicReports: [],
     integrationCapabilities: [],
@@ -126,6 +127,7 @@ document.addEventListener("DOMContentLoaded", () => {
     qs("#adminSaveUserBtn")?.addEventListener("click", saveAdminUser);
     qs("#adminSaveRoleBtn")?.addEventListener("click", saveAdminRole);
     qs("#saveAlertConfigBtn")?.addEventListener("click", saveAlertConfig);
+    qs("#loadInventoryBtn")?.addEventListener("click", loadMachineInventory);
     qs("#planAddTaskBtn")?.addEventListener("click", addPlanTask);
     qs("#planResetBtn")?.addEventListener("click", resetPlanTasks);
     qs("#adminUsername")?.addEventListener("change", fillAdminUserForm);
@@ -164,6 +166,10 @@ document.addEventListener("DOMContentLoaded", () => {
             uiState.agentPage = 0;
             renderAgents();
         });
+    });
+    ["#inventorySearch", "#inventoryTypeFilter"].forEach(selector => {
+        qs(selector)?.addEventListener("input", renderMachineInventory);
+        qs(selector)?.addEventListener("change", renderMachineInventory);
     });
     ["#ivrCallIdFilter", "#ivrCallerFilter"].forEach(selector => {
         qs(selector)?.addEventListener("input", debounce(() => {
@@ -980,6 +986,7 @@ function renderSmtp() {
 }
 
 function renderSpog() {
+    renderMachineInventory();
     qs("#spogOpsList").innerHTML = state.spogOps.map(item =>
         metricRow(`${pick(item, "area")} - ${pick(item, "capability")}`, `${pick(item, "status")} | ${pick(item, "action")}`)
     ).join("") || metricRow("SPOG", "Capabilities unavailable");
@@ -999,6 +1006,148 @@ function renderSpog() {
     </tr>`).join("");
     document.querySelectorAll("[data-log-save]").forEach(button => {
         button.addEventListener("click", () => saveServerLogTarget(button.dataset.logSave));
+    });
+}
+
+function renderMachineInventory() {
+    const grid = qs("#inventoryGrid");
+    const summary = qs("#inventorySummary");
+    if (!grid || !summary) return;
+    populateInventoryTypeFilter();
+    const search = firstFilterValue("#inventorySearch").toLowerCase();
+    const typeFilter = firstFilterValue("#inventoryTypeFilter");
+    const machines = state.machineInventory.filter(machine => {
+        const haystack = [
+            machine.name, machine.hostName, machine.type, machine.version,
+            ...machine.networks.map(network => network.address),
+            ...machine.services.map(service => `${service.type} ${service.port} ${service.status || ""}`)
+        ].join(" ").toLowerCase();
+        return (!typeFilter || machine.type === typeFilter) && (!search || haystack.includes(search));
+    });
+    summary.textContent = `${machines.length}/${state.machineInventory.length} machines`;
+    grid.innerHTML = machines.map(machine => inventoryCard(machine)).join("") ||
+        `<div class="empty-state"><strong>No machine inventory loaded</strong><span>Use Load From PCCE or run the machineInventory.list API action.</span></div>`;
+}
+
+function inventoryCard(machine) {
+    const publicIp = machine.networks.find(network => network.type === "PUBLIC")?.address || "";
+    const privateIp = machine.networks.find(network => network.type === "PRIVATE")?.address || "";
+    const serviceCount = machine.services.length;
+    const alertTone = machine.statusCount ? "warn" : "up";
+    return `<article class="inventory-card">
+        <div class="inventory-head">
+            <h3>${escapeHtml(inventoryDisplayName(machine))}</h3>
+            <span class="badge ${alertTone}">${machine.statusCount || 0} Alerts</span>
+        </div>
+        <p>${escapeHtml(machine.hostName || machine.name || "")}</p>
+        <div class="inventory-facts">
+            <span>Type <b>${escapeHtml(machine.type || "--")}</b></span>
+            <span>Public IP <b>${escapeHtml(publicIp || "--")}</b></span>
+            <span>Private IP <b>${escapeHtml(privateIp || "--")}</b></span>
+            <span>Version <b>${escapeHtml(machine.version || "--")}</b></span>
+        </div>
+        <div class="service-chips">
+            ${machine.services.slice(0, 8).map(service => `<span title="${escapeHtml(service.description || service.type)}">${escapeHtml(service.type)}${service.port ? `:${escapeHtml(String(service.port))}` : ""}</span>`).join("")}
+            ${serviceCount > 8 ? `<span>+${serviceCount - 8} more</span>` : ""}
+        </div>
+    </article>`;
+}
+
+function inventoryDisplayName(machine) {
+    const type = String(machine.type || "");
+    if (type === "CCE_ROGGER") return "Unified CCE Rogger";
+    if (type === "CCE_AW") return "Unified CCE AW-HDS-DDS";
+    if (type === "CCE_PG") return "Unified CCE PG";
+    if (type.includes("CVP")) return "Unified CVP";
+    if (type === "FINESSE") return "Finesse";
+    if (type.includes("CUIC")) return "CUIC-LD-IDS Publisher";
+    if (type.includes("CUCM")) return "Unified CM Publisher";
+    if (type.includes("VVB")) return "Virtualized Voice Browser";
+    return machine.name || machine.hostName || type || "Machine";
+}
+
+function populateInventoryTypeFilter() {
+    const select = qs("#inventoryTypeFilter");
+    if (!select) return;
+    const current = select.value;
+    const types = unique(state.machineInventory.map(machine => machine.type).filter(Boolean)).sort();
+    select.innerHTML = `<option value="">All</option>` + types.map(type => `<option value="${escapeHtml(type)}">${escapeHtml(type)}</option>`).join("");
+    select.value = types.includes(current) ? current : "";
+}
+
+function parseMachineInventory(xmlText) {
+    const text = String(xmlText || "");
+    if (!text.trim()) return [];
+    const doc = new DOMParser().parseFromString(text, "application/xml");
+    if (!doc.querySelector("parsererror")) {
+        return [...doc.querySelectorAll("machine")].map(machineNodeFromXml);
+    }
+    return parseMachineInventoryFallback(text);
+}
+
+function machineNodeFromXml(machine) {
+    const networkContainer = childElement(machine, "networks");
+    const networks = childrenByTag(networkContainer, "network").map(network => ({
+        type: nodeText(network, "type"),
+        address: nodeText(network, "address")
+    }));
+    const services = childrenByTag(networkContainer, "network")
+            .flatMap(network => childrenByTag(childElement(network, "services"), "service"))
+            .map(service => ({
+        type: nodeText(service, "type"),
+        port: nodeText(service, "port"),
+        status: nodeText(service, "status"),
+        description: nodeText(service, "description"),
+        userName: nodeText(service, "userName")
+    }));
+    return {
+        name: nodeText(machine, "name"),
+        hostName: nodeText(machine, "hostName"),
+        type: nodeText(machine, "type"),
+        version: nodeText(machine, "versionInfo > version") || nodeText(machine, "version"),
+        refUrl: nodeText(machine, "refURL"),
+        networks,
+        services,
+        statusCount: services.filter(service => service.status && service.status !== "IN_SYNC").length
+    };
+}
+
+function nodeText(root, selector) {
+    return root.querySelector(selector)?.textContent?.trim() || "";
+}
+
+function childElement(root, tagName) {
+    return [...(root?.children || [])].find(child => child.tagName === tagName) || null;
+}
+
+function childrenByTag(root, tagName) {
+    return [...(root?.children || [])].filter(child => child.tagName === tagName);
+}
+
+function parseMachineInventoryFallback(text) {
+    const chunks = text.split("<machine>").slice(1).map(chunk => chunk.split("</machine>")[0]);
+    return chunks.map(chunk => {
+        const tag = name => (chunk.match(new RegExp(`<${name}>([\\s\\S]*?)</${name}>`)) || [])[1]?.trim() || "";
+        const networks = [...chunk.matchAll(/<network>([\s\S]*?)<\/network>/g)].map(match => ({
+            type: (match[1].match(/<type>([\s\S]*?)<\/type>/) || [])[1]?.trim() || "",
+            address: (match[1].match(/<address>([\s\S]*?)<\/address>/) || [])[1]?.trim() || ""
+        }));
+        const services = [...chunk.matchAll(/<service>([\s\S]*?)<\/service>/g)].map(match => ({
+            type: (match[1].match(/<type>([\s\S]*?)<\/type>/) || [])[1]?.trim() || "",
+            port: (match[1].match(/<port>([\s\S]*?)<\/port>/) || [])[1]?.trim() || "",
+            status: (match[1].match(/<status>([\s\S]*?)<\/status>/) || [])[1]?.trim() || "",
+            description: (match[1].match(/<description>([\s\S]*?)<\/description>/) || [])[1]?.trim() || ""
+        }));
+        return {
+            name: tag("name"),
+            hostName: tag("hostName"),
+            type: tag("type"),
+            version: (chunk.match(/<version>([\s\S]*?)<\/version>/) || [])[1]?.trim() || "",
+            refUrl: tag("refURL"),
+            networks,
+            services,
+            statusCount: services.filter(service => service.status && service.status !== "IN_SYNC").length
+        };
     });
 }
 
@@ -1095,8 +1244,29 @@ async function executePcceAction(id) {
             body: JSON.stringify({ body: bodyText || null, pathParams, queryParams })
         });
         qs("#pcceActionResult").textContent = JSON.stringify(result, null, 2);
+        if (id === "machineInventory.list") {
+            state.machineInventory = parseMachineInventory(pick(result, "body") || "");
+            renderMachineInventory();
+            switchView("spog");
+        }
     } catch (error) {
         qs("#pcceActionResult").textContent = error.message;
+    }
+}
+
+async function loadMachineInventory() {
+    qs("#inventorySummary").textContent = "Loading inventory from PCCE...";
+    try {
+        const result = await api("/api/v1/pcce-api/actions/machineInventory.list/execute", {
+            method: "POST",
+            body: JSON.stringify({ queryParams: { resultsPerPage: "100", time: String(Date.now()) } })
+        });
+        state.machineInventory = parseMachineInventory(pick(result, "body") || "");
+        renderMachineInventory();
+    } catch (error) {
+        qs("#inventorySummary").textContent = error.message;
+        state.machineInventory = [];
+        renderMachineInventory();
     }
 }
 
