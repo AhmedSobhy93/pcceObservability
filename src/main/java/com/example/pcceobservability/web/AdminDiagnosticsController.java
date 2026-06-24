@@ -76,7 +76,7 @@ public class AdminDiagnosticsController {
                 "Collector not built into app",
                 "Use SNMP, WMI/WinRM, Prometheus exporter, SIEM, or installed agent for CPU/memory/disk/services."));
         items.add(item("Secure CVP JMX",
-                jmx != null && (!jmx.isEnabled() || jmx.isTrustStoreConfigured() && hasText(jmx.getUsername()) && hasItems(jmx.getTargets())),
+                jmx != null && (!jmx.isEnabled() || jmx.isTrustStoreConfigured() && hasText(jmx.getUsername()) && hasAny(jmx.getTargets())),
                 jmx != null && jmx.isEnabled() ? "JMX enabled" : "JMX disabled",
                 "Follow Cisco secure CVP JMX/OAMP certificate setup, then set PCCE_JMX_* targets and credentials."));
         items.add(item("PCCE Live Data",
@@ -172,6 +172,10 @@ public class AdminDiagnosticsController {
     }
 
     private boolean hasItems(List<String> values) {
+        return values != null && !values.isEmpty();
+    }
+
+    private boolean hasAny(List<?> values) {
         return values != null && !values.isEmpty();
     }
 }
