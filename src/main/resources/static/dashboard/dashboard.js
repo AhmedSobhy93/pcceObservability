@@ -56,6 +56,7 @@ const pages = {
 };
 
 const colors = ["#2ed3c2", "#3d82f6", "#f4a51c", "#8d6cf7", "#24e0a4", "#ff626c"];
+const uiState = { ivrNodePage: 0, ivrNodePageSize: 50 };
 const planState = { view: "tasks", topic: "ALL", collapsed: new Set() };
 const permissionCatalog = [
     "CALL_METRICS_READ",
@@ -87,6 +88,14 @@ document.addEventListener("DOMContentLoaded", () => {
     qs("#refreshBtn").addEventListener("click", refresh);
     qs("#agentFilterBtn")?.addEventListener("click", refresh);
     qs("#callsFilterBtn")?.addEventListener("click", refresh);
+    qs("#ivrPrevPage")?.addEventListener("click", () => {
+        uiState.ivrNodePage = Math.max(0, uiState.ivrNodePage - 1);
+        renderCvpIvrNodes();
+    });
+    qs("#ivrNextPage")?.addEventListener("click", () => {
+        uiState.ivrNodePage += 1;
+        renderCvpIvrNodes();
+    });
     qs("#adminQuickBtn")?.addEventListener("click", () => switchView("admin"));
     qs("#adminSaveUserBtn")?.addEventListener("click", saveAdminUser);
     qs("#adminSaveRoleBtn")?.addEventListener("click", saveAdminRole);
@@ -99,6 +108,23 @@ document.addEventListener("DOMContentLoaded", () => {
     qs("#resourceMode")?.addEventListener("click", () => setPlanView("resources"));
     ["#planTopicFilter", "#planStatusFilter", "#planPriorityFilter", "#planResourceFilter"].forEach(selector => {
         qs(selector)?.addEventListener("change", renderPlan);
+    });
+    const debouncedRefresh = debounce(() => {
+        uiState.ivrNodePage = 0;
+        refresh();
+    }, 450);
+    [
+        "#fromDate", "#toDate", "#overviewSkillFilter", "#businessSkillFilter", "#ivrAppFilter",
+        "#agentPageFilter", "#agentTeamInput", "#callsSkillFilter", "#callsCallTypeFilter", "#callKeyFilter"
+    ].forEach(selector => {
+        const element = qs(selector);
+        element?.addEventListener(element.type === "date" ? "change" : "input", debouncedRefresh);
+    });
+    ["#ivrCallIdFilter", "#ivrCallerFilter"].forEach(selector => {
+        qs(selector)?.addEventListener("input", debounce(() => {
+            uiState.ivrNodePage = 0;
+            renderCvpIvrNodes();
+        }, 250));
     });
     qs("#collapseBtn").addEventListener("click", () => document.body.classList.toggle("collapsed"));
     qs("#logoutBtn").addEventListener("click", logout);
@@ -208,6 +234,14 @@ function firstFilterValue(...selectors) {
         if (value) return value;
     }
     return "";
+}
+
+function debounce(fn, waitMs) {
+    let timer = null;
+    return (...args) => {
+        clearTimeout(timer);
+        timer = setTimeout(() => fn(...args), waitMs);
+    };
 }
 
 async function api(path, options = {}) {
@@ -420,8 +454,24 @@ function renderCvpIvrNodes() {
     const count = qs("#cvpIvrNodeCount");
     const table = qs("#cvpIvrNodeTable");
     if (!count || !table) return;
-    count.textContent = `${state.cvpIvrNodes.length} rows`;
-    table.innerHTML = state.cvpIvrNodes.slice(0, 500).map(row => `<tr>
+    const callIdFilter = firstFilterValue("#ivrCallIdFilter").toLowerCase();
+    const callerFilter = firstFilterValue("#ivrCallerFilter").toLowerCase();
+    const rows = state.cvpIvrNodes.filter(row => {
+        const callId = String(pick(row, "call_id", "callId") || "").toLowerCase();
+        const caller = String(pick(row, "caller_number", "callerNumber") || "").toLowerCase();
+        return (!callIdFilter || callId.includes(callIdFilter))
+            && (!callerFilter || caller.includes(callerFilter));
+    });
+    const totalPages = Math.max(1, Math.ceil(rows.length / uiState.ivrNodePageSize));
+    uiState.ivrNodePage = Math.min(uiState.ivrNodePage, totalPages - 1);
+    const start = uiState.ivrNodePage * uiState.ivrNodePageSize;
+    const pageRows = rows.slice(start, start + uiState.ivrNodePageSize);
+    count.textContent = `${rows.length} rows | page ${uiState.ivrNodePage + 1}/${totalPages}`;
+    qs("#ivrPrevPage").disabled = uiState.ivrNodePage === 0;
+    qs("#ivrNextPage").disabled = uiState.ivrNodePage >= totalPages - 1;
+    table.innerHTML = pageRows.map(row => {
+        const callId = pick(row, "call_id", "callId") || "";
+        return `<tr>
         <td>${escapeHtml(pick(row, "call_id", "callId") || "")}</td>
         <td>${escapeHtml(pick(row, "call_start_time", "callStartTime") || "")}</td>
         <td>${escapeHtml(pick(row, "caller_number", "callerNumber") || "")}</td>
@@ -429,7 +479,16 @@ function renderCvpIvrNodes() {
         <td>${escapeHtml(pick(row, "duration") || "")}</td>
         <td>${escapeHtml(pick(row, "flag") || "")}</td>
         <td><span class="badge ${ivrDispositionClass(pick(row, "call_disposition_id", "callDispositionId"))}">${escapeHtml(pick(row, "call_disposition_flag_desc", "callDispositionFlagDesc") || "")}</span></td>
-    </tr>`).join("") || `<tr><td colspan="7">No CVP IVR node rows for selected dates/app.</td></tr>`;
+        <td><button class="small-btn" data-trace-call="${escapeHtml(callId)}">Trace</button></td>
+    </tr>`;
+    }).join("") || `<tr><td colspan="8">No CVP IVR node rows for selected dates/app/filters.</td></tr>`;
+    document.querySelectorAll("[data-trace-call]").forEach(button => {
+        button.addEventListener("click", () => {
+            qs("#callKeyFilter").value = button.dataset.traceCall;
+            switchView("calls");
+            refresh();
+        });
+    });
 }
 
 function ivrDispositionClass(code) {

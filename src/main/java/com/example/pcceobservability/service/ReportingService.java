@@ -103,6 +103,15 @@ public class ReportingService {
         validateDateRange(from, to);
         String normalizedAgentId = blankToNull(accessControlService.scopedAgentId(agentId));
         String normalizedTeam = blankToNull(accessControlService.scopedTeam(team));
+        List<AgentStat> roster = timedQuery("hds.agentStats.roster", () -> hdsJdbcTemplate.query(
+                pcceProperties.getQueries().getAgentStats(),
+                this::mapAgentStat,
+                start(from),
+                normalizedAgentId,
+                normalizedAgentId,
+                normalizedAgentId,
+                normalizedTeam,
+                normalizedTeam));
         List<AgentStat> tcdStats = timedQuery("hds.agentStats.tcd", () -> hdsJdbcTemplate.query(
                 pcceProperties.getQueries().getAgentStatsTcd(),
                 this::mapAgentStat,
@@ -113,18 +122,11 @@ public class ReportingService {
                 normalizedAgentId,
                 normalizedTeam,
                 normalizedTeam));
-        if (!tcdStats.isEmpty()) {
-            return aggregateAgents(enrichAgentLabels(tcdStats));
+        List<AgentStat> enrichedTcd = aggregateAgents(enrichAgentLabels(tcdStats));
+        if (roster.isEmpty()) {
+            return enrichedTcd;
         }
-        return timedQuery("hds.agentStats.roster", () -> hdsJdbcTemplate.query(
-                pcceProperties.getQueries().getAgentStats(),
-                this::mapAgentStat,
-                start(from),
-                exclusiveEnd(to),
-                normalizedAgentId,
-                normalizedAgentId,
-                normalizedTeam,
-                normalizedTeam));
+        return mergeRosterWithActivity(roster, enrichedTcd);
     }
 
     public List<CallTypeMetric> callTypeMetrics(LocalDate from, LocalDate to, String callType, String skillGroup) {
@@ -224,7 +226,7 @@ public class ReportingService {
     public List<ReferenceOption> skillGroups() {
         return timedQuery("aw.reference.skillGroups", () -> awJdbcTemplate.query("""
                 SELECT TOP 500
-                    CAST(SkillTargetID AS varchar(50)) AS value,
+                    EnterpriseName AS value,
                     EnterpriseName AS label,
                     CAST(SkillTargetID AS varchar(50)) AS detail
                 FROM t_Skill_Group
@@ -239,7 +241,7 @@ public class ReportingService {
     public List<ReferenceOption> callTypes() {
         return timedQuery("aw.reference.callTypes", () -> awJdbcTemplate.query("""
                 SELECT TOP 500
-                    CAST(CallTypeID AS varchar(50)) AS value,
+                    EnterpriseName AS value,
                     EnterpriseName AS label,
                     CAST(CallTypeID AS varchar(50)) AS detail
                 FROM t_Call_Type
@@ -506,6 +508,43 @@ public class ReportingService {
             }
         }
         return new ArrayList<>(grouped.values());
+    }
+
+    private List<AgentStat> mergeRosterWithActivity(List<AgentStat> roster, List<AgentStat> activity) {
+        Map<String, AgentStat> merged = new LinkedHashMap<>();
+        for (AgentStat agent : roster) {
+            merged.put(agentKey(agent), agent);
+        }
+        for (AgentStat active : activity) {
+            String key = agentKey(active);
+            AgentStat base = merged.get(key);
+            if (base == null) {
+                merged.put(key, active);
+            } else {
+                merged.put(key, new AgentStat(
+                        active.date() == null ? base.date() : active.date(),
+                        firstText(active.agentName(), base.agentName()),
+                        firstText(active.agentId(), base.agentId()),
+                        firstText(active.team(), base.team()),
+                        firstText(active.skillGroup(), base.skillGroup()),
+                        active.status(),
+                        active.callsHandled(),
+                        active.avgHandleTime(),
+                        active.avgTalkTime(),
+                        active.avgHoldTime(),
+                        active.avgWrapTime(),
+                        active.occupancyPct(),
+                        active.adherencePct(),
+                        active.transfers(),
+                        active.loginDurationMin(),
+                        active.notReadyTimeMin()));
+            }
+        }
+        return new ArrayList<>(merged.values());
+    }
+
+    private String agentKey(AgentStat agent) {
+        return firstText(agent.agentId(), agent.agentName());
     }
 
     private String firstText(String first, String second) {

@@ -131,7 +131,7 @@ public class PcceProperties {
         private String agentStatsTcd = DefaultSql.AGENT_STATS_TCD;
         private String callTypeMetrics = DefaultSql.CALL_TYPE_METRICS;
         private String droppedCalls = DefaultSql.DROPPED_CALLS;
-        private boolean droppedCallsEnabled;
+        private boolean droppedCallsEnabled = true;
         private String dispositionBreakdown = DefaultSql.DISPOSITION_BREAKDOWN;
         private String ivrContainment = DefaultSql.IVR_CONTAINMENT;
 
@@ -529,6 +529,7 @@ public class PcceProperties {
                     monitor("Skill Groups", "Skill Group Management", "/unifiedconfig/config/skillgroup"),
                     monitor("Dialed Numbers", "Call Configuration and Management", "/unifiedconfig/config/dialednumber"),
                     monitor("Call Types", "Call Configuration and Management", "/unifiedconfig/config/calltype"),
+                    monitor("Machine Inventory", "System Configuration", "/unifiedconfig/config/machineinventory"),
                     monitor("Business Hours", "System Configuration", "/unifiedconfig/config/businesshour"));
         }
 
@@ -560,6 +561,7 @@ public class PcceProperties {
                     action("businessHours.list", "System Configuration", "List business hours", "GET", "/unifiedconfig/config/businesshour", false),
                     action("capacityInfo.get", "System Configuration", "Get capacity info", "GET", "/unifiedconfig/config/capacityinfo", false),
                     action("deploymentType.get", "System Configuration", "Get deployment type", "GET", "/unifiedconfig/config/deploymenttype", false),
+                    action("machineInventory.list", "System Configuration", "List machine inventory", "GET", "/unifiedconfig/config/machineinventory", false),
                     action("cvpReportingServer.get", "System Configuration", "Get CVP Reporting Server", "GET", "/unifiedconfig/config/cvpreportingserver", false),
                     action("businessHours.update", "System Configuration", "Update business hours", "PUT", "/unifiedconfig/config/businesshour/{id}", true),
                     action("user.update", "User Configuration and Management", "Update user", "PUT", "/unifiedconfig/config/user/{id}", true),
@@ -1367,8 +1369,7 @@ public class PcceProperties {
                 JOIN t_Person p ON p.PersonID = a.PersonID
                 LEFT JOIN t_Agent_Team_Member atm ON atm.SkillTargetID = a.SkillTargetID
                 LEFT JOIN t_Agent_Team at ON at.AgentTeamID = atm.AgentTeamID
-                WHERE ? IS NOT NULL
-                  AND (? IS NULL OR p.LoginName = ?)
+                WHERE (? IS NULL OR p.LoginName = ? OR CAST(a.SkillTargetID AS varchar(50)) = ?)
                   AND (? IS NULL OR at.EnterpriseName = ?)
                 ORDER BY [date], agent_name
                 """;
@@ -1443,7 +1444,7 @@ public class PcceProperties {
                 LEFT JOIN t_Skill_Group sg ON sg.SkillTargetID = tcd.SkillGroupSkillTargetID
                 WHERE tcd.DateTime >= ?
                   AND tcd.DateTime < ?
-                  AND 1 = 0
+                  AND COALESCE(tcd.CallDisposition, 0) IN (1, 2, 3, 4, 5, 6, 7, 10, 19, 26, 27, 35, 36, 37, 39, 40, 41, 42, 52)
                   AND (? IS NULL OR sg.EnterpriseName = ? OR CAST(sg.SkillTargetID AS varchar(50)) = ?)
                 GROUP BY CAST(tcd.DateTime AS date), DATEPART(hour, tcd.DateTime), COALESCE(sg.EnterpriseName, 'SkillTarget ' + CAST(tcd.SkillGroupSkillTargetID AS varchar(50)), 'UNMAPPED')
                 ORDER BY [date], [hour], skill_group

@@ -111,6 +111,13 @@ pcce:
         path: /unifiedconfig/config/calltype
         expected-status-min: 200
         expected-status-max: 499
+      - name: Machine Inventory
+        category: System Configuration
+        enabled: false
+        method: GET
+        path: /unifiedconfig/config/machineinventory
+        expected-status-min: 200
+        expected-status-max: 499
       - name: Business Hours
         category: System Configuration
         enabled: false
@@ -182,6 +189,13 @@ pcce:
         admin-only: false
         method: GET
         path: /unifiedconfig/config/deploymenttype
+      - id: machineInventory.list
+        category: System Configuration
+        name: List machine inventory
+        enabled: true
+        admin-only: false
+        method: GET
+        path: /unifiedconfig/config/machineinventory
       - id: cvpReportingServer.get
         category: System Configuration
         name: Get CVP Reporting Server

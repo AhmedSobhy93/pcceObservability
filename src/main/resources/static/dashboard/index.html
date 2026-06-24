@@ -106,7 +106,13 @@
         </div>
         <article class="panel full api-functions-panel">
             <div class="panel-head"><h2>CVP IVR Customer Nodes</h2><span id="cvpIvrNodeCount"></span></div>
-            <div class="table-wrap"><table><thead><tr><th>Call ID</th><th>Start</th><th>Caller</th><th>App</th><th>Duration</th><th>Node Flag</th><th>Disposition</th></tr></thead><tbody id="cvpIvrNodeTable"></tbody></table></div>
+            <div class="filter-bar page-filter compact-filter">
+                <label class="date-field"><span>Call ID</span><input type="text" id="ivrCallIdFilter" placeholder="Call GUID"></label>
+                <label class="date-field"><span>Caller</span><input type="text" id="ivrCallerFilter" placeholder="ANI"></label>
+                <button class="small-btn" id="ivrPrevPage">Previous</button>
+                <button class="small-btn" id="ivrNextPage">Next</button>
+            </div>
+            <div class="table-wrap"><table><thead><tr><th>Call ID</th><th>Start</th><th>Caller</th><th>App</th><th>Duration</th><th>Node Flag</th><th>Disposition</th><th></th></tr></thead><tbody id="cvpIvrNodeTable"></tbody></table></div>
         </article>
     </section>
 

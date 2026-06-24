@@ -68,6 +68,7 @@ public class PcceApiMonitoringService {
                 new ApiFunctionView("System Configuration", "Business hours", "GET", "/unifiedconfig/config/businesshour", "Read business hour configuration"),
                 new ApiFunctionView("System Configuration", "Capacity info", "GET", "/unifiedconfig/config/capacityinfo", "Read deployment capacity information where exposed"),
                 new ApiFunctionView("System Configuration", "Deployment information", "GET", "/unifiedconfig/config/deploymenttype", "Validate deployment-level API availability"),
+                new ApiFunctionView("System Configuration", "Machine inventory", "GET", "/unifiedconfig/config/machineinventory?q=datacenter:{name}&resultsPerPage=100", "Read SPOG inventory: machine type, hostname, version, network addresses, services, and service ports"),
                 new ApiFunctionView("System Configuration", "CVP Reporting Server", "GET", "/unifiedconfig/config/cvpreportingserver", "Validate CVP Reporting Server configuration visibility"));
     }
 
@@ -186,7 +187,8 @@ public class PcceApiMonitoringService {
         connection.setConnectTimeout((int) api.getTimeout().toMillis());
         connection.setReadTimeout((int) api.getTimeout().toMillis());
         connection.setRequestMethod(StringUtils.hasText(method) ? method : "GET");
-        connection.setRequestProperty("Accept", "application/json");
+        connection.setRequestProperty("Accept", "application/json, application/xml, text/xml, text/plain, */*; q=0.1");
+        connection.setRequestProperty("X-Requested-With", "XMLHttpRequest");
         if (StringUtils.hasText(contentType)) {
             connection.setRequestProperty("Content-Type", contentType);
         }
