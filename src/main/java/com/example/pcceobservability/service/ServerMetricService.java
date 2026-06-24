@@ -38,9 +38,9 @@ public class ServerMetricService {
         }
         if (!isLocalHost(host)) {
             return new ServerMetric(target.getName(), displayName(target), target.getSide(), target.getSite(), target.getTier(),
-                    host, "SNMP/WMI/AGENT", "NOT_CONFIGURED",
+                    host, "SNMP/WMI/EXPORTER", "NOT_CONFIGURED",
                     null, null, null, serviceHint(target),
-                    "Remote CPU, memory, disk and Windows service status require SNMP, WMI/WinRM, or an installed exporter/agent.",
+                    "Configure one collector for this host: SNMP, WMI/WinRM, Prometheus exporter, or installed monitoring agent. HTTP/TCP probes only confirm reachability.",
                     Instant.now());
         }
         return localMetric(target, host);

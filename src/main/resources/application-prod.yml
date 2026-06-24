@@ -77,6 +77,58 @@ pcce:
     service-level-critical-pct: ${PCCE_SERVICE_LEVEL_CRITICAL:70}
     audit-retention: ${PCCE_AUDIT_RETENTION:1000}
 
+  live-data:
+    enabled: ${PCCE_LIVE_DATA_ENABLED:false}
+    host: ${PCCE_LIVE_DATA_HOST:}
+    port: ${PCCE_LIVE_DATA_PORT:443}
+    websocket-port: ${PCCE_LIVE_DATA_WEBSOCKET_PORT:443}
+    token-path: ${PCCE_LIVE_DATA_TOKEN_PATH:livedata/token/new}
+    username: ${PCCE_LIVE_DATA_USERNAME:}
+    password: ${PCCE_LIVE_DATA_PASSWORD:}
+    timeout: ${PCCE_LIVE_DATA_TIMEOUT:10s}
+    trust-all-certificates: ${PCCE_LIVE_DATA_TRUST_ALL_CERTIFICATES:false}
+
+  jmx:
+    enabled: ${PCCE_JMX_ENABLED:false}
+    username: ${PCCE_JMX_USERNAME:}
+    password: ${PCCE_JMX_PASSWORD:}
+    timeout: ${PCCE_JMX_TIMEOUT:10s}
+    trust-store-configured: ${PCCE_JMX_TRUST_STORE_CONFIGURED:false}
+    targets:
+      - name: CVP Call Server JMX A
+        component: CVP_CallServer
+        enabled: ${PCCE_JMX_CVP_CALLSERVER_A_ENABLED:false}
+        service-url: ${PCCE_JMX_CVP_CALLSERVER_A_URL:}
+      - name: CVP Call Server JMX B
+        component: CVP_CallServer
+        enabled: ${PCCE_JMX_CVP_CALLSERVER_B_ENABLED:false}
+        service-url: ${PCCE_JMX_CVP_CALLSERVER_B_URL:}
+      - name: CVP Reporting JMX
+        component: CVP_ReportingServer
+        enabled: ${PCCE_JMX_CVP_REPORTING_ENABLED:false}
+        service-url: ${PCCE_JMX_CVP_REPORTING_URL:}
+
+  app-dynamics:
+    enabled: ${APPD_ENABLED:false}
+    controller-url: ${APPD_CONTROLLER_URL:}
+    account-name: ${APPD_ACCOUNT_NAME:}
+    username: ${APPD_USERNAME:}
+    password: ${APPD_PASSWORD:}
+    application-name: ${APPD_APPLICATION_NAME:PCCE}
+    timeout: ${APPD_TIMEOUT:10s}
+    trust-all-certificates: ${APPD_TRUST_ALL_CERTIFICATES:false}
+    dashboards:
+      - name: PCCE Application Flow Map
+        area: Contact Center APM
+        enabled: true
+        url: ${APPD_PCCE_FLOWMAP_URL:}
+        description: PCCE service flow, business transactions, errors and response time
+      - name: CVP / IVR JVM Health
+        area: CVP
+        enabled: true
+        url: ${APPD_CVP_JVM_URL:}
+        description: CVP JVM, servlet, backend and error monitoring
+
   components:
     - name: ICM_Router
       display-name: Router A

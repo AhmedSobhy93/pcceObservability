@@ -12,12 +12,17 @@ import org.springframework.util.StringUtils;
 public class SupportCapabilityService {
 
     private final List<ServerLogTarget> serverLogTargets = new ArrayList<>(List.of(
-            new ServerLogTarget("ICM_Router", "vswsitrgr01", "Cisco ICM Router logs", "Windows share / agent / SIEM", false),
-            new ServerLogTarget("ICM_Logger", "vswsitaw01", "Cisco ICM Logger logs", "Windows share / agent / SIEM", false),
-            new ServerLogTarget("PG", "vswsitpg01", "Cisco PG/CTI logs", "Windows share / agent / SIEM", false),
-            new ServerLogTarget("CVP", "vswsitcvp01", "CVP Call Server logs", "SFTP / agent / SIEM", false),
+            new ServerLogTarget("ICM_Router", "vswsitrgr01", "ICM Router / Rogger logs", "Windows share / agent / SIEM", false),
+            new ServerLogTarget("ICM_Logger", "vswsitaw01", "Logger, AW, HDS and SQL logs", "Windows share / agent / SIEM", false),
+            new ServerLogTarget("CTI_Server", "vswsitpg01", "CTI Server logs", "Windows share / agent / SIEM", false),
+            new ServerLogTarget("PG_CUCM", "vswsitpg01", "CUCM PG logs", "Windows share / agent / SIEM", false),
+            new ServerLogTarget("PG_CVP", "vswsitpg01", "CVP PG logs", "Windows share / agent / SIEM", false),
+            new ServerLogTarget("CVP_CallServer", "vswsitcvp01", "CVP Call Server and VXML/Tomcat logs", "SFTP / agent / SIEM", false),
+            new ServerLogTarget("CVP_ReportingServer", "vswsitcvpr01", "CVP Reporting / Informix logs", "SFTP / agent / SIEM", false),
             new ServerLogTarget("Finesse", "vssitfin01", "Finesse Tomcat/application logs", "SFTP / agent / SIEM", false),
-            new ServerLogTarget("CUIC", "vssitcuic01", "CUIC application/reporting logs", "SFTP / agent / SIEM", false)));
+            new ServerLogTarget("CUIC", "vssitcuic01", "CUIC, Live Data and IDS logs", "SFTP / agent / SIEM", false),
+            new ServerLogTarget("VVB", "vssitvvb01", "VVB application and voice browser logs", "SFTP / agent / SIEM", false),
+            new ServerLogTarget("CUCM", "vssitcucm01", "CUCM syslog/RTMT logs", "Syslog / RTMT / SIEM", false)));
 
     public List<SupportCapability> smtpCapabilities() {
         return List.of(
@@ -33,7 +38,7 @@ public class SupportCapabilityService {
                 new SupportCapability("Graceful Operations", "Maintenance mode and alert suppression", "Available", "Use Operations API maintenance endpoint"),
                 new SupportCapability("Graceful Operations", "Graceful Spring Boot shutdown", "Admin gated", "Enable actuator shutdown only in approved maintenance window"),
                 new SupportCapability("Log Collection", "Collect application logs", "Available", "Use Recent App Logs and monitoring/logs endpoint"),
-                new SupportCapability("PCCE Log Monitoring", "Monitor Router/Logger/PG/CVP/Finesse/CUIC logs", "Config required", "Configure server log targets and collection method"),
+                new SupportCapability("PCCE Log Monitoring", "Monitor Router/Logger/PG/CVP/Finesse/CUIC/VVB/CUCM logs", "Config required", "Enable server log targets and connect Windows share, SFTP, syslog, SIEM, or an agent"),
                 new SupportCapability("SPOG", "Single operational view across DB, APIs, components, alerts, logs", "Available", "Use System Health, Spring Boot App, PCCE Integration tabs"),
                 new SupportCapability("RTMT Extension", "CPU/memory/disk/service/process counters", "Config required", "Integrate SNMP/WMI/JMX/enterprise monitoring source"));
     }

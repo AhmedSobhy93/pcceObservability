@@ -31,6 +31,9 @@ const state = {
     finesseDialogs: [],
     finesseTeams: [],
     finesseQueues: [],
+    jmxStatus: [],
+    appDynamicsStatus: [],
+    liveDataStatus: [],
     callFlow: [],
     skillGroups: [],
     callTypeOptions: [],
@@ -38,6 +41,7 @@ const state = {
     adminUsers: [],
     adminRoles: [],
     adminComponents: [],
+    adminConfigReadiness: [],
     notificationSettings: null,
     projectTasks: []
 };
@@ -50,6 +54,7 @@ const pages = {
     system: ["System Health", "PCCE, CVP, CUIC, Finesse, PG, CTI, and gateway status"],
     eleveo: ["Eleveo QM & Recording", "Grafana monitoring for quality management and recording platforms"],
     integration: ["PCCE Integration", "AW/HDS SQL Server and CVP Informix connectivity"],
+    advanced: ["Advanced Monitoring", "Secure JMX, AppDynamics, and PCCE Live Data readiness"],
     smtp: ["Alerts", "Webhook, SMTP, SMS thresholds, escalation, and notification readiness"],
     spog: ["SPOG Operations", "Single pane operations, graceful actions, and log collection"],
     admin: ["Admin", "Users, role permissions, and runtime configuration"],
@@ -392,6 +397,9 @@ async function refresh() {
         safeLoad("finesseDialogs", "/api/v1/finesse/dialogs", [], { timeoutMs: 45000 }),
         safeLoad("finesseTeams", "/api/v1/finesse/teams", [], { timeoutMs: 30000 }),
         safeLoad("finesseQueues", "/api/v1/finesse/queues", [], { timeoutMs: 30000 }),
+        safeLoad("jmxStatus", "/api/v1/integrations/advanced/jmx", []),
+        safeLoad("appDynamicsStatus", "/api/v1/integrations/advanced/app-dynamics", []),
+        safeLoad("liveDataStatus", "/api/v1/integrations/advanced/live-data", []),
         safeLoad("skillGroups", "/api/v1/reference/skill-groups", []),
         safeLoad("callTypeOptions", "/api/v1/reference/call-types", []),
         safeLoad("agentOptions", "/api/v1/reference/agents", []),
@@ -406,6 +414,7 @@ async function refresh() {
             safeLoad("adminUsers", "/api/v1/admin/users", []),
             safeLoad("adminRoles", "/api/v1/admin/roles", []),
             safeLoad("adminComponents", "/api/v1/admin/components", []),
+            safeLoad("adminConfigReadiness", "/api/v1/admin/diagnostics/config-readiness", []),
             safeLoad("notificationSettings", "/api/v1/admin/notifications", null),
             safeLoad("serverLogTargets", "/api/v1/admin/server-log-targets", state.serverLogTargets)
         ]);
@@ -437,6 +446,7 @@ function renderAll(errors) {
     renderSmtp();
     renderSpog();
     renderEleveo();
+    renderAdvanced();
     renderOperations();
     renderSupport();
     renderAdmin();
@@ -676,7 +686,7 @@ function renderAgents() {
     qs("#agentPrevPage").disabled = uiState.agentPage === 0;
     qs("#agentNextPage").disabled = uiState.agentPage >= totalPages - 1;
     qs("#agentsTable").innerHTML = pageRows.map(agent => {
-        const status = String(pick(agent, "status") || "offline");
+        const status = effectiveAgentStatus(agent);
         const occupancy = pick(agent, "occupancy_pct", "occupancyPct");
         const adherence = pick(agent, "adherence_pct", "adherencePct");
         return `<tr>
@@ -699,7 +709,7 @@ function filteredAgents() {
     return (selectedTeam === "ALL"
         ? state.agents
         : state.agents.filter(agent => (pick(agent, "team") || "UNKNOWN") === selectedTeam))
-        .filter(agent => !statusFilter || String(pick(agent, "status") || "").toLowerCase() === statusFilter)
+        .filter(agent => !statusFilter || effectiveAgentStatus(agent) === statusFilter)
         .filter(agent => {
             if (!search) return true;
             return [
@@ -743,7 +753,7 @@ function renderAgentCards(agents) {
         .sort((a, b) => num(pick(b, "calls_handled", "callsHandled")) - num(pick(a, "calls_handled", "callsHandled")))
         .slice(0, 8);
     qs("#agentVisualCards").innerHTML = top.map(agent => {
-        const status = String(pick(agent, "status") || "offline");
+        const status = effectiveAgentStatus(agent);
         const calls = num(pick(agent, "calls_handled", "callsHandled"));
         const occupancy = pick(agent, "occupancy_pct", "occupancyPct");
         const adherence = pick(agent, "adherence_pct", "adherencePct");
@@ -823,6 +833,35 @@ function miniBar(value) {
 function derivedAgentOccupancy(agent) {
     const calls = num(pick(agent, "calls_handled", "callsHandled"));
     return Math.min(100, calls * 5);
+}
+
+function effectiveAgentStatus(agent) {
+    return finesseStatusForAgent(agent) || String(pick(agent, "status") || "offline").toLowerCase();
+}
+
+function finesseStatusForAgent(agent) {
+    const agentId = String(pick(agent, "agent_id", "agentId") || "").trim().toLowerCase();
+    const agentName = String(pick(agent, "agent_name", "agentName") || "").trim().toLowerCase();
+    if (!agentId && !agentName) return null;
+    const match = state.finesseAgents.find(item => {
+        const name = String(pick(item, "name") || "").toLowerCase();
+        const body = String(pick(item, "body") || "").toLowerCase();
+        return (agentId && (name.includes(agentId) || xmlTag(body, "id").toLowerCase() === agentId))
+            || (agentName && body.includes(agentName));
+    });
+    if (!match || num(pick(match, "status_code", "statusCode")) >= 400) return null;
+    return mapFinesseState(xmlTag(pick(match, "body"), "state"));
+}
+
+function mapFinesseState(value) {
+    const finesseState = String(value || "").trim().toUpperCase();
+    if (!finesseState) return null;
+    if (finesseState === "READY") return "available";
+    if (["TALKING", "RESERVED", "HOLD", "ACTIVE"].includes(finesseState)) return "on_call";
+    if (finesseState.includes("WORK")) return "wrap_up";
+    if (finesseState === "NOT_READY") return "not_ready";
+    if (["LOGOUT", "LOGGED_OUT", "OFFLINE"].includes(finesseState)) return "offline";
+    return finesseState.toLowerCase().replaceAll(" ", "_");
 }
 
 function renderFinesse() {
@@ -1078,6 +1117,12 @@ function countXmlTags(body, tagName) {
     if (!text) return null;
     const matches = text.match(new RegExp(`<${tagName}(\\s|>)`, "g"));
     return matches ? matches.length : null;
+}
+
+function xmlTag(body, tagName) {
+    const text = String(body || "");
+    const match = text.match(new RegExp(`<${tagName}[^>]*>([\\s\\S]*?)</${tagName}>`, "i"));
+    return match ? match[1].trim() : "";
 }
 
 function renderSmtp() {
@@ -1343,6 +1388,42 @@ function renderEleveo() {
     ].join("");
 }
 
+function renderAdvanced() {
+    qs("#jmxGrid").innerHTML = renderIntegrationCards(state.jmxStatus, "Secure JMX");
+    qs("#appDynamicsGrid").innerHTML = renderIntegrationCards(state.appDynamicsStatus, "AppDynamics");
+    qs("#liveDataGrid").innerHTML = renderIntegrationCards(state.liveDataStatus, "PCCE Live Data");
+    qs("#jmxNotes").innerHTML = [
+        metricRow("Cisco secure JMX", "Use CVP/OAMP secure JMX certificate exchange before enabling polling."),
+        metricRow("Scope", "Best for CVP JVM health, memory, threads and selected MBeans; not a replacement for HDS/CUIC reporting."),
+        metricRow("Banking control", "Use read-only JMX user, approved truststore, short timeout and explicit target list.")
+    ].join("");
+    qs("#appDynamicsNotes").innerHTML = [
+        metricRow("Existing agents", "Use installed AppDynamics machine/application agents on PCCE nodes where available."),
+        metricRow("Dashboards", "Embed or deep-link controller dashboards for CVP, Finesse, CUIC, AW/HDS and JVM tiers."),
+        metricRow("Alerting", "Keep AppDynamics as telemetry source; route business-impact alerts through this portal/SMS/SMTP.")
+    ].join("");
+    qs("#liveDataNotes").innerHTML = [
+        metricRow("Realtime first", "Use Live Data for agent state, skill group, call type and precision queue realtime widgets."),
+        metricRow("HDS protection", "Keep historical dashboards on bounded HDS queries; avoid aggressive refresh against HDS."),
+        metricRow("CUIC alignment", "Use the same Live Data host, token path and user configured in CUIC datasource.")
+    ].join("");
+}
+
+function renderIntegrationCards(items, emptyTitle) {
+    return (items || []).map(item => {
+        const stateValue = String(pick(item, "state") || "unknown").toLowerCase();
+        const badge = stateValue.includes("configured") || stateValue.includes("mapped") ? "up"
+            : stateValue.includes("disabled") ? "disabled"
+            : "down";
+        return `<article class="component-card">
+            <div class="component-title"><h3>${escapeHtml(pick(item, "name") || "")}</h3><span class="badge ${badge}">${escapeHtml(pick(item, "state") || "")}</span></div>
+            <p>${escapeHtml(pick(item, "category") || "")}</p>
+            <small>${escapeHtml(pick(item, "target") || "")}</small>
+            <div class="component-detail">${escapeHtml(pick(item, "detail") || "")}</div>
+        </article>`;
+    }).join("") || `<article class="component-card"><h3>${escapeHtml(emptyTitle)}</h3><span class="badge warn">not loaded</span><p>Configuration endpoint unavailable.</p></article>`;
+}
+
 async function executePcceAction(id) {
     qs("#pcceActionResult").textContent = `Running ${id}...`;
     try {
@@ -1428,6 +1509,7 @@ function renderAdmin() {
         qs("#adminRolesList").innerHTML = metricRow("Access", "PERM_SOLUTION_ADMIN required");
         qs("#adminComponentsTable").innerHTML = "";
         qs("#adminPermissionGrid").innerHTML = "";
+        qs("#adminConfigReadinessGrid").innerHTML = "";
         qs("#adminCapabilityCards").innerHTML = adminCapabilityCards();
         return;
     }
@@ -1453,6 +1535,7 @@ function renderAdmin() {
     ).join("");
     populateAdminRoleSelect();
     renderPermissionEditor();
+    renderAdminConfigReadiness();
     qs("#adminComponentsTable").innerHTML = state.adminComponents.map(component => `<tr>
         <td><strong>${escapeHtml(pick(component, "display_name", "displayName") || pick(component, "name") || "")}</strong><span class="subline">${escapeHtml(pick(component, "name") || "")}</span></td>
         <td>${escapeHtml(componentMeta(component))}</td>
@@ -1463,6 +1546,18 @@ function renderAdmin() {
         <td>${pick(component, "trust_all_certificates", "trustAllCertificates") ? "trust all" : "default"}</td>
     </tr>`).join("");
     qs("#adminCapabilityCards").innerHTML = adminCapabilityCards();
+}
+
+function renderAdminConfigReadiness() {
+    qs("#adminConfigReadinessGrid").innerHTML = state.adminConfigReadiness.map(item => {
+        const ready = Boolean(pick(item, "ready"));
+        return `<article class="component-card">
+            <h3>${escapeHtml(pick(item, "area") || "")}</h3>
+            <span class="badge ${ready ? "up" : "warn"}">${ready ? "ready" : "needs config"}</span>
+            <p>${escapeHtml(pick(item, "finding") || "")}</p>
+            <p>${escapeHtml(pick(item, "recommendation") || "")}</p>
+        </article>`;
+    }).join("") || `<article class="component-card"><h3>Config readiness</h3><span class="badge warn">not loaded</span><p>Admin diagnostics endpoint unavailable.</p></article>`;
 }
 
 function populateAdminRoleSelect() {
@@ -1553,6 +1648,8 @@ async function saveAdminRole() {
 function adminCapabilityCards() {
     const cards = [
         ["RBAC", "Create/update app users, assign roles, scope teams and agents."],
+        ["User Lifecycle", "Disable a user by clearing Enabled / allowed to login in the User Editor."],
+        ["LDAP / AD Ready", "Configure APP_LDAP_* variables for AD bind/search and map AD groups to app roles."],
         ["Role Permissions", "Tune permissions for Admin, Workforce, Supervisor, Agent, and Viewer."],
         ["Components", "Review probes, target URLs, TLS trust, timeout and enabled state."],
         ["App Database", "Project plan and portal data use the app DB, not browser-only cache."],

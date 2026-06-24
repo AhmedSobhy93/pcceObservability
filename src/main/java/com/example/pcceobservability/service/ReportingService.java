@@ -334,8 +334,8 @@ public class ReportingService {
             return timedQuery("cvp.ivrContainment", () -> cvpReportingJdbcTemplate.query(
                         pcceProperties.getQueries().getIvrContainment(),
                         (rs, rowNum) -> new IvrContainmentMetric(
-                                rs.getObject("call_date", LocalDate.class),
-                                rs.getInt("call_hour"),
+                                toLocalDate(rs.getObject("call_date")),
+                                toHour(rs.getObject("call_hour")),
                                 rs.getBigDecimal("ivr_containment_rate")),
                         start(from),
                         exclusiveEnd(to)));
@@ -385,6 +385,38 @@ public class ReportingService {
                 rs.getBigDecimal("first_call_resolution"),
                 rs.getBigDecimal("ivr_containment_rate"),
                 rs.getBigDecimal("csat_score"));
+    }
+
+    private LocalDate toLocalDate(Object value) {
+        if (value == null) {
+            return null;
+        }
+        if (value instanceof LocalDate localDate) {
+            return localDate;
+        }
+        if (value instanceof java.sql.Date date) {
+            return date.toLocalDate();
+        }
+        if (value instanceof java.sql.Timestamp timestamp) {
+            return timestamp.toLocalDateTime().toLocalDate();
+        }
+        String text = value.toString().trim();
+        if (text.length() >= 10) {
+            return LocalDate.parse(text.substring(0, 10));
+        }
+        return null;
+    }
+
+    private Integer toHour(Object value) {
+        if (value == null) {
+            return null;
+        }
+        if (value instanceof Number number) {
+            return number.intValue();
+        }
+        String text = value.toString().trim();
+        java.util.regex.Matcher matcher = java.util.regex.Pattern.compile("(\\d{1,2})").matcher(text);
+        return matcher.find() ? Integer.parseInt(matcher.group(1)) : null;
     }
 
     private AgentStat mapAgentStat(ResultSet rs, int rowNum) throws SQLException {

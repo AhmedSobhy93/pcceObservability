@@ -40,6 +40,15 @@ public class PcceProperties {
     @Valid
     private Finesse finesse = new Finesse();
 
+    @Valid
+    private Jmx jmx = new Jmx();
+
+    @Valid
+    private AppDynamics appDynamics = new AppDynamics();
+
+    @Valid
+    private LiveData liveData = new LiveData();
+
     public Queries getQueries() {
         return queries;
     }
@@ -110,6 +119,30 @@ public class PcceProperties {
 
     public void setFinesse(Finesse finesse) {
         this.finesse = finesse;
+    }
+
+    public Jmx getJmx() {
+        return jmx;
+    }
+
+    public void setJmx(Jmx jmx) {
+        this.jmx = jmx;
+    }
+
+    public AppDynamics getAppDynamics() {
+        return appDynamics;
+    }
+
+    public void setAppDynamics(AppDynamics appDynamics) {
+        this.appDynamics = appDynamics;
+    }
+
+    public LiveData getLiveData() {
+        return liveData;
+    }
+
+    public void setLiveData(LiveData liveData) {
+        this.liveData = liveData;
     }
 
     private static List<ComponentTarget> defaultComponents() {
@@ -540,7 +573,7 @@ public class PcceProperties {
             monitor.setMethod("GET");
             monitor.setPath(path);
             monitor.setExpectedStatusMax(499);
-            monitor.setEnabled(false);
+            monitor.setEnabled(true);
             return monitor;
         }
 
@@ -576,7 +609,7 @@ public class PcceProperties {
             action.setMethod(method);
             action.setPath(path);
             action.setAdminOnly(adminOnly);
-            action.setEnabled(false);
+            action.setEnabled(!adminOnly);
             return action;
         }
     }
@@ -1020,6 +1053,296 @@ public class PcceProperties {
         }
     }
 
+    public static class Jmx {
+        private boolean enabled;
+        private String username;
+        private String password;
+        private Duration timeout = Duration.ofSeconds(10);
+        private boolean trustStoreConfigured;
+        private List<JmxTarget> targets = List.of();
+
+        public boolean isEnabled() {
+            return enabled;
+        }
+
+        public void setEnabled(boolean enabled) {
+            this.enabled = enabled;
+        }
+
+        public String getUsername() {
+            return username;
+        }
+
+        public void setUsername(String username) {
+            this.username = username;
+        }
+
+        public String getPassword() {
+            return password;
+        }
+
+        public void setPassword(String password) {
+            this.password = password;
+        }
+
+        public Duration getTimeout() {
+            return timeout;
+        }
+
+        public void setTimeout(Duration timeout) {
+            this.timeout = timeout;
+        }
+
+        public boolean isTrustStoreConfigured() {
+            return trustStoreConfigured;
+        }
+
+        public void setTrustStoreConfigured(boolean trustStoreConfigured) {
+            this.trustStoreConfigured = trustStoreConfigured;
+        }
+
+        public List<JmxTarget> getTargets() {
+            return targets;
+        }
+
+        public void setTargets(List<JmxTarget> targets) {
+            this.targets = targets;
+        }
+    }
+
+    public static class JmxTarget {
+        private String name;
+        private String component;
+        private String serviceUrl;
+        private boolean enabled = true;
+        private List<String> mbeans = List.of(
+                "java.lang:type=Memory",
+                "java.lang:type=Threading",
+                "java.lang:type=OperatingSystem");
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(String name) {
+            this.name = name;
+        }
+
+        public String getComponent() {
+            return component;
+        }
+
+        public void setComponent(String component) {
+            this.component = component;
+        }
+
+        public String getServiceUrl() {
+            return serviceUrl;
+        }
+
+        public void setServiceUrl(String serviceUrl) {
+            this.serviceUrl = serviceUrl;
+        }
+
+        public boolean isEnabled() {
+            return enabled;
+        }
+
+        public void setEnabled(boolean enabled) {
+            this.enabled = enabled;
+        }
+
+        public List<String> getMbeans() {
+            return mbeans;
+        }
+
+        public void setMbeans(List<String> mbeans) {
+            this.mbeans = mbeans;
+        }
+    }
+
+    public static class AppDynamics {
+        private boolean enabled;
+        private String controllerUrl;
+        private String accountName;
+        private String username;
+        private String password;
+        private String applicationName;
+        private Duration timeout = Duration.ofSeconds(10);
+        private boolean trustAllCertificates;
+        private List<GrafanaDashboard> dashboards = List.of();
+
+        public boolean isEnabled() {
+            return enabled;
+        }
+
+        public void setEnabled(boolean enabled) {
+            this.enabled = enabled;
+        }
+
+        public String getControllerUrl() {
+            return controllerUrl;
+        }
+
+        public void setControllerUrl(String controllerUrl) {
+            this.controllerUrl = controllerUrl;
+        }
+
+        public String getAccountName() {
+            return accountName;
+        }
+
+        public void setAccountName(String accountName) {
+            this.accountName = accountName;
+        }
+
+        public String getUsername() {
+            return username;
+        }
+
+        public void setUsername(String username) {
+            this.username = username;
+        }
+
+        public String getPassword() {
+            return password;
+        }
+
+        public void setPassword(String password) {
+            this.password = password;
+        }
+
+        public String getApplicationName() {
+            return applicationName;
+        }
+
+        public void setApplicationName(String applicationName) {
+            this.applicationName = applicationName;
+        }
+
+        public Duration getTimeout() {
+            return timeout;
+        }
+
+        public void setTimeout(Duration timeout) {
+            this.timeout = timeout;
+        }
+
+        public boolean isTrustAllCertificates() {
+            return trustAllCertificates;
+        }
+
+        public void setTrustAllCertificates(boolean trustAllCertificates) {
+            this.trustAllCertificates = trustAllCertificates;
+        }
+
+        public List<GrafanaDashboard> getDashboards() {
+            return dashboards;
+        }
+
+        public void setDashboards(List<GrafanaDashboard> dashboards) {
+            this.dashboards = dashboards;
+        }
+    }
+
+    public static class LiveData {
+        private boolean enabled;
+        private String host;
+        private int port = 443;
+        private int websocketPort = 443;
+        private String tokenPath = "livedata/token/new";
+        private String username;
+        private String password;
+        private Duration timeout = Duration.ofSeconds(10);
+        private boolean trustAllCertificates;
+        private List<String> stockReports = List.of(
+                "Agent Real Time",
+                "Agent Skill Group Real Time",
+                "Call Type Real Time",
+                "Precision Queue Real Time",
+                "Skill Group Real Time");
+
+        public boolean isEnabled() {
+            return enabled;
+        }
+
+        public void setEnabled(boolean enabled) {
+            this.enabled = enabled;
+        }
+
+        public String getHost() {
+            return host;
+        }
+
+        public void setHost(String host) {
+            this.host = host;
+        }
+
+        public int getPort() {
+            return port;
+        }
+
+        public void setPort(int port) {
+            this.port = port;
+        }
+
+        public int getWebsocketPort() {
+            return websocketPort;
+        }
+
+        public void setWebsocketPort(int websocketPort) {
+            this.websocketPort = websocketPort;
+        }
+
+        public String getTokenPath() {
+            return tokenPath;
+        }
+
+        public void setTokenPath(String tokenPath) {
+            this.tokenPath = tokenPath;
+        }
+
+        public String getUsername() {
+            return username;
+        }
+
+        public void setUsername(String username) {
+            this.username = username;
+        }
+
+        public String getPassword() {
+            return password;
+        }
+
+        public void setPassword(String password) {
+            this.password = password;
+        }
+
+        public Duration getTimeout() {
+            return timeout;
+        }
+
+        public void setTimeout(Duration timeout) {
+            this.timeout = timeout;
+        }
+
+        public boolean isTrustAllCertificates() {
+            return trustAllCertificates;
+        }
+
+        public void setTrustAllCertificates(boolean trustAllCertificates) {
+            this.trustAllCertificates = trustAllCertificates;
+        }
+
+        public List<String> getStockReports() {
+            return stockReports;
+        }
+
+        public void setStockReports(List<String> stockReports) {
+            this.stockReports = stockReports;
+        }
+    }
+
     public static class Operations {
         private boolean scheduledAssessmentEnabled = true;
         private long assessmentFixedDelayMs = 300000;
@@ -1155,6 +1478,7 @@ public class PcceProperties {
     public static class Security {
         private List<AppUser> users = defaultUsers();
         private Map<AppRole, List<Permission>> rolePermissions = defaultRolePermissions();
+        private Ldap ldap = new Ldap();
 
         public List<AppUser> getUsers() {
             return users;
@@ -1170,6 +1494,14 @@ public class PcceProperties {
 
         public void setRolePermissions(Map<AppRole, List<Permission>> rolePermissions) {
             this.rolePermissions = rolePermissions;
+        }
+
+        public Ldap getLdap() {
+            return ldap;
+        }
+
+        public void setLdap(Ldap ldap) {
+            this.ldap = ldap;
         }
 
         private static List<AppUser> defaultUsers() {
@@ -1206,6 +1538,81 @@ public class PcceProperties {
                     Permission.COMPONENT_STATUS_READ,
                     Permission.OPERATIONS_READ));
             return permissions;
+        }
+    }
+
+    public static class Ldap {
+        private boolean enabled;
+        private String userSearchBase;
+        private String userSearchFilter = "(sAMAccountName={0})";
+        private String groupSearchBase;
+        private String adminGroup;
+        private String workforceManagerGroup;
+        private String supervisorGroup;
+        private String viewerGroup;
+
+        public boolean isEnabled() {
+            return enabled;
+        }
+
+        public void setEnabled(boolean enabled) {
+            this.enabled = enabled;
+        }
+
+        public String getUserSearchBase() {
+            return userSearchBase;
+        }
+
+        public void setUserSearchBase(String userSearchBase) {
+            this.userSearchBase = userSearchBase;
+        }
+
+        public String getUserSearchFilter() {
+            return userSearchFilter;
+        }
+
+        public void setUserSearchFilter(String userSearchFilter) {
+            this.userSearchFilter = userSearchFilter;
+        }
+
+        public String getGroupSearchBase() {
+            return groupSearchBase;
+        }
+
+        public void setGroupSearchBase(String groupSearchBase) {
+            this.groupSearchBase = groupSearchBase;
+        }
+
+        public String getAdminGroup() {
+            return adminGroup;
+        }
+
+        public void setAdminGroup(String adminGroup) {
+            this.adminGroup = adminGroup;
+        }
+
+        public String getWorkforceManagerGroup() {
+            return workforceManagerGroup;
+        }
+
+        public void setWorkforceManagerGroup(String workforceManagerGroup) {
+            this.workforceManagerGroup = workforceManagerGroup;
+        }
+
+        public String getSupervisorGroup() {
+            return supervisorGroup;
+        }
+
+        public void setSupervisorGroup(String supervisorGroup) {
+            this.supervisorGroup = supervisorGroup;
+        }
+
+        public String getViewerGroup() {
+            return viewerGroup;
+        }
+
+        public void setViewerGroup(String viewerGroup) {
+            this.viewerGroup = viewerGroup;
         }
     }
 
@@ -1462,8 +1869,8 @@ public class PcceProperties {
 
         static final String IVR_CONTAINMENT = """
                 SELECT
-                    DATE(c.startdatetime) AS call_date,
-                    HOUR(c.startdatetime) AS call_hour,
+                    EXTEND(c.startdatetime, YEAR TO DAY) AS call_date,
+                    EXTEND(c.startdatetime, HOUR TO HOUR) AS call_hour,
                     CAST(100.0 * SUM(CASE WHEN vs.causeid NOT IN (2, 18, 1001, 1044) THEN 1 ELSE 0 END)
                         / NULLIF(COUNT(*), 0) AS DECIMAL(9,2)) AS ivr_containment_rate
                 FROM call c
@@ -1472,7 +1879,7 @@ public class PcceProperties {
                  AND c.callstartdate = vs.callstartdate
                 WHERE c.startdatetime >= ?
                   AND c.startdatetime < ?
-                GROUP BY DATE(c.startdatetime), HOUR(c.startdatetime)
+                GROUP BY EXTEND(c.startdatetime, YEAR TO DAY), EXTEND(c.startdatetime, HOUR TO HOUR)
                 ORDER BY call_date, call_hour
                 """;
 

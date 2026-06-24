@@ -1,0 +1,11 @@
+.tools/
+target/
+data/
+logs/
+mvn-test.log
+
+*.log
+*.tmp
+
+.idea/
+*.iml

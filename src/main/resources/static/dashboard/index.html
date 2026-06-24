@@ -24,6 +24,7 @@
         <button class="nav-item" data-view="system"><span class="icon icon-system"></span>System Health</button>
         <button class="nav-item" data-view="eleveo"><span class="icon icon-eleveo"></span>Eleveo QM</button>
         <button class="nav-item" data-view="integration"><span class="icon icon-integration"></span>PCCE Integration</button>
+        <button class="nav-item" data-view="advanced"><span class="icon icon-system"></span>Advanced Monitoring</button>
         <button class="nav-item" data-view="smtp"><span class="icon icon-alerts"></span>Alerts</button>
         <button class="nav-item" data-view="spog"><span class="icon icon-spog"></span>SPOG Ops</button>
         <button class="nav-item" data-view="admin"><span class="icon icon-admin"></span>Admin</button>
@@ -260,6 +261,39 @@
         </div>
     </section>
 
+    <section class="view" id="view-advanced">
+        <div class="content-grid">
+            <article class="panel wide">
+                <div class="panel-head"><h2>Secure CVP JMX</h2><span>CVP/OAMP secured JMX readiness</span></div>
+                <div class="component-grid" id="jmxGrid"></div>
+            </article>
+            <article class="panel">
+                <h2>JMX Notes</h2>
+                <div class="metric-list" id="jmxNotes"></div>
+            </article>
+        </div>
+        <div class="content-grid support-grid">
+            <article class="panel wide">
+                <div class="panel-head"><h2>AppDynamics</h2><span>Controller and dashboard integration</span></div>
+                <div class="component-grid" id="appDynamicsGrid"></div>
+            </article>
+            <article class="panel">
+                <h2>AppDynamics Use Cases</h2>
+                <div class="metric-list" id="appDynamicsNotes"></div>
+            </article>
+        </div>
+        <div class="content-grid support-grid">
+            <article class="panel wide">
+                <div class="panel-head"><h2>PCCE Live Data</h2><span>Realtime API and WebSocket configuration</span></div>
+                <div class="component-grid" id="liveDataGrid"></div>
+            </article>
+            <article class="panel">
+                <h2>Realtime Data Plan</h2>
+                <div class="metric-list" id="liveDataNotes"></div>
+            </article>
+        </div>
+    </section>
+
     <section class="view" id="view-smtp">
         <div class="content-grid">
             <article class="panel wide"><h2>Alerting Capabilities</h2><div class="metric-list" id="smtpCapabilityList"></div></article>
@@ -341,7 +375,7 @@
                     <label class="date-field"><span>Agent ID</span><input id="adminAgentId" placeholder="Optional"></label>
                     <label class="date-field"><span>Teams</span><input id="adminTeams" placeholder="Sales, Support"></label>
                     <label class="date-field"><span>Roles</span><select id="adminUserRole"><option>ADMIN</option><option>WORKFORCE_MANAGER</option><option>SUPERVISOR</option><option>AGENT</option><option>VIEWER</option></select></label>
-                    <label class="check-row"><input type="checkbox" id="adminUserEnabled" checked> Enabled</label>
+                    <label class="check-row"><input type="checkbox" id="adminUserEnabled" checked> Enabled / allowed to login</label>
                     <button class="primary-btn" id="adminSaveUserBtn">Save User</button>
                     <pre class="log-box action-result" id="adminActionResult">Admin actions are audited in memory.</pre>
                 </div>
@@ -359,6 +393,10 @@
                 <div class="metric-list" id="adminRolesList"></div>
             </article>
         </div>
+        <article class="panel full api-functions-panel">
+            <div class="panel-head"><h2>Configuration Readiness</h2><span>Production integration checklist</span></div>
+            <div class="component-grid" id="adminConfigReadinessGrid"></div>
+        </article>
         <article class="panel full api-functions-panel">
             <div class="panel-head"><h2>Component Configuration</h2><span>Use Swagger/Admin API to update values</span></div>
             <div class="table-wrap"><table><thead><tr><th>Component</th><th>Topology</th><th>Enabled</th><th>Probe</th><th>Target</th><th>Timeout</th><th>TLS</th></tr></thead><tbody id="adminComponentsTable"></tbody></table></div>

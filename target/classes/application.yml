@@ -6,6 +6,45 @@ spring:
     name: pcce-observability
   jackson:
     property-naming-strategy: SNAKE_CASE
+  datasource:
+    url: ${APP_DB_URL:jdbc:h2:file:./data/pcce-observability;AUTO_SERVER=TRUE;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH}
+    username: ${APP_DB_USERNAME:sa}
+    password: ${APP_DB_PASSWORD:}
+    driver-class-name: ${APP_DB_DRIVER:org.h2.Driver}
+    hikari:
+      maximum-pool-size: ${APP_DB_MAX_POOL_SIZE:5}
+      minimum-idle: ${APP_DB_MIN_IDLE:1}
+      connection-timeout: ${APP_DB_CONNECTION_TIMEOUT_MS:5000}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: false
+  flyway:
+    enabled: ${APP_DB_FLYWAY_ENABLED:true}
+    locations: classpath:db/migration
+  h2:
+    console:
+      enabled: ${H2_CONSOLE_ENABLED:true}
+      path: /h2-console
+  mail:
+    host: ${PCCE_SMTP_HOST:}
+    port: ${PCCE_SMTP_PORT:25}
+    username: ${PCCE_SMTP_USERNAME:}
+    password: ${PCCE_SMTP_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: ${PCCE_SMTP_AUTH:false}
+          starttls:
+            enable: ${PCCE_SMTP_STARTTLS:false}
+  ldap:
+    urls: ${APP_LDAP_URLS:}
+    base: ${APP_LDAP_BASE:}
+    username: ${APP_LDAP_MANAGER_DN:}
+    password: ${APP_LDAP_MANAGER_PASSWORD:}
 
 management:
   endpoints:
@@ -14,6 +53,186 @@ management:
         include: health,info,metrics
 
 pcce:
+  performance:
+    jdbc-query-timeout-seconds: 30
+    slow-query-warning-ms: 2000
+    slow-request-warning-ms: 3000
+
+  finesse:
+    enabled: ${FINESSE_ENABLED:true}
+    base-url: ${FINESSE_BASE_URL:https://vssitfin01.dev.mdi:8445}
+    username: ${FINESSE_USERNAME:administrator}
+    password: ${FINESSE_PASSWORD:}
+    timeout: ${FINESSE_TIMEOUT:10s}
+    trust-all-certificates: ${FINESSE_TRUST_ALL_CERTIFICATES:true}
+    user-ids: ${FINESSE_USER_IDS:}
+    team-ids: ${FINESSE_TEAM_IDS:}
+    queue-ids: ${FINESSE_QUEUE_IDS:}
+
+  pcce-api:
+    enabled: ${PCCE_API_ENABLED:true}
+    base-url: ${PCCE_API_BASE_URL:https://vswsitaw01}
+    username: ${PCCE_API_USERNAME:}
+    password: ${PCCE_API_PASSWORD:}
+    auth-mode: ${PCCE_API_AUTH_MODE:BASIC}
+    bearer-token: ${PCCE_API_BEARER_TOKEN:}
+    api-key-header-name: ${PCCE_API_KEY_HEADER_NAME:}
+    api-key: ${PCCE_API_KEY:}
+    timeout: 10s
+    trust-all-certificates: true
+    monitors:
+      - name: Users
+        category: User Configuration and Management
+        enabled: ${PCCE_API_MONITORING_ENABLED:true}
+        method: GET
+        path: /unifiedconfig/config/user
+        expected-status-min: 200
+        expected-status-max: 499
+      - name: Agent Teams
+        category: Team Configuration and Management
+        enabled: ${PCCE_API_MONITORING_ENABLED:true}
+        method: GET
+        path: /unifiedconfig/config/agentteam
+        expected-status-min: 200
+        expected-status-max: 499
+      - name: Skill Groups
+        category: Skill Group Management
+        enabled: ${PCCE_API_MONITORING_ENABLED:true}
+        method: GET
+        path: /unifiedconfig/config/skillgroup
+        expected-status-min: 200
+        expected-status-max: 499
+      - name: Dialed Numbers
+        category: Call Configuration and Management
+        enabled: ${PCCE_API_MONITORING_ENABLED:true}
+        method: GET
+        path: /unifiedconfig/config/dialednumber
+        expected-status-min: 200
+        expected-status-max: 499
+      - name: Call Types
+        category: Call Configuration and Management
+        enabled: ${PCCE_API_MONITORING_ENABLED:true}
+        method: GET
+        path: /unifiedconfig/config/calltype
+        expected-status-min: 200
+        expected-status-max: 499
+      - name: Machine Inventory
+        category: System Configuration
+        enabled: ${PCCE_API_MONITORING_ENABLED:true}
+        method: GET
+        path: /unifiedconfig/config/machineinventory
+        expected-status-min: 200
+        expected-status-max: 499
+      - name: Business Hours
+        category: System Configuration
+        enabled: ${PCCE_API_MONITORING_ENABLED:true}
+        method: GET
+        path: /unifiedconfig/config/businesshour
+        expected-status-min: 200
+        expected-status-max: 499
+    actions:
+      - id: users.list
+        category: User Configuration and Management
+        name: List users
+        enabled: true
+        admin-only: false
+        method: GET
+        path: /unifiedconfig/config/user
+      - id: teams.list
+        category: Team Configuration and Management
+        name: List agent teams
+        enabled: true
+        admin-only: false
+        method: GET
+        path: /unifiedconfig/config/agentteam
+      - id: skills.list
+        category: Skill Group Management
+        name: List skill groups
+        enabled: true
+        admin-only: false
+        method: GET
+        path: /unifiedconfig/config/skillgroup
+      - id: dialedNumbers.list
+        category: Call Configuration and Management
+        name: List dialed numbers
+        enabled: true
+        admin-only: false
+        method: GET
+        path: /unifiedconfig/config/dialednumber
+      - id: callTypes.list
+        category: Call Configuration and Management
+        name: List call types
+        enabled: true
+        admin-only: false
+        method: GET
+        path: /unifiedconfig/config/calltype
+      - id: eccVariables.list
+        category: Call Configuration and Management
+        name: List ECC variables
+        enabled: true
+        admin-only: false
+        method: GET
+        path: /unifiedconfig/config/expandedcallvariable
+      - id: campaigns.list
+        category: Outbound Option
+        name: List campaigns
+        enabled: true
+        admin-only: false
+        method: GET
+        path: /unifiedconfig/config/campaign
+      - id: businessHours.list
+        category: System Configuration
+        name: List business hours
+        enabled: true
+        admin-only: false
+        method: GET
+        path: /unifiedconfig/config/businesshour
+      - id: deploymentType.get
+        category: System Configuration
+        name: Get deployment type
+        enabled: true
+        admin-only: false
+        method: GET
+        path: /unifiedconfig/config/deploymenttype
+      - id: machineInventory.list
+        category: System Configuration
+        name: List machine inventory
+        enabled: true
+        admin-only: false
+        method: GET
+        path: /unifiedconfig/config/machineinventory
+      - id: cvpReportingServer.get
+        category: System Configuration
+        name: Get CVP Reporting Server
+        enabled: true
+        admin-only: false
+        method: GET
+        path: /unifiedconfig/config/cvpreportingserver
+      - id: user.update
+        category: User Configuration and Management
+        name: Update user
+        enabled: false
+        admin-only: true
+        method: PUT
+        path: /unifiedconfig/config/user/{id}
+      - id: team.update
+        category: Team Configuration and Management
+        name: Update agent team
+        enabled: false
+        admin-only: true
+        method: PUT
+        path: /unifiedconfig/config/agentteam/{id}
+      - id: businessHours.update
+        category: System Configuration
+        name: Update business hours
+        enabled: false
+        admin-only: true
+        method: PUT
+        path: /unifiedconfig/config/businesshour/{id}
+
+  queries:
+    call-metrics-tcd-fallback-enabled: true
+
   operations:
     scheduled-assessment-enabled: true
     assessment-fixed-delay-ms: 300000
@@ -27,7 +246,79 @@ pcce:
     maintenance-reason:
     audit-retention: 500
 
+  notifications:
+    webhook-enabled: false
+    webhook-url: ${PCCE_ALERT_WEBHOOK_URL:}
+    smtp-enabled: ${PCCE_SMTP_ENABLED:false}
+    smtp-from: ${PCCE_SMTP_FROM:pcce-observability@localhost}
+    smtp-recipients: ${PCCE_SMTP_RECIPIENTS:}
+    smtp-subject-prefix: ${PCCE_SMTP_SUBJECT_PREFIX:[PCCE Observability]}
+    sms-enabled: ${PCCE_SMS_ENABLED:false}
+    sms-url: ${PCCE_SMS_URL:http://sms-microgateway.sit.apps.openshift.dev.mdi/mgw/v1/system/secure/sms-gateway/sms/immediate}
+    sms-authorization: ${PCCE_SMS_AUTHORIZATION:}
+    sms-user-agent: ${PCCE_SMS_USER_AGENT:D-Tech / v1.6}
+    sms-recipients: ${PCCE_SMS_RECIPIENTS:}
+    sms-minimum-severity: CRITICAL
+    sms-max-alerts-per-assessment: 5
+    minimum-severity: CRITICAL
+    timeout: 10s
+
+  grafana:
+    enabled: ${ELEVEO_GRAFANA_ENABLED:false}
+    dashboards:
+      - name: Eleveo QM Overview
+        area: QM
+        enabled: true
+        url: ${ELEVEO_GRAFANA_QM_URL:}
+        description: Quality management monitoring from Eleveo Grafana
+      - name: Eleveo Recording Overview
+        area: Recording
+        enabled: true
+        url: ${ELEVEO_GRAFANA_RECORDING_URL:}
+        description: Recording platform health, storage, and service telemetry
+
   security:
+    ldap:
+      enabled: ${APP_LDAP_ENABLED:false}
+      user-search-base: ${APP_LDAP_USER_SEARCH_BASE:}
+      user-search-filter: ${APP_LDAP_USER_SEARCH_FILTER:(sAMAccountName={0})}
+      group-search-base: ${APP_LDAP_GROUP_SEARCH_BASE:}
+      admin-group: ${APP_LDAP_ADMIN_GROUP:}
+      workforce-manager-group: ${APP_LDAP_WFM_GROUP:}
+      supervisor-group: ${APP_LDAP_SUPERVISOR_GROUP:}
+      viewer-group: ${APP_LDAP_VIEWER_GROUP:}
+
+    role-permissions:
+      ADMIN:
+        - CALL_METRICS_READ
+        - AGENT_STATS_READ
+        - DROPPED_CALLS_READ
+        - IVR_METRICS_READ
+        - COMPONENT_STATUS_READ
+        - OPERATIONS_READ
+        - SOLUTION_ADMIN
+      WORKFORCE_MANAGER:
+        - CALL_METRICS_READ
+        - AGENT_STATS_READ
+        - DROPPED_CALLS_READ
+        - IVR_METRICS_READ
+        - COMPONENT_STATUS_READ
+        - OPERATIONS_READ
+      SUPERVISOR:
+        - CALL_METRICS_READ
+        - AGENT_STATS_READ
+        - DROPPED_CALLS_READ
+        - COMPONENT_STATUS_READ
+        - OPERATIONS_READ
+      AGENT:
+        - AGENT_STATS_READ
+      VIEWER:
+        - CALL_METRICS_READ
+        - DROPPED_CALLS_READ
+        - IVR_METRICS_READ
+        - COMPONENT_STATUS_READ
+        - OPERATIONS_READ
+
     users:
       - username: admin
         password: ${PCCE_ADMIN_PASSWORD:{noop}change-me}
@@ -64,64 +355,122 @@ pcce:
     aw:
       url: ${PCCE_AW_JDBC_URL:jdbc:sqlserver://10.10.90.193:1433;databaseName=pcce_awdb;encrypt=true;trustServerCertificate=true}
       username: ${PCCE_AW_USERNAME:obser_user}
-      password: ${PCCE_AW_PASSWORD:MDI@bank1}
+      password: ${PCCE_AW_PASSWORD:}
       driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
     hds:
       url: ${PCCE_HDS_JDBC_URL:jdbc:sqlserver://10.10.90.193:1433;databaseName=pcce_hds;encrypt=true;trustServerCertificate=true}
       username: ${PCCE_HDS_USERNAME:obser_user}
-      password: ${PCCE_HDS_PASSWORD:MDI@bank1}
+      password: ${PCCE_HDS_PASSWORD:}
       driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
     cvp-reporting:
       url: ${CVP_REPORTING_JDBC_URL:jdbc:informix-sqli://10.10.90.198:1526/cvp_data:INFORMIXSERVER=cvp;DELIMIDENT=y;}
       username: ${CVP_REPORTING_USERNAME:cvp_dbuser}
-      password: ${CVP_REPORTING_PASSWORD:MDI@bank12345}
+      password: ${CVP_REPORTING_PASSWORD:}
       driver-class-name: com.informix.jdbc.IfxDriver
 
   components:
     - name: ICM_Router
+      display-name: Lab Rogger / Router
+      side: LAB
+      site: SIT
+      tier: ICM
       enabled: true
-      probe: TCP
+      probe: HOST
       host: 10.10.90.191
       port: 4000
+      timeout: 5s
     - name: ICM_Logger
+      display-name: Lab Logger / AW DB
+      side: LAB
+      site: SIT
+      tier: ICM
       enabled: true
       probe: JDBC_AW
     - name: CVP_CallServer
+      display-name: Lab CVP Call Server
+      side: LAB
+      site: SIT
+      tier: CVP
       enabled: true
       probe: HTTP
-      url: https://10.10.90.194.example.local:8000/cvp/diag
+      url: http://10.10.90.194:8000/cvp/diag
+      timeout: 15s
+      expected-status-min: 200
+      expected-status-max: 499
     - name: CVP_ReportingServer
+      display-name: Lab CVP Reporting
+      side: LAB
+      site: SIT
+      tier: CVP
       enabled: true
       probe: JDBC_CVP_REPORTING
     - name: CTI_Server
+      display-name: Lab CTI Server
+      side: LAB
+      site: SIT
+      tier: PG
       enabled: true
       probe: TCP
-      host: 10.10.90.195
+      host: 10.10.90.192
       port: 42027
     - name: PG_CUCM
+      display-name: Lab CUCM PG
+      side: LAB
+      site: SIT
+      tier: PG
       enabled: true
-      probe: TCP
+      probe: HOST
       host: 10.10.90.192
       port: 42028
+      timeout: 5s
     - name: PG_CVP
+      display-name: Lab CVP PG
+      side: LAB
+      site: SIT
+      tier: PG
       enabled: true
-      probe: TCP
+      probe: HOST
       host: 10.10.90.192
       port: 42029
+      timeout: 5s
     - name: VoIP_Gateway
+      display-name: Lab Voice Gateway
+      side: SHARED
+      site: SIT
+      tier: VOICE
       enabled: true
       probe: TCP
       host: 10.10.141.60
       port: 5060
     - name: Finesse
+      display-name: Lab Finesse
+      side: LAB
+      site: SIT
+      tier: DESKTOP
       enabled: true
       probe: HTTP
-      url: https://10.10.90.195/desktop
+      url: https://vssitfin01.dev.mdi:8445/desktop
+      timeout: 15s
+      trust-all-certificates: true
+      expected-status-min: 200
+      expected-status-max: 499
     - name: MediaSense
-      enabled: true
+      display-name: MediaSense
+      side: SHARED
+      site: SIT
+      tier: RECORDING
+      enabled: false
       probe: HTTP
       url: https://mediasense.example.local
     - name: CUIC
+      display-name: Lab CUIC
+      side: LAB
+      site: SIT
+      tier: REPORTING
       enabled: true
       probe: HTTP
       url: https://vssitcuic01.dev.mdi/cuic
+      timeout: 15s
+      trust-all-certificates: true
+      expected-status-min: 200
+      expected-status-max: 499

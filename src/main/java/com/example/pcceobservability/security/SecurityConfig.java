@@ -4,6 +4,7 @@ import static org.springframework.security.config.Customizer.withDefaults;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -17,6 +18,16 @@ import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 @EnableWebSecurity
 @EnableMethodSecurity
 public class SecurityConfig {
+
+    private final LdapAuthenticationProvider ldapAuthenticationProvider;
+    private final ConfiguredUserDetailsService configuredUserDetailsService;
+
+    public SecurityConfig(
+            LdapAuthenticationProvider ldapAuthenticationProvider,
+            ConfiguredUserDetailsService configuredUserDetailsService) {
+        this.ldapAuthenticationProvider = ldapAuthenticationProvider;
+        this.configuredUserDetailsService = configuredUserDetailsService;
+    }
 
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -41,6 +52,8 @@ public class SecurityConfig {
                         .invalidateHttpSession(true)
                         .clearAuthentication(true)
                         .deleteCookies("JSESSIONID"))
+                .authenticationProvider(daoAuthenticationProvider(passwordEncoder()))
+                .authenticationProvider(ldapAuthenticationProvider)
                 .headers(headers -> headers.frameOptions(frameOptions -> frameOptions.sameOrigin()))
                 .httpBasic(withDefaults());
         return http.build();
@@ -49,5 +62,13 @@ public class SecurityConfig {
     @Bean
     PasswordEncoder passwordEncoder() {
         return PasswordEncoderFactories.createDelegatingPasswordEncoder();
+    }
+
+    @Bean
+    DaoAuthenticationProvider daoAuthenticationProvider(PasswordEncoder passwordEncoder) {
+        DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
+        provider.setUserDetailsService(configuredUserDetailsService);
+        provider.setPasswordEncoder(passwordEncoder);
+        return provider;
     }
 }
