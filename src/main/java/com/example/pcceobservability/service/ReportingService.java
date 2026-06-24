@@ -103,7 +103,7 @@ public class ReportingService {
         validateDateRange(from, to);
         String normalizedAgentId = blankToNull(accessControlService.scopedAgentId(agentId));
         String normalizedTeam = blankToNull(accessControlService.scopedTeam(team));
-        List<AgentStat> roster = timedQuery("hds.agentStats.roster", () -> hdsJdbcTemplate.query(
+        List<AgentStat> roster = timedQuery("aw.agentStats.roster", () -> awJdbcTemplate.query(
                 pcceProperties.getQueries().getAgentStats(),
                 this::mapAgentStat,
                 start(from),

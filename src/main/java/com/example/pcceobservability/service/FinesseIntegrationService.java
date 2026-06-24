@@ -20,6 +20,8 @@ import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -27,15 +29,20 @@ import org.springframework.util.StringUtils;
 public class FinesseIntegrationService {
 
     private final PcceProperties pcceProperties;
+    private final JdbcTemplate awJdbcTemplate;
 
-    public FinesseIntegrationService(PcceProperties pcceProperties) {
+    public FinesseIntegrationService(
+            PcceProperties pcceProperties,
+            @Qualifier("awJdbcTemplate") JdbcTemplate awJdbcTemplate) {
         this.pcceProperties = pcceProperties;
+        this.awJdbcTemplate = awJdbcTemplate;
     }
 
     public List<IntegrationCapability> capabilities() {
         return List.of(
                 new IntegrationCapability("Finesse", "SystemInfo", "GET /finesse/api/SystemInfo", status(), "Validate Finesse desktop API and service health"),
-                new IntegrationCapability("Finesse", "Live agent state", "GET /finesse/api/User/{id}", status(), "Configure pcce.finesse.user-ids or agent IDs in app users"),
+                new IntegrationCapability("Finesse", "User directory", "GET /finesse/api/Users", status(), "Discover Finesse-visible users from Finesse and AW login IDs"),
+                new IntegrationCapability("Finesse", "Live agent state", "GET /finesse/api/User/{id}", status(), "Use AW LoginName/Finesse login ID, not only numeric SkillTargetID"),
                 new IntegrationCapability("Finesse", "Agent dialogs", "GET /finesse/api/User/{id}/Dialogs", status(), "Track active calls, held calls, participants, and dialog lifecycle"),
                 new IntegrationCapability("Finesse", "Teams", "GET /finesse/api/Team/{id}", status(), "Configure pcce.finesse.team-ids for supervisor/team monitoring"),
                 new IntegrationCapability("Finesse", "Queues", "GET /finesse/api/Queue/{id}", status(), "Use when exposed by your deployment; otherwise keep queue KPIs from AW/HDS/CUIC"));
@@ -46,25 +53,38 @@ public class FinesseIntegrationService {
     }
 
     public List<FinesseEndpointResult> agents() {
-        return configuredUserIds().stream()
+        List<FinesseEndpointResult> results = new ArrayList<>();
+        results.add(request("Users Directory", "/finesse/api/Users"));
+        results.addAll(configuredUserIds().stream()
+                .limit(25)
                 .map(userId -> request("User " + userId, "/finesse/api/User/" + encodePath(userId)))
-                .toList();
+                .toList());
+        return results;
     }
 
     public List<FinesseEndpointResult> dialogs() {
         return configuredUserIds().stream()
+                .limit(50)
                 .map(userId -> request("Dialogs " + userId, "/finesse/api/User/" + encodePath(userId) + "/Dialogs"))
                 .toList();
     }
 
     public List<FinesseEndpointResult> teams() {
-        return filtered(pcceProperties.getFinesse().getTeamIds()).stream()
+        List<String> teamIds = filtered(pcceProperties.getFinesse().getTeamIds());
+        if (teamIds.isEmpty()) {
+            return List.of(request("Teams Directory", "/finesse/api/Teams"));
+        }
+        return teamIds.stream()
                 .map(teamId -> request("Team " + teamId, "/finesse/api/Team/" + encodePath(teamId)))
                 .toList();
     }
 
     public List<FinesseEndpointResult> queues() {
-        return filtered(pcceProperties.getFinesse().getQueueIds()).stream()
+        List<String> queueIds = filtered(pcceProperties.getFinesse().getQueueIds());
+        if (queueIds.isEmpty()) {
+            return List.of(request("Queues Directory", "/finesse/api/Queues"));
+        }
+        return queueIds.stream()
                 .map(queueId -> request("Queue " + queueId, "/finesse/api/Queue/" + encodePath(queueId)))
                 .toList();
     }
@@ -154,12 +174,31 @@ public class FinesseIntegrationService {
 
     private List<String> configuredUserIds() {
         Set<String> userIds = new LinkedHashSet<>(filtered(pcceProperties.getFinesse().getUserIds()));
+        userIds.addAll(awFinesseUserIds());
         for (PcceProperties.AppUser user : pcceProperties.getSecurity().getUsers()) {
             if (StringUtils.hasText(user.getAgentId())) {
                 userIds.add(user.getAgentId().trim());
             }
         }
         return new ArrayList<>(userIds);
+    }
+
+    private List<String> awFinesseUserIds() {
+        try {
+            return awJdbcTemplate.query("""
+                    SELECT TOP 500
+                        COALESCE(p.LoginName, CAST(a.SkillTargetID AS varchar(50))) AS user_id
+                    FROM t_Agent a
+                    LEFT JOIN t_Person p ON p.PersonID = a.PersonID
+                    WHERE COALESCE(p.LoginName, CAST(a.SkillTargetID AS varchar(50))) IS NOT NULL
+                    ORDER BY user_id
+                    """, (rs, rowNum) -> rs.getString("user_id")).stream()
+                    .filter(StringUtils::hasText)
+                    .map(String::trim)
+                    .toList();
+        } catch (Exception ex) {
+            return List.of();
+        }
     }
 
     private List<String> filtered(List<String> values) {

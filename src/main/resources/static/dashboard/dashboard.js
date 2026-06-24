@@ -525,7 +525,11 @@ function renderAgents() {
 function renderFinesse() {
     const agentGrid = qs("#finesseAgentGrid");
     if (!agentGrid) return;
-    qs("#finesseAgentCount").textContent = `${state.finesseAgents.length} configured users`;
+    const directory = state.finesseAgents.find(item => String(pick(item, "name") || "").toLowerCase().includes("users directory"));
+    const directoryCount = directory ? countXmlTags(pick(directory, "body"), "User") : null;
+    qs("#finesseAgentCount").textContent = directoryCount === null
+        ? `${state.finesseAgents.length} Finesse probes`
+        : `${directoryCount} Finesse users discovered`;
     qs("#finesseDialogCount").textContent = `${state.finesseDialogs.length} dialog probes`;
     agentGrid.innerHTML = state.finesseAgents.map(endpointCard).join("") ||
         `<article class="component-card"><h3>Finesse Agents</h3><span class="badge warn">not configured</span><p>Set FINESSE_ENABLED=true and FINESSE_USER_IDS or app user agent IDs.</p></article>`;
@@ -739,8 +743,28 @@ function endpointCard(item) {
         <span class="badge ${badgeClass}">${statusCode ? `HTTP ${statusCode}` : disabled ? "disabled" : "error"}</span>
         <p>${escapeHtml(pick(item, "method") || "GET")} - ${escapeHtml(pick(item, "target") || "")}</p>
         <p>${fmt(pick(item, "latency_ms", "latencyMs"))} ms</p>
-        <pre class="body-preview">${escapeHtml(snippet(pick(item, "body"), 420))}</pre>
+        <pre class="body-preview">${escapeHtml(finesseBodyPreview(item))}</pre>
     </article>`;
+}
+
+function finesseBodyPreview(item) {
+    const name = String(pick(item, "name") || "");
+    const body = String(pick(item, "body") || "");
+    if (name.toLowerCase().includes("users directory")) {
+        const count = countXmlTags(body, "User");
+        return count === null ? snippet(body, 420) : `${count} users returned by /finesse/api/Users`;
+    }
+    if (body.includes("custom Cisco error page") || body.includes("<title> Cisco System")) {
+        return "Cisco error page returned. For /User/{id}, verify the value is the Finesse login ID from AW LoginName, not only SkillTargetID.";
+    }
+    return snippet(body, 420);
+}
+
+function countXmlTags(body, tagName) {
+    const text = String(body || "");
+    if (!text) return null;
+    const matches = text.match(new RegExp(`<${tagName}(\\s|>)`, "g"));
+    return matches ? matches.length : null;
 }
 
 function renderSmtp() {
