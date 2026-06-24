@@ -4,11 +4,15 @@ import com.example.pcceobservability.model.ProjectTaskDto;
 import com.example.pcceobservability.model.ProjectTaskUpdateRequest;
 import com.example.pcceobservability.service.ProjectPlanService;
 import java.util.List;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -52,6 +56,32 @@ public class ProjectPlanController {
             @PathVariable int index,
             @RequestBody ProjectTaskUpdateRequest request) {
         return projectPlanService.update(index, request);
+    }
+
+    @PutMapping("/api/v1/project/tasks/id/{id}")
+    @ResponseBody
+    @PreAuthorize("isAuthenticated()")
+    public ProjectTaskDto updateTaskById(
+            @PathVariable long id,
+            @RequestBody ProjectTaskUpdateRequest request) {
+        return projectPlanService.updateById(id, request);
+    }
+
+    @DeleteMapping("/api/v1/project/tasks/id/{id}")
+    @ResponseBody
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PreAuthorize("isAuthenticated()")
+    public void deleteTaskById(@PathVariable long id) {
+        projectPlanService.deleteById(id);
+    }
+
+    @GetMapping("/api/v1/project/tasks/export.csv")
+    @ResponseBody
+    public ResponseEntity<String> exportCsv() {
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=pcce-project-plan.csv")
+                .contentType(MediaType.parseMediaType("text/csv"))
+                .body(projectPlanService.csv());
     }
 
     private void populate(Model model) {

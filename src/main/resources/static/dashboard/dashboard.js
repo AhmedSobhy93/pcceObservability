@@ -124,6 +124,8 @@ document.addEventListener("DOMContentLoaded", () => {
     qs("#loadInventoryBtn")?.addEventListener("click", loadMachineInventory);
     qs("#planAddTaskBtn")?.addEventListener("click", addPlanTask);
     qs("#planResetBtn")?.addEventListener("click", resetPlanTasks);
+    qs("#planExportCsvBtn")?.addEventListener("click", () => window.open("/api/v1/project/tasks/export.csv", "_blank"));
+    qs("#planCopyShareBtn")?.addEventListener("click", copyProjectShareLink);
     qs("#adminUsername")?.addEventListener("change", fillAdminUserForm);
     qs("#adminRoleSelect")?.addEventListener("change", renderPermissionEditor);
     qs("#taskListMode")?.addEventListener("click", () => setPlanView("tasks"));
@@ -1752,7 +1754,7 @@ function renderPlanTaskGroups(tasks) {
                 <i><b style="width:${pctDone}%"></b></i>
                 <em>${pctDone}%</em>
             </button>
-            <div class="table-wrap plan-group-body"><table><thead><tr><th>Task</th><th>Priority</th><th>Status</th><th>Resource</th><th>Timeline</th><th>Progress</th></tr></thead><tbody>
+            <div class="table-wrap plan-group-body"><table><thead><tr><th>Task</th><th>Priority</th><th>Status</th><th>Resource / Owner</th><th>Timeline</th><th>Progress / Controls</th></tr></thead><tbody>
                 ${topicTasks.map(planTaskRow).join("")}
             </tbody></table></div>
         </article>`;
@@ -1768,17 +1770,34 @@ function renderPlanTaskGroups(tasks) {
 function planTaskRow(task) {
     const criticalOpen = task.priority === "CRITICAL" && task.status !== "COMPLETED";
     const index = planTasks.indexOf(task);
+    const id = task.id || index;
     return `<tr class="${criticalOpen ? "critical-row" : ""}">
-        <td><strong>${escapeHtml(task.task)}</strong>${task.priorityNum ? `<span class="subline">Priority #${task.priorityNum}</span>` : ""}</td>
+        <td><strong>${escapeHtml(task.task)}</strong>${task.priorityNum ? `<span class="subline">Priority #${task.priorityNum}</span>` : ""}
+            <span class="subline">ID ${escapeHtml(id)}${task.milestone ? ` - ${escapeHtml(task.milestone)}` : ""}</span>
+            ${task.deliverable ? `<span class="subline">Deliverable: ${escapeHtml(task.deliverable)}</span>` : ""}
+            ${task.dependsOn ? `<span class="subline">Depends on: ${escapeHtml(task.dependsOn)}</span>` : ""}
+            ${task.blockedBy ? `<span class="subline danger-text">Blocked by: ${escapeHtml(task.blockedBy)}</span>` : ""}
+        </td>
         <td>${badge(task.priority, priorityClass(task.priority))}</td>
         <td><select class="inline-input" data-plan-field="status" data-plan-index="${index}">${["COMPLETED", "IN_PROGRESS", "ON_HOLD", "PLANNED"].map(status => `<option ${task.status === status ? "selected" : ""}>${status}</option>`).join("")}</select></td>
-        <td>${escapeHtml(task.resource)}</td>
-        <td>${escapeHtml(task.start || "--")} / ${escapeHtml(task.finish || "--")}<span class="subline">${task.duration ?? "--"} days</span></td>
+        <td>
+            <input class="inline-input" data-plan-field="resource" data-plan-index="${index}" value="${escapeHtml(task.resource || "")}">
+            <input class="inline-input" data-plan-field="owner" data-plan-index="${index}" value="${escapeHtml(task.owner || "")}" placeholder="Owner">
+            <input class="inline-input" data-plan-field="team" data-plan-index="${index}" value="${escapeHtml(task.team || "")}" placeholder="Team">
+            ${task.shareWith ? `<span class="subline">Share: ${escapeHtml(task.shareWith)}</span>` : ""}
+        </td>
+        <td>
+            <input class="inline-input" data-plan-field="start" data-plan-index="${index}" value="${escapeHtml(task.start || "")}" placeholder="Start">
+            <input class="inline-input" data-plan-field="finish" data-plan-index="${index}" value="${escapeHtml(task.finish || "")}" placeholder="Finish">
+            <input class="inline-input" data-plan-field="duration" data-plan-index="${index}" type="number" min="0" value="${escapeHtml(task.duration ?? "")}" placeholder="Days">
+        </td>
         <td>
             <input class="inline-input plan-pct-input" type="number" min="0" max="100" data-plan-field="pct" data-plan-index="${index}" value="${escapeHtml(task.pct)}">
             ${inlineProgress(task.pct)}
+            <select class="inline-input" data-plan-field="risk" data-plan-index="${index}">${["LOW", "MEDIUM", "HIGH", "CRITICAL"].map(risk => `<option ${String(task.risk || "MEDIUM") === risk ? "selected" : ""}>${risk}</option>`).join("")}</select>
             <input class="inline-input" data-plan-field="comments" data-plan-index="${index}" value="${escapeHtml(task.comments)}">
             <button class="small-btn" data-plan-save="${index}">Save</button>
+            <button class="small-btn danger-btn" data-plan-delete="${index}">Delete</button>
         </td>
     </tr>`;
 }
@@ -1814,6 +1833,9 @@ function bindPlanEditors() {
     document.querySelectorAll("[data-plan-save]").forEach(button => {
         button.addEventListener("click", () => savePlanTask(Number(button.dataset.planSave)));
     });
+    document.querySelectorAll("[data-plan-delete]").forEach(button => {
+        button.addEventListener("click", () => deletePlanTask(Number(button.dataset.planDelete)));
+    });
 }
 
 async function savePlanTask(index) {
@@ -1821,7 +1843,7 @@ async function savePlanTask(index) {
     if (!task) return;
     document.querySelectorAll(`[data-plan-index="${index}"]`).forEach(input => {
         const field = input.dataset.planField;
-        task[field] = field === "pct" ? Math.max(0, Math.min(100, Number(input.value || 0))) : input.value;
+        task[field] = ["pct", "duration"].includes(field) ? Number(input.value || 0) : input.value;
     });
     await persistPlanTask(index, task, "PUT");
 }
@@ -1836,14 +1858,24 @@ async function addPlanTask() {
         priorityNum: null,
         status: qs("#planEditStatus").value,
         resource: qs("#planEditResource").value.trim() || "Unassigned",
-        start: null,
-        finish: null,
-        duration: null,
+        owner: qs("#planEditOwner").value.trim(),
+        team: qs("#planEditTeam").value.trim(),
+        milestone: qs("#planEditMilestone").value.trim(),
+        start: qs("#planEditStart").value.trim(),
+        finish: qs("#planEditFinish").value.trim(),
+        duration: Number(qs("#planEditDuration").value || 0),
         pct: Math.max(0, Math.min(100, Number(qs("#planEditPct").value || 0))),
+        dependsOn: qs("#planEditDependsOn").value.trim(),
+        blockedBy: qs("#planEditBlockedBy").value.trim(),
+        risk: qs("#planEditRisk").value,
+        deliverable: qs("#planEditDeliverable").value.trim(),
+        shareWith: qs("#planEditShareWith").value.trim(),
+        externalRef: qs("#planEditExternalRef").value.trim(),
         comments: qs("#planEditComments").value.trim()
     }, "POST");
-    qs("#planEditTask").value = "";
-    qs("#planEditComments").value = "";
+    ["#planEditTask", "#planEditOwner", "#planEditTeam", "#planEditMilestone", "#planEditStart", "#planEditFinish",
+        "#planEditDuration", "#planEditDependsOn", "#planEditBlockedBy", "#planEditDeliverable", "#planEditShareWith",
+        "#planEditExternalRef", "#planEditComments"].forEach(selector => qs(selector).value = "");
 }
 
 async function resetPlanTasks() {
@@ -1858,7 +1890,9 @@ async function resetPlanTasks() {
 }
 
 async function persistPlanTask(index, task, method) {
-    const target = method === "POST" ? "/api/v1/project/tasks" : `/api/v1/project/tasks/${index}`;
+    const target = method === "POST" ? "/api/v1/project/tasks"
+        : task.id ? `/api/v1/project/tasks/id/${encodeURIComponent(task.id)}`
+            : `/api/v1/project/tasks/${index}`;
     showPlanMessage("Saving project plan...");
     try {
         await api(target, { method, body: JSON.stringify(task) });
@@ -1872,6 +1906,41 @@ async function persistPlanTask(index, task, method) {
         showPlanMessage("Project plan saved in app database.");
     } catch (error) {
         showPlanMessage(error.message);
+    }
+}
+
+async function deletePlanTask(index) {
+    const task = planTasks[index];
+    if (!task || !task.id) {
+        showPlanMessage("Task must be saved before it can be deleted.");
+        return;
+    }
+    if (!confirm(`Delete task: ${task.task}?`)) {
+        return;
+    }
+    showPlanMessage("Deleting project task...");
+    try {
+        await api(`/api/v1/project/tasks/id/${encodeURIComponent(task.id)}`, { method: "DELETE" });
+        const error = await safeLoad("projectTasks", "/api/v1/project/tasks", [], { timeoutMs: 8000 });
+        if (error) {
+            showPlanMessage(error);
+            return;
+        }
+        planTasks = state.projectTasks || [];
+        renderPlan();
+        showPlanMessage("Project task deleted.");
+    } catch (error) {
+        showPlanMessage(error.message);
+    }
+}
+
+async function copyProjectShareLink() {
+    const link = `${location.origin}/project`;
+    try {
+        await navigator.clipboard.writeText(link);
+        showPlanMessage(`Share link copied: ${link}`);
+    } catch {
+        showPlanMessage(`Share link: ${link}`);
     }
 }
 

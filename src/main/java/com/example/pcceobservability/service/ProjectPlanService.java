@@ -39,9 +39,17 @@ public class ProjectPlanService {
     }
 
     public ProjectTaskDto add(ProjectTaskUpdateRequest request) {
-        ProjectTaskDto created = toTask(request, new ProjectTaskDto("PCCE", "New task", "MEDIUM", null,
-                "PLANNED", "Unassigned", null, null, null, 0, null));
+        ProjectTaskDto created = toTask(request, new ProjectTaskDto(null, "PCCE", "New task", "MEDIUM", null,
+                "PLANNED", "Unassigned", null, null, null, null, null, null, 0,
+                null, null, "MEDIUM", null, null, null, null));
         ProjectTaskEntity entity = toEntity(created, nextSortOrder());
+        return toDto(projectTaskRepository.save(entity));
+    }
+
+    public ProjectTaskDto updateById(long id, ProjectTaskUpdateRequest request) {
+        ProjectTaskEntity entity = projectTaskRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Unknown task id: " + id));
+        apply(entity, toTask(request, toDto(entity)));
         return toDto(projectTaskRepository.save(entity));
     }
 
@@ -53,6 +61,41 @@ public class ProjectPlanService {
         ProjectTaskEntity entity = entities.get(index);
         apply(entity, toTask(request, toDto(entity)));
         return toDto(projectTaskRepository.save(entity));
+    }
+
+    public void deleteById(long id) {
+        if (!projectTaskRepository.existsById(id)) {
+            throw new IllegalArgumentException("Unknown task id: " + id);
+        }
+        projectTaskRepository.deleteById(id);
+    }
+
+    public String csv() {
+        StringBuilder builder = new StringBuilder("id,topic,task,priority,priority_num,status,resource,owner,team,milestone,start,finish,duration,pct,depends_on,blocked_by,risk,deliverable,share_with,external_ref,comments\n");
+        for (ProjectTaskDto task : tasks()) {
+            builder.append(csv(task.id())).append(',')
+                    .append(csv(task.topic())).append(',')
+                    .append(csv(task.task())).append(',')
+                    .append(csv(task.priority())).append(',')
+                    .append(csv(task.priorityNum())).append(',')
+                    .append(csv(task.status())).append(',')
+                    .append(csv(task.resource())).append(',')
+                    .append(csv(task.owner())).append(',')
+                    .append(csv(task.team())).append(',')
+                    .append(csv(task.milestone())).append(',')
+                    .append(csv(task.start())).append(',')
+                    .append(csv(task.finish())).append(',')
+                    .append(csv(task.duration())).append(',')
+                    .append(csv(task.pct())).append(',')
+                    .append(csv(task.dependsOn())).append(',')
+                    .append(csv(task.blockedBy())).append(',')
+                    .append(csv(task.risk())).append(',')
+                    .append(csv(task.deliverable())).append(',')
+                    .append(csv(task.shareWith())).append(',')
+                    .append(csv(task.externalRef())).append(',')
+                    .append(csv(task.comments())).append('\n');
+        }
+        return builder.toString();
     }
 
     public Map<String, TopicStat> topicStats() {
@@ -133,16 +176,26 @@ public class ProjectPlanService {
             return fallback;
         }
         return new ProjectTaskDto(
+                fallback.id(),
                 textOr(request.topic(), fallback.topic()),
                 textOr(request.task(), fallback.task()),
                 textOr(request.priority(), fallback.priority()),
                 request.priorityNum() == null ? fallback.priorityNum() : request.priorityNum(),
                 textOr(request.status(), fallback.status()),
                 textOr(request.resource(), fallback.resource()),
+                valueOr(request.owner(), fallback.owner()),
+                valueOr(request.team(), fallback.team()),
+                valueOr(request.milestone(), fallback.milestone()),
                 valueOr(request.start(), fallback.start()),
                 valueOr(request.finish(), fallback.finish()),
                 request.duration() == null ? fallback.duration() : request.duration(),
                 clamp(request.pct() == null ? fallback.pct() : request.pct()),
+                valueOr(request.dependsOn(), fallback.dependsOn()),
+                valueOr(request.blockedBy(), fallback.blockedBy()),
+                textOr(request.risk(), fallback.risk() == null ? "MEDIUM" : fallback.risk()),
+                valueOr(request.deliverable(), fallback.deliverable()),
+                valueOr(request.shareWith(), fallback.shareWith()),
+                valueOr(request.externalRef(), fallback.externalRef()),
                 valueOr(request.comments(), fallback.comments()));
     }
 
@@ -184,16 +237,26 @@ public class ProjectPlanService {
 
     private ProjectTaskDto toDto(ProjectTaskEntity entity) {
         return new ProjectTaskDto(
+                entity.getId(),
                 entity.getTopic(),
                 entity.getTask(),
                 entity.getPriority(),
                 entity.getPriorityNum(),
                 entity.getStatus(),
                 entity.getResource(),
+                entity.getOwner(),
+                entity.getTeam(),
+                entity.getMilestone(),
                 entity.getStart(),
                 entity.getFinish(),
                 entity.getDuration(),
                 entity.getPct(),
+                entity.getDependsOn(),
+                entity.getBlockedBy(),
+                entity.getRisk(),
+                entity.getDeliverable(),
+                entity.getShareWith(),
+                entity.getExternalRef(),
                 entity.getComments());
     }
 
@@ -211,12 +274,26 @@ public class ProjectPlanService {
         entity.setPriorityNum(task.priorityNum());
         entity.setStatus(task.status());
         entity.setResource(task.resource());
+        entity.setOwner(task.owner());
+        entity.setTeam(task.team());
+        entity.setMilestone(task.milestone());
         entity.setStart(task.start());
         entity.setFinish(task.finish());
         entity.setDuration(task.duration());
         entity.setPct(clamp(task.pct()));
+        entity.setDependsOn(task.dependsOn());
+        entity.setBlockedBy(task.blockedBy());
+        entity.setRisk(task.risk());
+        entity.setDeliverable(task.deliverable());
+        entity.setShareWith(task.shareWith());
+        entity.setExternalRef(task.externalRef());
         entity.setComments(task.comments());
         entity.setUpdatedAt(java.time.LocalDateTime.now());
+    }
+
+    private String csv(Object value) {
+        String text = value == null ? "" : String.valueOf(value);
+        return "\"" + text.replace("\"", "\"\"") + "\"";
     }
 
     private static List<ProjectTaskDto> defaultTasks() {

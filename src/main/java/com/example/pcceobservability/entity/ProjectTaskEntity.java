@@ -37,6 +37,15 @@ public class ProjectTaskEntity {
     @Column(nullable = false, length = 300)
     private String resource;
 
+    @Column(length = 160)
+    private String owner;
+
+    @Column(length = 160)
+    private String team;
+
+    @Column(length = 200)
+    private String milestone;
+
     @Column(name = "start_text", length = 40)
     private String start;
 
@@ -47,6 +56,24 @@ public class ProjectTaskEntity {
 
     @Column(nullable = false)
     private int pct;
+
+    @Column(name = "depends_on", length = 700)
+    private String dependsOn;
+
+    @Column(name = "blocked_by", length = 700)
+    private String blockedBy;
+
+    @Column(length = 40)
+    private String risk;
+
+    @Column(length = 700)
+    private String deliverable;
+
+    @Column(name = "share_with", length = 500)
+    private String shareWith;
+
+    @Column(name = "external_ref", length = 500)
+    private String externalRef;
 
     @Column(length = 1000)
     private String comments;
@@ -121,6 +148,30 @@ public class ProjectTaskEntity {
         this.resource = resource;
     }
 
+    public String getOwner() {
+        return owner;
+    }
+
+    public void setOwner(String owner) {
+        this.owner = owner;
+    }
+
+    public String getTeam() {
+        return team;
+    }
+
+    public void setTeam(String team) {
+        this.team = team;
+    }
+
+    public String getMilestone() {
+        return milestone;
+    }
+
+    public void setMilestone(String milestone) {
+        this.milestone = milestone;
+    }
+
     public String getStart() {
         return start;
     }
@@ -151,6 +202,54 @@ public class ProjectTaskEntity {
 
     public void setPct(int pct) {
         this.pct = pct;
+    }
+
+    public String getDependsOn() {
+        return dependsOn;
+    }
+
+    public void setDependsOn(String dependsOn) {
+        this.dependsOn = dependsOn;
+    }
+
+    public String getBlockedBy() {
+        return blockedBy;
+    }
+
+    public void setBlockedBy(String blockedBy) {
+        this.blockedBy = blockedBy;
+    }
+
+    public String getRisk() {
+        return risk;
+    }
+
+    public void setRisk(String risk) {
+        this.risk = risk;
+    }
+
+    public String getDeliverable() {
+        return deliverable;
+    }
+
+    public void setDeliverable(String deliverable) {
+        this.deliverable = deliverable;
+    }
+
+    public String getShareWith() {
+        return shareWith;
+    }
+
+    public void setShareWith(String shareWith) {
+        this.shareWith = shareWith;
+    }
+
+    public String getExternalRef() {
+        return externalRef;
+    }
+
+    public void setExternalRef(String externalRef) {
+        this.externalRef = externalRef;
     }
 
     public String getComments() {

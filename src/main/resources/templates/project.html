@@ -226,6 +226,8 @@
             <p class="subtitle">Stakeholder view for PCCE, Eleveo, Dtech, Cisco Portal, Survey, Chat, and One Content delivery.</p>
         </div>
         <div class="top-actions">
+            <a class="btn" href="/api/v1/project/tasks/export.csv">Export CSV</a>
+            <button class="btn" onclick="navigator.clipboard.writeText(location.href)">Copy Share Link</button>
             <a class="btn" href="/dashboard/index.html">Operations Dashboard</a>
             <button class="btn primary" onclick="location.reload()">Refresh</button>
         </div>
@@ -291,10 +293,19 @@
             <label>Priority<select name="priority"><option>CRITICAL</option><option>HIGH</option><option selected>MEDIUM</option><option>LOW</option></select></label>
             <label>Status<select name="status"><option>PLANNED</option><option>IN_PROGRESS</option><option>ON_HOLD</option><option>COMPLETED</option></select></label>
             <label>Resource<input name="resource" value="Unassigned"></label>
+            <label>Owner<input name="owner" placeholder="Accountable owner"></label>
+            <label>Team<input name="team" placeholder="Delivery team"></label>
+            <label>Milestone<input name="milestone" placeholder="Phase / milestone"></label>
             <label>Start<input name="start" placeholder="1-Jul-26"></label>
             <label>Finish<input name="finish" placeholder="31-Jul-26"></label>
             <label>Duration<input name="duration" type="number" min="0"></label>
             <label>Progress<input name="pct" type="number" min="0" max="100" value="0"></label>
+            <label>Risk<select name="risk"><option>LOW</option><option selected>MEDIUM</option><option>HIGH</option><option>CRITICAL</option></select></label>
+            <label class="wide">Depends On<input name="dependsOn" placeholder="Task ID/name"></label>
+            <label class="wide">Blocked By<input name="blockedBy" placeholder="Dependency / approval / vendor"></label>
+            <label class="wide">Deliverable<input name="deliverable" placeholder="Output / acceptance criteria"></label>
+            <label class="wide">Share With<input name="shareWith" placeholder="Stakeholders / teams"></label>
+            <label class="wide">External Ref<input name="externalRef" placeholder="Jira, ServiceNow, document link"></label>
             <label class="wide">Comments<input name="comments" placeholder="Notes"></label>
             <button class="btn primary" type="submit">Add Task</button>
         </form>
@@ -318,7 +329,7 @@
                 <table>
                     <thead>
                     <tr>
-                        <th>Task</th><th>Priority</th><th>Status</th><th class="resource-col">Resource</th><th class="timeline-col">Timeline</th><th>Progress + Comments</th>
+                        <th>Task</th><th>Priority</th><th>Status</th><th class="resource-col">Resource / Owner</th><th class="timeline-col">Timeline</th><th>Progress + Comments</th>
                     </tr>
                     </thead>
                     <tbody>
@@ -333,15 +344,25 @@
                         <td>
                             <span class="task-title" th:text="${task.task}">Task</span>
                             <span class="sub" th:if="${task.priorityNum != null}" th:text="'Priority #' + ${task.priorityNum}">Priority #1</span>
+                            <span class="sub" th:if="${task.milestone != null && !task.milestone.isBlank()}" th:text="'Milestone: ' + ${task.milestone}">Milestone</span>
+                            <span class="sub" th:if="${task.dependsOn != null && !task.dependsOn.isBlank()}" th:text="'Depends: ' + ${task.dependsOn}">Depends</span>
+                            <span class="sub" th:if="${task.blockedBy != null && !task.blockedBy.isBlank()}" th:text="'Blocked: ' + ${task.blockedBy}">Blocked</span>
+                            <span class="sub" th:if="${task.deliverable != null && !task.deliverable.isBlank()}" th:text="'Deliverable: ' + ${task.deliverable}">Deliverable</span>
                         </td>
                         <td><span class="badge" th:classappend="' priority-' + ${#strings.toLowerCase(task.priority)}" th:text="${task.priority}">HIGH</span></td>
                         <td><span class="badge" th:classappend="${#strings.toLowerCase(#strings.replace(task.status, '_', '-'))}" th:text="${#strings.replace(task.status, '_', ' ')}">IN PROGRESS</span></td>
-                        <td class="resource-col" th:text="${task.resource}">Ahmed</td>
+                        <td class="resource-col">
+                            <span th:text="${task.resource}">Ahmed</span>
+                            <span class="sub" th:if="${task.owner != null && !task.owner.isBlank()}" th:text="'Owner: ' + ${task.owner}">Owner</span>
+                            <span class="sub" th:if="${task.team != null && !task.team.isBlank()}" th:text="'Team: ' + ${task.team}">Team</span>
+                            <span class="sub" th:if="${task.shareWith != null && !task.shareWith.isBlank()}" th:text="'Share: ' + ${task.shareWith}">Share</span>
+                        </td>
                         <td class="timeline-col"><span th:text="${(task.start == null ? '--' : task.start) + ' / ' + (task.finish == null ? '--' : task.finish)}">--</span><span class="sub" th:text="${(task.duration == null ? 0 : task.duration) + ' days'}">0 days</span></td>
                         <td>
                             <div class="row-edit">
                                 <select data-field="status"><option th:selected="${task.status == 'COMPLETED'}">COMPLETED</option><option th:selected="${task.status == 'IN_PROGRESS'}">IN_PROGRESS</option><option th:selected="${task.status == 'ON_HOLD'}">ON_HOLD</option><option th:selected="${task.status == 'PLANNED'}">PLANNED</option></select>
                                 <input data-field="pct" type="number" min="0" max="100" th:value="${task.pct}">
+                                <select data-field="risk"><option th:selected="${task.risk == 'LOW'}">LOW</option><option th:selected="${task.risk == null || task.risk == 'MEDIUM'}">MEDIUM</option><option th:selected="${task.risk == 'HIGH'}">HIGH</option><option th:selected="${task.risk == 'CRITICAL'}">CRITICAL</option></select>
                                 <div class="progress"><i th:style="'width:' + ${task.pct} + '%'"></i></div>
                                 <input data-field="comments" th:value="${task.comments}" placeholder="Comments">
                                 <button class="btn" type="button" onclick="saveRow(this)">Save</button>
