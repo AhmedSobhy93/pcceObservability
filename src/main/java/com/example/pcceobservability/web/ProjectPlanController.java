@@ -4,7 +4,9 @@ import com.example.pcceobservability.model.ProjectTaskDto;
 import com.example.pcceobservability.model.ProjectTemplateRequest;
 import com.example.pcceobservability.model.ProjectTaskUpdateRequest;
 import com.example.pcceobservability.service.ProjectPlanService;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -103,8 +105,35 @@ public class ProjectPlanController {
         model.addAttribute("inProgressCount", projectPlanService.inProgressCount());
         model.addAttribute("onHoldCount", projectPlanService.onHoldCount());
         model.addAttribute("criticalOpenCount", projectPlanService.criticalOpenCount());
-        model.addAttribute("resources", projectPlanService.resourceStats().stream()
-                .map(resource -> resource.name())
-                .toList());
+        model.addAttribute("topics", distinct(tasks.stream().map(ProjectTaskDto::topic).toList()));
+        model.addAttribute("resources", distinct(splitMulti(tasks.stream().map(ProjectTaskDto::resource).toList())));
+        model.addAttribute("owners", distinct(tasks.stream().map(ProjectTaskDto::owner).toList()));
+        model.addAttribute("teams", distinct(tasks.stream().map(ProjectTaskDto::team).toList()));
+        model.addAttribute("milestones", distinct(tasks.stream().map(ProjectTaskDto::milestone).toList()));
+    }
+
+    private List<String> distinct(List<String> values) {
+        Set<String> distinct = new LinkedHashSet<>();
+        for (String value : values) {
+            if (value != null && !value.isBlank()) {
+                distinct.add(value.trim());
+            }
+        }
+        return distinct.stream().toList();
+    }
+
+    private List<String> splitMulti(List<String> values) {
+        Set<String> split = new LinkedHashSet<>();
+        for (String value : values) {
+            if (value == null) {
+                continue;
+            }
+            for (String item : value.split(",|/|&")) {
+                if (!item.isBlank()) {
+                    split.add(item.trim());
+                }
+            }
+        }
+        return split.stream().toList();
     }
 }

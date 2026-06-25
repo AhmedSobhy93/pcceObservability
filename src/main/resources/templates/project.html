@@ -6,222 +6,139 @@
     <title>PCCE Program Project Plan</title>
     <style>
         :root {
-            --bg:#0e1420; --card:#141b29; --border:#1e2a3a; --primary:#2dd4bf;
-            --text:#e2e8f0; --muted:#64748b; --ok:#22c55e; --warn:#f59e0b;
-            --danger:#ef4444; --violet:#a78bfa; --orange:#fb923c; --slate:#94a3b8;
+            --bg:#0e1420; --card:#141b29; --card2:#111827; --border:#1e2a3a; --primary:#2dd4bf;
+            --text:#e2e8f0; --muted:#8aa3c4; --ok:#34d399; --warn:#fbbf24;
+            --danger:#f87171; --blue:#60a5fa; --violet:#a78bfa; --orange:#fb923c;
         }
         * { box-sizing: border-box; }
-        body {
-            margin: 0;
-            background: var(--bg);
-            color: var(--text);
-            font-family: Inter, Segoe UI, Roboto, Arial, sans-serif;
+        body { margin:0; background:var(--bg); color:var(--text); font-family:Inter, Segoe UI, Roboto, Arial, sans-serif; }
+        .page { max-width:1480px; margin:0 auto; padding:30px 30px 54px; }
+        .top { display:flex; align-items:flex-end; justify-content:space-between; gap:18px; margin-bottom:24px; }
+        h1 { margin:0; font-size:34px; letter-spacing:0; }
+        .subtitle { margin:8px 0 0; color:var(--muted); font-size:16px; }
+        .top-actions, .filters, .toggle, .inline-actions, .chips { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+        button, input, select { font:inherit; }
+        .btn, .icon-btn {
+            border:1px solid var(--border); background:#1b2534; color:var(--text); border-radius:12px;
+            min-height:40px; padding:9px 14px; cursor:pointer; text-decoration:none;
         }
-        .page { max-width: 1540px; margin: 0 auto; padding: 34px 26px 48px; }
-        .top {
-            display: flex;
-            align-items: flex-end;
-            justify-content: space-between;
-            gap: 18px;
-            margin-bottom: 26px;
-        }
-        h1 { margin: 0; font-size: 34px; letter-spacing: 0; }
-        .subtitle { margin: 8px 0 0; color: var(--muted); font-size: 16px; }
-        .top-actions { display: flex; gap: 10px; flex-wrap: wrap; }
-        button, select, input {
-            font: inherit;
-        }
-        .btn {
-            border: 1px solid var(--border);
-            background: #1b2534;
-            color: var(--text);
-            border-radius: 12px;
-            padding: 10px 14px;
-            cursor: pointer;
-        }
-        .btn:hover { border-color: var(--primary); color: var(--primary); }
-        .btn.primary { background: #123231; border-color: #1e5d58; color: #ccfbf1; }
-        .kpi-row {
-            display: grid;
-            grid-template-columns: repeat(5, minmax(160px, 1fr));
-            gap: 14px;
-            margin-bottom: 20px;
-        }
+        .icon-btn { width:40px; padding:0; display:grid; place-items:center; color:var(--muted); }
+        .btn:hover, .icon-btn:hover { border-color:var(--primary); color:var(--primary); }
+        .btn.primary { background:var(--primary); color:#062522; border-color:var(--primary); font-weight:800; }
+        .kpis { display:grid; grid-template-columns:repeat(5, minmax(150px, 1fr)); gap:14px; margin-bottom:18px; }
         .kpi, .topic-card, .panel, .resource-card {
-            background: var(--card);
-            border: 1px solid var(--border);
-            border-radius: 14px;
+            background:var(--card); border:1px solid var(--border); border-radius:16px;
         }
-        .kpi { padding: 18px; }
-        .kpi span { display: block; color: var(--muted); font-size: 13px; text-transform: uppercase; letter-spacing: .08em; }
-        .kpi strong { display: block; margin-top: 12px; font-size: 32px; }
-        .kpi.ok strong { color: var(--ok); }
-        .kpi.primary strong { color: var(--primary); }
-        .kpi.warn strong { color: var(--warn); }
-        .kpi.danger strong { color: var(--danger); }
-        .topic-row {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 12px;
-            margin-bottom: 20px;
+        .kpi { padding:16px 18px; }
+        .kpi span { display:block; color:var(--muted); font-size:12px; text-transform:uppercase; letter-spacing:.08em; }
+        .kpi strong { display:block; margin-top:10px; font-size:30px; }
+        .kpi.ok strong { color:var(--ok); } .kpi.active strong { color:var(--blue); }
+        .kpi.warn strong { color:var(--warn); } .kpi.danger strong { color:var(--danger); }
+        .topics { display:flex; gap:12px; overflow-x:auto; padding-bottom:6px; margin-bottom:18px; }
+        .topic-card { min-width:210px; padding:14px; text-align:left; color:var(--text); cursor:pointer; }
+        .topic-card.active { border-color:var(--primary); box-shadow:inset 0 0 0 1px rgba(45,212,191,.45); }
+        .topic-card strong { display:block; font-size:18px; }
+        .topic-card small { display:block; color:var(--muted); margin-top:7px; }
+        .bar { height:8px; border-radius:999px; background:#1b2432; overflow:hidden; }
+        .topic-card .bar { margin-top:12px; }
+        .bar i { display:block; height:100%; border-radius:inherit; background:var(--primary); }
+        .filters {
+            justify-content:space-between; margin-bottom:18px; padding:0;
         }
-        .topic-card {
-            min-width: 190px;
-            padding: 14px;
-            text-align: left;
-            color: var(--text);
-        }
-        .topic-card.active { border-color: var(--primary); box-shadow: inset 0 0 0 1px rgba(45,212,191,.35); }
-        .topic-card strong { display: block; font-size: 17px; }
-        .topic-card span, .topic-card em { display: block; margin-top: 7px; color: var(--muted); font-style: normal; font-size: 13px; }
-        .topic-card .critical { color: var(--danger); }
-        .progress { height: 5px; background: var(--border); border-radius: 999px; overflow: hidden; }
-        .topic-card .progress { margin-top: 12px; }
-        .progress i { display: block; height: 100%; background: var(--primary); border-radius: inherit; }
-        .filter-bar {
-            display: flex;
-            align-items: end;
-            gap: 12px;
-            flex-wrap: wrap;
-            margin-bottom: 18px;
-            padding: 14px;
-            background: #101827;
-            border: 1px solid var(--border);
-            border-radius: 14px;
-        }
-        .toggle { display: flex; padding: 4px; background: #0b1220; border: 1px solid var(--border); border-radius: 12px; }
-        .toggle button { border: 0; background: transparent; color: var(--muted); padding: 8px 12px; border-radius: 9px; cursor: pointer; }
-        .toggle button.active { background: var(--primary); color: #042f2e; }
-        label { display: grid; gap: 5px; color: var(--muted); font-size: 12px; }
+        .toggle { padding:2px; border:1px solid var(--border); background:#0b1220; border-radius:16px; overflow:hidden; }
+        .toggle button { border:0; background:transparent; color:var(--muted); padding:10px 20px; cursor:pointer; }
+        .toggle button.active { background:var(--primary); color:#062522; }
         select, input {
-            height: 39px;
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            color: var(--text);
-            background: #111827;
-            padding: 0 10px;
+            height:44px; border:1px solid var(--border); background:#1b2330; color:var(--text);
+            border-radius:14px; padding:0 14px; min-width:150px;
         }
-        .count { margin-left: auto; color: var(--muted); font-weight: 700; }
-        .edit-panel { margin-bottom: 18px; padding: 16px; }
-        .edit-grid {
-            display: grid;
-            grid-template-columns: repeat(6, minmax(130px, 1fr));
-            gap: 10px;
-        }
-        .wide { grid-column: span 2; }
-        .panel { margin-bottom: 14px; overflow: hidden; }
+        input::placeholder { color:#627895; }
+        .count { color:var(--muted); font-weight:800; white-space:nowrap; }
+        .add-panel { padding:16px; margin-bottom:18px; display:none; }
+        .add-panel.open { display:block; }
+        .add-grid { display:grid; grid-template-columns:repeat(6, minmax(130px, 1fr)); gap:10px; }
+        .span2 { grid-column:span 2; } .span3 { grid-column:span 3; }
+        label { color:var(--muted); font-size:12px; display:grid; gap:6px; }
+        .plan-group { margin-bottom:16px; overflow:hidden; }
         .group-head {
-            width: 100%;
-            border: 0;
-            background: transparent;
-            color: var(--text);
-            display: grid;
-            grid-template-columns: 1.4fr auto auto 160px 44px;
-            gap: 14px;
-            align-items: center;
-            padding: 15px 18px;
-            cursor: pointer;
+            display:grid; grid-template-columns:1fr auto auto 150px 70px; gap:18px; align-items:center;
+            width:100%; padding:18px 30px; border:0; background:transparent; color:var(--text); cursor:pointer;
         }
-        .chevron { display: inline-block; color: var(--primary); transition: transform .15s ease; }
-        .panel.collapsed .chevron { transform: rotate(-90deg); }
-        .pills { display: flex; gap: 6px; flex-wrap: wrap; }
-        .pill, .badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            border-radius: 999px;
-            padding: 4px 9px;
-            font-size: 12px;
-            white-space: nowrap;
+        .group-title { display:flex; align-items:center; gap:14px; font-size:23px; font-weight:900; }
+        .chev { color:var(--muted); transition:transform .16s ease; }
+        .plan-group.collapsed .chev { transform:rotate(-90deg); }
+        .pill {
+            display:inline-flex; align-items:center; justify-content:center; min-width:34px; height:28px;
+            padding:0 9px; border-radius:8px; font-size:13px; font-weight:900;
         }
-        .badge::before {
-            content: "";
-            width: 7px;
-            height: 7px;
-            border-radius: 50%;
-            background: currentColor;
+        .pill.done { color:var(--ok); background:rgba(52,211,153,.14); }
+        .pill.active { color:var(--blue); background:rgba(96,165,250,.14); }
+        .pill.hold { color:var(--warn); background:rgba(251,191,36,.14); }
+        .pct { color:var(--primary); font-weight:900; }
+        .table-wrap { overflow:auto; }
+        table { width:100%; min-width:1220px; border-collapse:collapse; }
+        th, td { border-top:1px solid var(--border); text-align:left; vertical-align:middle; padding:14px 30px; }
+        th { color:var(--muted); font-size:12px; text-transform:uppercase; letter-spacing:.08em; font-weight:700; }
+        tbody tr:hover td { background:rgba(45,212,191,.035); }
+        .critical-row td:first-child { box-shadow:inset 3px 0 0 var(--danger); }
+        .task-name { font-size:18px; font-weight:900; color:#f8fafc; }
+        .sub { display:block; margin-top:6px; color:var(--muted); font-size:13px; line-height:1.35; }
+        .badge {
+            display:inline-flex; align-items:center; gap:8px; border-radius:9px; padding:7px 12px; font-size:13px; font-weight:900;
+            border:0; min-width:110px;
         }
-        .completed, .priority-low { color: var(--ok); background: rgba(34,197,94,.12); }
-        .in-progress { color: var(--primary); background: rgba(45,212,191,.12); }
-        .on-hold, .priority-medium { color: var(--warn); background: rgba(245,158,11,.13); }
-        .planned { color: var(--violet); background: rgba(167,139,250,.13); }
-        .priority-critical { color: var(--danger); background: rgba(239,68,68,.13); }
-        .priority-high { color: var(--orange); background: rgba(251,146,60,.13); }
-        .priority-low { color: var(--slate); background: rgba(148,163,184,.14); }
-        table { width: 100%; border-collapse: collapse; min-width: 980px; }
-        th, td { padding: 13px 14px; border-top: 1px solid var(--border); text-align: left; vertical-align: top; }
-        th { color: var(--muted); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; }
-        tr:hover td { background: rgba(45,212,191,.04); }
-        .critical-row td:first-child { border-left: 2px solid var(--danger); }
-        .task-title { font-weight: 800; }
-        .sub { display: block; color: var(--muted); font-size: 12px; margin-top: 5px; }
-        .row-edit {
-            display: grid;
-            gap: 7px;
-            min-width: 260px;
+        .badge::before { content:""; width:8px; height:8px; border-radius:50%; background:currentColor; }
+        .badge.priority-critical { color:var(--danger); background:rgba(248,113,113,.15); }
+        .badge.priority-high { color:var(--orange); background:rgba(251,146,60,.13); }
+        .badge.priority-medium { color:var(--warn); background:rgba(251,191,36,.13); }
+        .badge.priority-low { color:#94a3b8; background:rgba(148,163,184,.15); }
+        .badge.status-completed { color:var(--ok); background:rgba(52,211,153,.13); }
+        .badge.status-in-progress { color:var(--blue); background:rgba(96,165,250,.13); }
+        .badge.status-on-hold { color:var(--warn); background:rgba(251,191,36,.13); }
+        .badge.status-planned { color:var(--violet); background:rgba(167,139,250,.13); }
+        .inline-select, .inline-input {
+            height:34px; min-width:0; width:100%; border-radius:9px; padding:0 10px; background:#1b2330;
         }
-        .row-edit input, .row-edit select { width: 100%; height: 33px; }
-        .manage-edit {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(120px, 1fr));
-            gap: 7px;
-            min-width: 280px;
-        }
-        .manage-edit input { width: 100%; height: 33px; }
-        .task-list.hidden, .resource-view.hidden { display: none; }
-        .resource-view {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(310px, 1fr));
-            gap: 14px;
-        }
-        .resource-card { padding: 16px; }
-        .resource-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-        .resource-id { display: flex; align-items: center; gap: 10px; }
-        .avatar {
-            width: 38px;
-            height: 38px;
-            border-radius: 50%;
-            background: var(--primary);
-            color: #042f2e;
-            display: grid;
-            place-items: center;
-            font-weight: 900;
-        }
-        .resource-card h3, .resource-card h4 { margin: 0; }
-        .resource-stats {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 8px;
-            margin: 16px 0 12px;
-        }
-        .resource-stats div { padding: 10px; background: #101827; border-radius: 10px; border: 1px solid var(--border); }
-        .resource-stats b { display: block; font-size: 20px; }
-        .resource-stats span { color: var(--muted); font-size: 12px; }
-        .stacked { display: flex; height: 8px; overflow: hidden; border-radius: 999px; background: var(--border); margin-bottom: 16px; }
-        .stacked .done { background: var(--ok); }
-        .stacked .active { background: var(--primary); }
-        .stacked .hold { background: var(--warn); }
-        .chip-list { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
-        .chip {
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            padding: 7px 9px;
-            font-size: 12px;
-            color: var(--text);
-            background: #101827;
-        }
-        .chip small { display: block; color: var(--muted); margin-top: 3px; }
-        .chip.priority-critical { border-color: rgba(239,68,68,.7); }
-        .chip.priority-high { border-color: rgba(251,146,60,.7); }
-        .chip.priority-medium { border-color: rgba(245,158,11,.7); }
-        .critical-box { margin-top: 14px; padding: 10px; background: rgba(239,68,68,.08); border: 1px solid rgba(239,68,68,.28); border-radius: 12px; }
-        .empty { color: var(--muted); font-size: 13px; }
-        @media (max-width: 950px) {
-            .kpi-row { grid-template-columns: repeat(2, 1fr); }
-            .edit-grid { grid-template-columns: repeat(2, 1fr); }
-            .group-head { grid-template-columns: 1fr; }
-            .timeline-col, .resource-col { display: none; }
-            table { min-width: 720px; }
+        .priority-cell, .status-cell { min-width:132px; }
+        .resource-cell { min-width:230px; }
+        .mini-grid { display:grid; gap:7px; }
+        .timeline { min-width:190px; color:var(--muted); font-size:14px; line-height:1.5; }
+        .timeline b { color:var(--text); font-weight:700; }
+        .timeline span { display:block; }
+        .progress-cell { min-width:260px; }
+        .progress-row { display:grid; grid-template-columns:1fr 48px; gap:12px; align-items:center; }
+        .comments { margin-top:8px; color:var(--muted); font-size:14px; line-height:1.35; width:100%; }
+        .row-actions { display:flex; align-items:center; gap:8px; }
+        .save { background:#123231; border-color:#1e5d58; color:#ccfbf1; }
+        .delete { color:var(--danger); }
+        .dirty td { background:rgba(251,191,36,.035); }
+        .resource-view { display:none; grid-template-columns:repeat(auto-fit, minmax(320px,1fr)); gap:14px; }
+        .resource-view.open { display:grid; }
+        .task-list.hidden { display:none; }
+        .resource-card { padding:16px; }
+        .resource-head { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+        .avatar { width:42px; height:42px; border-radius:50%; display:grid; place-items:center; color:#052e2b; background:var(--primary); font-weight:900; }
+        .resource-title { display:flex; align-items:center; gap:11px; }
+        .resource-card h3, .resource-card h4 { margin:0; }
+        .resource-stats { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin:15px 0; }
+        .resource-stats div { background:var(--card2); border:1px solid var(--border); border-radius:10px; padding:10px; }
+        .resource-stats b { display:block; font-size:22px; }
+        .resource-stats span { color:var(--muted); font-size:12px; }
+        .stack { display:flex; height:8px; background:#1b2432; border-radius:999px; overflow:hidden; margin-bottom:14px; }
+        .stack .done { background:var(--ok); } .stack .active { background:var(--blue); } .stack .hold { background:var(--warn); }
+        .chip-list { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+        .chip { border:1px solid var(--border); border-radius:10px; padding:8px 10px; background:var(--card2); font-size:13px; }
+        .chip small { display:block; color:var(--muted); margin-top:4px; }
+        .chip.priority-critical { border-color:rgba(248,113,113,.75); }
+        .chip.priority-high { border-color:rgba(251,146,60,.75); }
+        .critical-box { margin-top:14px; padding:12px; border:1px solid rgba(248,113,113,.28); background:rgba(248,113,113,.08); border-radius:12px; }
+        @media (max-width: 980px) {
+            .page { padding:22px 14px 42px; }
+            .top { align-items:flex-start; flex-direction:column; }
+            .kpis { grid-template-columns:repeat(2, minmax(0,1fr)); }
+            .group-head { grid-template-columns:1fr; padding:16px; }
+            .add-grid { grid-template-columns:repeat(2, minmax(0,1fr)); }
+            th, td { padding:12px 16px; }
         }
     </style>
 </head>
@@ -230,166 +147,157 @@
     <header class="top">
         <div>
             <h1>PCCE Program Project Plan</h1>
-            <p class="subtitle">Stakeholder view for PCCE, Eleveo, Dtech, Cisco Portal, Survey, Chat, and One Content delivery.</p>
+            <p class="subtitle">Editable delivery plan for stakeholder review, owners, resources, dependencies, and milestones.</p>
         </div>
         <div class="top-actions">
+            <button class="btn primary" type="button" id="addToggle">Add Task</button>
             <a class="btn" href="/api/v1/project/tasks/export.csv">Export CSV</a>
-            <button class="btn" onclick="navigator.clipboard.writeText(location.href)">Copy Share Link</button>
-            <a class="btn" href="/dashboard/index.html">Operations Dashboard</a>
-            <button class="btn primary" onclick="location.reload()">Refresh</button>
+            <button class="btn" type="button" onclick="navigator.clipboard.writeText(location.href)">Copy Link</button>
+            <a class="btn" href="/dashboard/index.html">Operations</a>
         </div>
     </header>
 
-    <section class="kpi-row">
+    <section class="kpis">
         <article class="kpi"><span>Total Tasks</span><strong th:text="${totalTasks}">0</strong></article>
         <article class="kpi ok"><span>Completed</span><strong th:text="${completedCount}">0</strong></article>
-        <article class="kpi primary"><span>In Progress</span><strong th:text="${inProgressCount}">0</strong></article>
+        <article class="kpi active"><span>In Progress</span><strong th:text="${inProgressCount}">0</strong></article>
         <article class="kpi warn"><span>On Hold</span><strong th:text="${onHoldCount}">0</strong></article>
         <article class="kpi danger"><span>Critical Open</span><strong th:text="${criticalOpenCount}">0</strong></article>
     </section>
 
-    <section class="topic-row" id="topicCards">
+    <section class="topics" id="topicCards">
         <button class="topic-card" th:each="entry : ${topicStats}" th:data-topic="${entry.key}">
             <strong th:text="${entry.key}">PCCE</strong>
-            <span><b th:text="${entry.value.total}">0</b> tasks</span>
-            <div class="progress"><i th:style="'width:' + ${entry.value.pctComplete()} + '%'"></i></div>
-            <em><b th:text="${entry.value.pctComplete()}">0</b>% complete</em>
-            <span class="critical" th:if="${entry.value.critical > 0}"><b th:text="${entry.value.critical}">0</b> critical</span>
+            <small><b th:text="${entry.value.total}">0</b> tasks | <b th:text="${entry.value.critical}">0</b> critical</small>
+            <div class="bar"><i th:style="'width:' + ${entry.value.pctComplete()} + '%'"></i></div>
+            <small><b th:text="${entry.value.pctComplete()}">0</b>% complete</small>
         </button>
     </section>
 
-    <section class="filter-bar">
+    <section class="filters">
         <div class="toggle">
             <button id="taskMode" class="active" type="button">Task List</button>
             <button id="resourceMode" type="button">Resource View</button>
         </div>
-        <label>Status
-            <select id="statusFilter">
-                <option value="ALL">All</option>
-                <option>COMPLETED</option>
-                <option>IN_PROGRESS</option>
-                <option>ON_HOLD</option>
-                <option>PLANNED</option>
-            </select>
-        </label>
-        <label>Priority
-            <select id="priorityFilter">
-                <option value="ALL">All</option>
-                <option>CRITICAL</option>
-                <option>HIGH</option>
-                <option>MEDIUM</option>
-                <option>LOW</option>
-            </select>
-        </label>
-        <label>Resource
-            <select id="resourceFilter">
-                <option value="ALL">All</option>
-                <option th:each="resource : ${resources}" th:value="${resource}" th:text="${resource}">Ahmed</option>
-            </select>
-        </label>
-        <label>Team<input id="teamFilter" placeholder="All teams"></label>
-        <label>Milestone<input id="milestoneFilter" placeholder="All milestones"></label>
-        <strong class="count" id="taskCount" th:text="${totalTasks + ' tasks'}">0 tasks</strong>
+        <div class="inline-actions">
+            <button class="icon-btn" type="button" title="Filters">⌯</button>
+            <select id="topicFilter"><option value="ALL">All Topics</option><option th:each="topic : ${topics}" th:value="${topic}" th:text="${topic}"></option></select>
+            <select id="statusFilter"><option value="ALL">All Status</option><option>COMPLETED</option><option>IN_PROGRESS</option><option>ON_HOLD</option><option>PLANNED</option></select>
+            <select id="priorityFilter"><option value="ALL">All Priorities</option><option>CRITICAL</option><option>HIGH</option><option>MEDIUM</option><option>LOW</option></select>
+            <select id="resourceFilter"><option value="ALL">All Resources</option><option th:each="resource : ${resources}" th:value="${resource}" th:text="${resource}"></option></select>
+            <strong class="count" id="taskCount" th:text="${totalTasks + ' tasks'}">0 tasks</strong>
+        </div>
     </section>
 
-    <section class="panel edit-panel">
-        <form class="edit-grid" id="addTaskForm">
+    <section class="panel add-panel" id="addPanel">
+        <form class="add-grid" id="addTaskForm">
             <label>Topic<input name="topic" list="topicOptions" value="PCCE"></label>
-            <datalist id="topicOptions">
-                <option th:each="entry : ${topicStats}" th:value="${entry.key}"></option>
-            </datalist>
-            <label class="wide">Task<input name="task" required placeholder="New task name"></label>
+            <label class="span2">Task<input name="task" required placeholder="Task name"></label>
             <label>Priority<select name="priority"><option>CRITICAL</option><option>HIGH</option><option selected>MEDIUM</option><option>LOW</option></select></label>
             <label>Status<select name="status"><option>PLANNED</option><option>IN_PROGRESS</option><option>ON_HOLD</option><option>COMPLETED</option></select></label>
-            <label>Resource<input name="resource" value="Unassigned"></label>
-            <label>Owner<input name="owner" placeholder="Accountable owner"></label>
-            <label>Team<input name="team" placeholder="Delivery team"></label>
-            <label>Milestone<input name="milestone" placeholder="Phase / milestone"></label>
-            <label>Start<input name="start" placeholder="1-Jul-26"></label>
-            <label>Finish<input name="finish" placeholder="31-Jul-26"></label>
+            <label>Resource<input name="resource" list="resourceOptions" value="Unassigned"></label>
+            <label>Owner<input name="owner" list="ownerOptions"></label>
+            <label>Team<input name="team" list="teamOptions"></label>
+            <label>Milestone<input name="milestone" list="milestoneOptions"></label>
+            <label>Start<input name="start" placeholder="1-Feb-26"></label>
+            <label>Finish<input name="finish" placeholder="30-Apr-26"></label>
             <label>Duration<input name="duration" type="number" min="0"></label>
             <label>Progress<input name="pct" type="number" min="0" max="100" value="0"></label>
             <label>Risk<select name="risk"><option>LOW</option><option selected>MEDIUM</option><option>HIGH</option><option>CRITICAL</option></select></label>
-            <label class="wide">Depends On<input name="dependsOn" placeholder="Task ID/name"></label>
-            <label class="wide">Blocked By<input name="blockedBy" placeholder="Dependency / approval / vendor"></label>
-            <label class="wide">Deliverable<input name="deliverable" placeholder="Output / acceptance criteria"></label>
-            <label class="wide">Share With<input name="shareWith" placeholder="Stakeholders / teams"></label>
-            <label class="wide">External Ref<input name="externalRef" placeholder="Jira, ServiceNow, document link"></label>
-            <label class="wide">Comments<input name="comments" placeholder="Notes"></label>
-            <button class="btn primary" type="submit">Add Task</button>
+            <label class="span2">Depends On<input name="dependsOn" placeholder="Dependency task"></label>
+            <label class="span2">Blocked By<input name="blockedBy" placeholder="Blocker"></label>
+            <label class="span3">Comments<input name="comments" placeholder="Progress note"></label>
+            <button class="btn primary" type="submit">Create Task</button>
         </form>
     </section>
 
+    <datalist id="topicOptions"><option th:each="topic : ${topics}" th:value="${topic}"></option></datalist>
+    <datalist id="resourceOptions"><option th:each="resource : ${resources}" th:value="${resource}"></option></datalist>
+    <datalist id="ownerOptions"><option th:each="owner : ${owners}" th:value="${owner}"></option></datalist>
+    <datalist id="teamOptions"><option th:each="team : ${teams}" th:value="${team}"></option></datalist>
+    <datalist id="milestoneOptions"><option th:each="milestone : ${milestones}" th:value="${milestone}"></option></datalist>
+
     <section class="task-list" id="taskListView">
-        <article class="panel topic-group" th:each="entry : ${topicStats}">
+        <article class="panel plan-group" th:each="entry : ${topicStats}">
             <button class="group-head" type="button" onclick="toggleGroup(this)">
-                <strong><span class="chevron">v</span> <span th:text="${entry.key}">Topic</span></strong>
-                <span th:text="${entry.value.total + ' tasks'}">0 tasks</span>
-                <span class="pills">
-                    <span class="pill completed" th:if="${entry.value.completed > 0}" th:text="${entry.value.completed + ' done'}"></span>
-                    <span class="pill in-progress" th:if="${entry.value.inProgress > 0}" th:text="${entry.value.inProgress + ' active'}"></span>
-                    <span class="pill on-hold" th:if="${entry.value.onHold > 0}" th:text="${entry.value.onHold + ' hold'}"></span>
-                    <span class="pill planned" th:if="${entry.value.planned > 0}" th:text="${entry.value.planned + ' planned'}"></span>
+                <span class="group-title"><span class="chev">⌄</span><span th:text="${entry.key}">PCCE</span></span>
+                <span class="count" th:text="${entry.value.total + ' tasks'}">0 tasks</span>
+                <span class="chips">
+                    <span class="pill done" th:if="${entry.value.completed > 0}" th:text="${entry.value.completed}">0</span>
+                    <span class="pill active" th:if="${entry.value.inProgress > 0}" th:text="${entry.value.inProgress}">0</span>
+                    <span class="pill hold" th:if="${entry.value.onHold > 0}" th:text="${entry.value.onHold}">0</span>
                 </span>
-                <span class="progress"><i th:style="'width:' + ${entry.value.pctComplete()} + '%'"></i></span>
-                <em th:text="${entry.value.pctComplete() + '%'}">0%</em>
+                <span class="bar"><i th:style="'width:' + ${entry.value.pctComplete()} + '%'"></i></span>
+                <span class="pct" th:text="${entry.value.pctComplete() + '%'}">0%</span>
             </button>
-            <div class="group-body">
+            <div class="table-wrap group-body">
                 <table>
                     <thead>
                     <tr>
-                        <th>Task</th><th>Priority</th><th>Status</th><th class="resource-col">Assignee / Owner</th><th class="timeline-col">Timeline</th><th>Progress + Controls</th>
+                        <th>Task</th><th>Priority</th><th>Status</th><th>Resource</th><th>Timeline</th><th>Progress / Comments</th><th></th>
                     </tr>
                     </thead>
                     <tbody>
-                    <tr th:each="task, iter : ${tasks}"
-                        th:if="${task.topic == entry.key}"
+                    <tr th:each="task, iter : ${tasks}" th:if="${task.topic == entry.key}"
                         th:classappend="${task.priority == 'CRITICAL' and task.status != 'COMPLETED'} ? 'critical-row'"
-                        th:data-index="${iter.index}"
-                        th:data-id="${task.id}"
-                        th:data-topic="${task.topic}"
-                        th:data-status="${task.status}"
-                        th:data-priority="${task.priority}"
-                        th:data-resource="${task.resource}"
-                        th:data-team="${task.team}"
-                        th:data-milestone="${task.milestone}">
+                        th:data-index="${iter.index}" th:data-id="${task.id}" th:data-topic="${task.topic}"
+                        th:data-status="${task.status}" th:data-priority="${task.priority}" th:data-resource="${task.resource}">
                         <td>
-                            <span class="task-title" th:text="${task.task}">Task</span>
-                            <span class="sub" th:if="${task.priorityNum != null}" th:text="'Priority #' + ${task.priorityNum}">Priority #1</span>
-                            <span class="sub" th:if="${task.milestone != null && !task.milestone.isBlank()}" th:text="'Milestone: ' + ${task.milestone}">Milestone</span>
-                            <span class="sub" th:if="${task.dependsOn != null && !task.dependsOn.isBlank()}" th:text="'Depends: ' + ${task.dependsOn}">Depends</span>
+                            <input type="hidden" data-field="dependsOn" th:value="${task.dependsOn}">
+                            <input type="hidden" data-field="blockedBy" th:value="${task.blockedBy}">
+                            <input type="hidden" data-field="risk" th:value="${task.risk}">
+                            <input type="hidden" data-field="deliverable" th:value="${task.deliverable}">
+                            <input type="hidden" data-field="shareWith" th:value="${task.shareWith}">
+                            <input type="hidden" data-field="externalRef" th:value="${task.externalRef}">
+                            <div class="task-name" contenteditable="true" data-field="task" th:text="${task.task}">Task</div>
+                            <input class="inline-input" data-field="topic" list="topicOptions" th:value="${task.topic}" placeholder="Topic">
+                            <span class="sub" th:if="${task.priorityNum != null}" th:text="'#' + ${task.priorityNum}">#1</span>
+                            <input type="hidden" data-field="priorityNum" th:value="${task.priorityNum}">
+                            <span class="sub" th:if="${task.team != null && !task.team.isBlank()}" th:text="${task.team}">Team</span>
                             <span class="sub" th:if="${task.blockedBy != null && !task.blockedBy.isBlank()}" th:text="'Blocked: ' + ${task.blockedBy}">Blocked</span>
-                            <span class="sub" th:if="${task.deliverable != null && !task.deliverable.isBlank()}" th:text="'Deliverable: ' + ${task.deliverable}">Deliverable</span>
                         </td>
-                        <td><span class="badge" th:classappend="' priority-' + ${#strings.toLowerCase(task.priority)}" th:text="${task.priority}">HIGH</span></td>
-                        <td><span class="badge" th:classappend="${#strings.toLowerCase(#strings.replace(task.status, '_', '-'))}" th:text="${#strings.replace(task.status, '_', ' ')}">IN PROGRESS</span></td>
-                        <td class="resource-col">
-                            <div class="manage-edit">
-                                <input data-field="resource" th:value="${task.resource}" placeholder="Assignee">
-                                <input data-field="owner" th:value="${task.owner}" placeholder="Owner">
-                                <input data-field="team" th:value="${task.team}" placeholder="Team">
-                                <input data-field="shareWith" th:value="${task.shareWith}" placeholder="Share with">
+                        <td class="priority-cell">
+                            <select class="badge inline-select" data-field="priority">
+                                <option th:selected="${task.priority == 'CRITICAL'}">CRITICAL</option>
+                                <option th:selected="${task.priority == 'HIGH'}">HIGH</option>
+                                <option th:selected="${task.priority == 'MEDIUM'}">MEDIUM</option>
+                                <option th:selected="${task.priority == 'LOW'}">LOW</option>
+                            </select>
+                        </td>
+                        <td class="status-cell">
+                            <select class="badge inline-select" data-field="status">
+                                <option th:selected="${task.status == 'COMPLETED'}">COMPLETED</option>
+                                <option th:selected="${task.status == 'IN_PROGRESS'}">IN_PROGRESS</option>
+                                <option th:selected="${task.status == 'ON_HOLD'}">ON_HOLD</option>
+                                <option th:selected="${task.status == 'PLANNED'}">PLANNED</option>
+                            </select>
+                        </td>
+                        <td class="resource-cell">
+                            <div class="mini-grid">
+                                <input class="inline-input" data-field="resource" list="resourceOptions" th:value="${task.resource}" placeholder="Assignee">
+                                <input class="inline-input" data-field="owner" list="ownerOptions" th:value="${task.owner}" placeholder="Owner">
+                                <input class="inline-input" data-field="team" list="teamOptions" th:value="${task.team}" placeholder="Team">
                             </div>
                         </td>
-                        <td class="timeline-col">
-                            <div class="manage-edit">
-                                <input data-field="milestone" th:value="${task.milestone}" placeholder="Milestone">
-                                <input data-field="start" th:value="${task.start}" placeholder="Start">
-                                <input data-field="finish" th:value="${task.finish}" placeholder="Finish">
-                                <input data-field="duration" type="number" min="0" th:value="${task.duration}" placeholder="Days">
+                        <td class="timeline">
+                            <div class="mini-grid">
+                                <input class="inline-input" data-field="milestone" list="milestoneOptions" th:value="${task.milestone}" placeholder="Milestone">
+                                <input class="inline-input" data-field="start" th:value="${task.start}" placeholder="Start">
+                                <input class="inline-input" data-field="finish" th:value="${task.finish}" placeholder="Finish">
+                                <input class="inline-input" data-field="duration" type="number" min="0" th:value="${task.duration}" placeholder="Days">
                             </div>
+                        </td>
+                        <td class="progress-cell">
+                            <div class="progress-row">
+                                <div class="bar"><i th:style="'width:' + ${task.pct} + '%'"></i></div>
+                                <input class="inline-input" data-field="pct" type="number" min="0" max="100" th:value="${task.pct}">
+                            </div>
+                            <input class="comments" data-field="comments" th:value="${task.comments}" placeholder="Comments">
                         </td>
                         <td>
-                            <div class="row-edit">
-                                <select data-field="status"><option th:selected="${task.status == 'COMPLETED'}">COMPLETED</option><option th:selected="${task.status == 'IN_PROGRESS'}">IN_PROGRESS</option><option th:selected="${task.status == 'ON_HOLD'}">ON_HOLD</option><option th:selected="${task.status == 'PLANNED'}">PLANNED</option></select>
-                                <input data-field="pct" type="number" min="0" max="100" th:value="${task.pct}">
-                                <select data-field="risk"><option th:selected="${task.risk == 'LOW'}">LOW</option><option th:selected="${task.risk == null || task.risk == 'MEDIUM'}">MEDIUM</option><option th:selected="${task.risk == 'HIGH'}">HIGH</option><option th:selected="${task.risk == 'CRITICAL'}">CRITICAL</option></select>
-                                <div class="progress"><i th:style="'width:' + ${task.pct} + '%'"></i></div>
-                                <input data-field="dependsOn" th:value="${task.dependsOn}" placeholder="Depends on">
-                                <input data-field="blockedBy" th:value="${task.blockedBy}" placeholder="Blocked by">
-                                <input data-field="deliverable" th:value="${task.deliverable}" placeholder="Deliverable">
-                                <input data-field="comments" th:value="${task.comments}" placeholder="Comments">
-                                <button class="btn" type="button" onclick="saveRow(this)">Save</button>
+                            <div class="row-actions">
+                                <button class="btn save" type="button" onclick="saveRow(this)">Save</button>
+                                <button class="btn delete" type="button" onclick="deleteRow(this)">Delete</button>
                             </div>
                         </td>
                     </tr>
@@ -399,22 +307,19 @@
         </article>
     </section>
 
-    <section class="resource-view hidden" id="resourceView">
+    <section class="resource-view" id="resourceView">
         <article class="resource-card" th:each="resource : ${resourceStats}">
             <div class="resource-head">
-                <div class="resource-id">
-                    <span class="avatar" th:text="${#strings.substring(resource.name, 0, 1)}">A</span>
-                    <div><h3 th:text="${resource.name}">Ahmed</h3><span class="sub">Resource owner</span></div>
-                </div>
-                <span class="pill priority-critical" th:text="${resource.criticalOpen.size() + ' critical open'}">0 critical open</span>
+                <div class="resource-title"><span class="avatar" th:text="${#strings.substring(resource.name, 0, 1)}">A</span><div><h3 th:text="${resource.name}">Ahmed</h3><span class="sub">Assigned resource</span></div></div>
+                <span class="pill hold" th:text="${resource.criticalOpen.size() + ' critical'}">0 critical</span>
             </div>
             <div class="resource-stats">
                 <div><b th:text="${resource.total}">0</b><span>total</span></div>
                 <div><b th:text="${resource.completed}">0</b><span>done</span></div>
                 <div><b th:text="${resource.inProgress}">0</b><span>active</span></div>
-                <div><b th:text="${resource.onHold}">0</b><span>on hold</span></div>
+                <div><b th:text="${resource.onHold}">0</b><span>hold</span></div>
             </div>
-            <div class="stacked">
+            <div class="stack">
                 <i class="done" th:style="'width:' + ${resource.total == 0 ? 0 : resource.completed * 100 / resource.total} + '%'"></i>
                 <i class="active" th:style="'width:' + ${resource.total == 0 ? 0 : resource.inProgress * 100 / resource.total} + '%'"></i>
                 <i class="hold" th:style="'width:' + ${resource.total == 0 ? 0 : resource.onHold * 100 / resource.total} + '%'"></i>
@@ -424,56 +329,70 @@
                 <span class="chip" th:each="task : ${resource.activeTasks}" th:classappend="' priority-' + ${#strings.toLowerCase(task.priority)}">
                     <span th:text="${task.task}">Task</span><small th:text="${task.topic}">Topic</small>
                 </span>
-                <span class="empty" th:if="${resource.activeTasks.isEmpty()}">No active work</span>
             </div>
             <div class="critical-box" th:if="${!resource.criticalOpen.isEmpty()}">
                 <h4>Critical Open</h4>
-                <div class="chip-list">
-                    <span class="chip priority-critical" th:each="task : ${resource.criticalOpen}">
-                        <span th:text="${task.task}">Task</span><small th:text="${task.comments == null ? task.topic : task.comments}">Comment</small>
-                    </span>
-                </div>
+                <div class="chip-list"><span class="chip priority-critical" th:each="task : ${resource.criticalOpen}"><span th:text="${task.task}">Task</span><small th:text="${task.comments == null ? task.topic : task.comments}">Comment</small></span></div>
             </div>
         </article>
     </section>
 </main>
+
 <script th:inline="javascript">
     let activeTopic = "";
     const originalTasks = /*[[${tasks}]]*/ [];
 
+    function csrfHeaders() {
+        const token = document.cookie.split("; ").find(row => row.startsWith("XSRF-TOKEN="));
+        return token ? { "X-XSRF-TOKEN": decodeURIComponent(token.split("=")[1]) } : {};
+    }
+
     function toggleGroup(header) {
-        const group = header.closest(".topic-group");
+        const group = header.closest(".plan-group");
         group.classList.toggle("collapsed");
-        const body = group.querySelector(".group-body");
-        body.hidden = group.classList.contains("collapsed");
+        group.querySelector(".group-body").hidden = group.classList.contains("collapsed");
+    }
+
+    function resourceMatches(rowValue, selected) {
+        if (selected === "ALL") return true;
+        return String(rowValue || "").split(/,|\/|&/).map(item => item.trim()).includes(selected);
     }
 
     function applyFilters() {
+        const topic = document.getElementById("topicFilter").value;
         const status = document.getElementById("statusFilter").value;
         const priority = document.getElementById("priorityFilter").value;
         const resource = document.getElementById("resourceFilter").value;
-        const team = document.getElementById("teamFilter").value.trim().toLowerCase();
-        const milestone = document.getElementById("milestoneFilter").value.trim().toLowerCase();
         let visible = 0;
         document.querySelectorAll("tbody tr[data-topic]").forEach(row => {
-            const resourceMatch = resource === "ALL" || row.dataset.resource.split(/,|\/|&/).map(item => item.trim()).includes(resource);
-            const teamMatch = !team || String(row.dataset.team || "").toLowerCase().includes(team);
-            const milestoneMatch = !milestone || String(row.dataset.milestone || "").toLowerCase().includes(milestone);
             const show = (!activeTopic || row.dataset.topic === activeTopic)
+                && (topic === "ALL" || row.dataset.topic === topic)
                 && (status === "ALL" || row.dataset.status === status)
                 && (priority === "ALL" || row.dataset.priority === priority)
-                && resourceMatch
-                && teamMatch
-                && milestoneMatch;
+                && resourceMatches(row.dataset.resource, resource);
             row.hidden = !show;
             if (show) visible++;
         });
-        document.querySelectorAll(".topic-group").forEach(group => {
-            const any = [...group.querySelectorAll("tbody tr")].some(row => !row.hidden);
-            group.hidden = !any;
+        document.querySelectorAll(".plan-group").forEach(group => {
+            group.hidden = ![...group.querySelectorAll("tbody tr")].some(row => !row.hidden);
         });
         document.getElementById("taskCount").textContent = `${visible} tasks`;
     }
+
+    function setSelectSkin(select) {
+        const isPriority = select.dataset.field === "priority";
+        const prefix = isPriority ? "priority-" : "status-";
+        select.className = `badge inline-select ${prefix}${select.value.toLowerCase().replaceAll("_", "-")}`;
+    }
+
+    document.querySelectorAll("select[data-field]").forEach(setSelectSkin);
+    document.querySelectorAll("[data-field]").forEach(input => {
+        input.addEventListener("input", () => input.closest("tr")?.classList.add("dirty"));
+        input.addEventListener("change", () => {
+            if (input.tagName === "SELECT") setSelectSkin(input);
+            input.closest("tr")?.classList.add("dirty");
+        });
+    });
 
     document.querySelectorAll(".topic-card").forEach(card => {
         card.addEventListener("click", () => {
@@ -482,14 +401,8 @@
             applyFilters();
         });
     });
-
-    ["statusFilter", "priorityFilter", "resourceFilter"].forEach(id => {
-        document.getElementById(id).addEventListener("change", applyFilters);
-    });
-    ["teamFilter", "milestoneFilter"].forEach(id => {
-        document.getElementById(id).addEventListener("input", applyFilters);
-    });
-
+    ["topicFilter", "statusFilter", "priorityFilter", "resourceFilter"].forEach(id => document.getElementById(id).addEventListener("change", applyFilters));
+    document.getElementById("addToggle").addEventListener("click", () => document.getElementById("addPanel").classList.toggle("open"));
     document.getElementById("taskMode").addEventListener("click", () => setView("tasks"));
     document.getElementById("resourceMode").addEventListener("click", () => setView("resources"));
 
@@ -497,44 +410,43 @@
         document.getElementById("taskMode").classList.toggle("active", view === "tasks");
         document.getElementById("resourceMode").classList.toggle("active", view === "resources");
         document.getElementById("taskListView").classList.toggle("hidden", view !== "tasks");
-        document.getElementById("resourceView").classList.toggle("hidden", view !== "resources");
+        document.getElementById("resourceView").classList.toggle("open", view === "resources");
     }
 
-    function csrfHeaders() {
-        const token = document.cookie.split("; ").find(row => row.startsWith("XSRF-TOKEN="));
-        return token ? { "X-XSRF-TOKEN": decodeURIComponent(token.split("=")[1]) } : {};
+    function fieldValue(element) {
+        const value = element.isContentEditable ? element.textContent : element.value;
+        if (element.dataset.field === "duration") return Number(String(value || "").replace(/[^0-9]/g, "") || 0);
+        if (["pct", "priorityNum"].includes(element.dataset.field)) return value === "" ? null : Number(value);
+        return value;
     }
 
     async function saveRow(button) {
         const row = button.closest("tr");
         const index = Number(row.dataset.index);
-        const existing = originalTasks[index];
-        const body = { ...existing };
-        row.querySelectorAll("[data-field]").forEach(input => {
-            const field = input.dataset.field;
-            body[field] = ["pct", "duration"].includes(field) ? Number(input.value || 0) : input.value;
-        });
+        const body = { ...originalTasks[index] };
+        row.querySelectorAll("[data-field]").forEach(input => body[input.dataset.field] = fieldValue(input));
         const target = row.dataset.id ? `/api/v1/project/tasks/id/${row.dataset.id}` : `/api/v1/project/tasks/${index}`;
-        await fetch(target, {
-            method: "PUT",
-            headers: { "Content-Type": "application/json", ...csrfHeaders() },
-            body: JSON.stringify(body)
-        });
+        button.disabled = true;
+        button.textContent = "Saving";
+        await fetch(target, { method:"PUT", headers:{ "Content-Type":"application/json", ...csrfHeaders() }, body:JSON.stringify(body) });
+        location.reload();
+    }
+
+    async function deleteRow(button) {
+        const row = button.closest("tr");
+        if (!row.dataset.id || !confirm("Delete this task?")) return;
+        button.disabled = true;
+        await fetch(`/api/v1/project/tasks/id/${row.dataset.id}`, { method:"DELETE", headers:csrfHeaders() });
         location.reload();
     }
 
     document.getElementById("addTaskForm").addEventListener("submit", async event => {
         event.preventDefault();
-        const form = new FormData(event.currentTarget);
-        const body = Object.fromEntries(form.entries());
+        const body = Object.fromEntries(new FormData(event.currentTarget).entries());
         body.priorityNum = null;
         body.duration = body.duration ? Number(body.duration) : null;
         body.pct = body.pct ? Number(body.pct) : 0;
-        await fetch("/api/v1/project/tasks", {
-            method: "POST",
-            headers: { "Content-Type": "application/json", ...csrfHeaders() },
-            body: JSON.stringify(body)
-        });
+        await fetch("/api/v1/project/tasks", { method:"POST", headers:{ "Content-Type":"application/json", ...csrfHeaders() }, body:JSON.stringify(body) });
         location.reload();
     });
 
