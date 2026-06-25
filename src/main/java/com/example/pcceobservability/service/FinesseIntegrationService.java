@@ -14,6 +14,7 @@ import java.util.ArrayList;
 import java.util.Base64;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
@@ -31,7 +32,8 @@ import org.springframework.util.StringUtils;
 public class FinesseIntegrationService {
 
     private static final Pattern FINESSE_USER_ID_PATTERN = Pattern.compile("<id>\\s*([^<]+?)\\s*</id>", Pattern.CASE_INSENSITIVE);
-    private static final int CACHE_TTL_SECONDS = 20;
+    private static final Pattern FINESSE_USER_BLOCK_PATTERN = Pattern.compile("<User\\b[^>]*>[\\s\\S]*?</User>", Pattern.CASE_INSENSITIVE);
+    private static final int CACHE_TTL_SECONDS = 30;
 
     private final PcceProperties pcceProperties;
     private final JdbcTemplate awJdbcTemplate;
@@ -39,6 +41,8 @@ public class FinesseIntegrationService {
     private volatile Instant cachedAgentsAt = Instant.EPOCH;
     private volatile List<FinesseEndpointResult> cachedDialogs = List.of();
     private volatile Instant cachedDialogsAt = Instant.EPOCH;
+    private final AtomicBoolean agentsRefreshInProgress = new AtomicBoolean(false);
+    private final AtomicBoolean dialogsRefreshInProgress = new AtomicBoolean(false);
 
     public FinesseIntegrationService(
             PcceProperties pcceProperties,
@@ -61,37 +65,59 @@ public class FinesseIntegrationService {
         return List.of(request("SystemInfo", "/finesse/api/SystemInfo"));
     }
 
-    public synchronized List<FinesseEndpointResult> agents() {
+    public List<FinesseEndpointResult> agents() {
         if (fresh(cachedAgentsAt) && !cachedAgents.isEmpty()) {
             return cachedAgents;
         }
-        List<FinesseEndpointResult> results = new ArrayList<>();
-        FinesseEndpointResult directory = request("Users Directory", "/finesse/api/Users");
-        results.add(directory);
-        Set<String> userIds = new LinkedHashSet<>(userIdsFromDirectory(directory.body()));
-        userIds.addAll(configuredUserIds());
-        results.addAll(userIds.parallelStream()
-                .limit(25)
-                .map(userId -> request("User " + userId, "/finesse/api/User/" + encodePath(userId)))
-                .toList());
-        cachedAgents = List.copyOf(results);
-        cachedAgentsAt = Instant.now();
-        return results;
+        if (!agentsRefreshInProgress.compareAndSet(false, true)) {
+            return withRefreshInProgress(cachedAgents, "Finesse agent refresh already running; returning cached agent state.");
+        }
+        try {
+            List<FinesseEndpointResult> results = new ArrayList<>();
+            FinesseEndpointResult directory = request("Users Directory", "/finesse/api/Users");
+            results.add(directory);
+            Set<String> userIds = new LinkedHashSet<>(userIdsFromDirectory(directory.body()));
+            userIds.addAll(configuredUserIds());
+            results.addAll(userIds.parallelStream()
+                    .limit(25)
+                    .map(userId -> request("User " + userId, "/finesse/api/User/" + encodePath(userId)))
+                    .toList());
+            cachedAgents = List.copyOf(results);
+            cachedAgentsAt = Instant.now();
+            return results;
+        } finally {
+            agentsRefreshInProgress.set(false);
+        }
     }
 
-    public synchronized List<FinesseEndpointResult> dialogs() {
+    public List<FinesseEndpointResult> dialogs() {
         if (fresh(cachedDialogsAt) && !cachedDialogs.isEmpty()) {
             return cachedDialogs;
         }
-        Set<String> userIds = new LinkedHashSet<>(userIdsFromDirectory(request("Users Directory", "/finesse/api/Users").body()));
-        userIds.addAll(configuredUserIds());
-        List<FinesseEndpointResult> results = userIds.parallelStream()
-                .limit(25)
-                .map(userId -> request("Dialogs " + userId, "/finesse/api/User/" + encodePath(userId) + "/Dialogs"))
-                .toList();
-        cachedDialogs = List.copyOf(results);
-        cachedDialogsAt = Instant.now();
-        return results;
+        if (!dialogsRefreshInProgress.compareAndSet(false, true)) {
+            return withRefreshInProgress(cachedDialogs, "Finesse dialog refresh already running; returning cached dialogs.");
+        }
+        try {
+            if (!fresh(cachedAgentsAt) || cachedAgents.isEmpty()) {
+                agents();
+            }
+            Set<String> userIds = activeFinesseUserIds(cachedAgents);
+            if (userIds.isEmpty()) {
+                cachedDialogs = List.of(new FinesseEndpointResult("Dialogs", "GET", target("/finesse/api/User/{id}/Dialogs"),
+                        204, 0, "No active TALKING/RESERVED/HOLD agents discovered in cached Finesse user state.", Instant.now()));
+                cachedDialogsAt = Instant.now();
+                return cachedDialogs;
+            }
+            List<FinesseEndpointResult> results = userIds.parallelStream()
+                    .limit(12)
+                    .map(userId -> request("Dialogs " + userId, "/finesse/api/User/" + encodePath(userId) + "/Dialogs"))
+                    .toList();
+            cachedDialogs = List.copyOf(results);
+            cachedDialogsAt = Instant.now();
+            return results;
+        } finally {
+            dialogsRefreshInProgress.set(false);
+        }
     }
 
     public List<FinesseEndpointResult> teams() {
@@ -239,6 +265,49 @@ public class FinesseIntegrationService {
             }
         }
         return ids;
+    }
+
+    private Set<String> activeFinesseUserIds(List<FinesseEndpointResult> agentResults) {
+        Set<String> ids = new LinkedHashSet<>();
+        for (FinesseEndpointResult result : agentResults == null ? List.<FinesseEndpointResult>of() : agentResults) {
+            String body = result.body();
+            Matcher matcher = FINESSE_USER_BLOCK_PATTERN.matcher(body == null ? "" : body);
+            if (!matcher.find() && StringUtils.hasText(body)) {
+                collectActiveUserId(body, ids);
+                continue;
+            }
+            matcher.reset();
+            while (matcher.find()) {
+                collectActiveUserId(matcher.group(), ids);
+            }
+        }
+        return ids;
+    }
+
+    private void collectActiveUserId(String userXml, Set<String> ids) {
+        String state = xmlTag(userXml, "state").toUpperCase();
+        if (!Set.of("TALKING", "RESERVED", "HOLD", "ACTIVE").contains(state)) {
+            return;
+        }
+        String id = xmlTag(userXml, "id");
+        if (StringUtils.hasText(id)) {
+            ids.add(id.trim());
+        }
+    }
+
+    private String xmlTag(String body, String tagName) {
+        Matcher matcher = Pattern.compile("<" + tagName + "\\b[^>]*>\\s*([^<]+?)\\s*</" + tagName + ">",
+                Pattern.CASE_INSENSITIVE).matcher(body == null ? "" : body);
+        return matcher.find() ? matcher.group(1).trim() : "";
+    }
+
+    private List<FinesseEndpointResult> withRefreshInProgress(List<FinesseEndpointResult> cached, String message) {
+        if (cached != null && !cached.isEmpty()) {
+            List<FinesseEndpointResult> results = new ArrayList<>(cached);
+            results.add(new FinesseEndpointResult("Refresh Status", "GET", "cache", 202, 0, message, Instant.now()));
+            return results;
+        }
+        return List.of(new FinesseEndpointResult("Refresh Status", "GET", "cache", 202, 0, message, Instant.now()));
     }
 
     private List<String> filtered(List<String> values) {

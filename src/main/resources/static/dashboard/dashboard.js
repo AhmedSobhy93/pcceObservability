@@ -385,8 +385,8 @@ async function refresh() {
         const wantsAgents = activeView === "agents";
         const wantsCalls = activeView === "calls";
         const wantsSystem = activeView === "system";
-    const wantsIntegration = activeView === "integration";
-    const wantsCvp = activeView === "cvp";
+        const wantsIntegration = activeView === "integration";
+        const wantsCvp = activeView === "cvp";
         const wantsAdvanced = activeView === "advanced";
         const wantsAlerts = activeView === "smtp";
         const wantsSpog = activeView === "spog";
@@ -397,9 +397,11 @@ async function refresh() {
 
     const coreLoads = [
         safeLoad("user", "/api/v1/auth/me", null),
-        safeLoad("components", "/api/v1/components/status", state.components, { timeoutMs: 12000 }),
         safeLoad("assessment", "/api/v1/operations/assessment/last", state.assessment, { timeoutMs: 5000 })
     ];
+    if (["overview", "system", "app", "spog"].includes(activeView)) {
+        coreLoads.push(safeLoad("components", "/api/v1/components/status", state.components, { timeoutMs: 12000 }));
+    }
     if (wantsBusiness || wantsCalls) {
         coreLoads.push(
                 safeLoad("calls", `/api/v1/metrics/calls?${params}`, [], { timeoutMs: 15000 }),
@@ -413,11 +415,7 @@ async function refresh() {
                 safeLoad("cvpIvrNodes", `/api/v1/metrics/cvp-ivr-nodes?${ivrNodeParams()}`, [], { timeoutMs: 12000 }));
     }
     if (wantsAgents) {
-        coreLoads.push(
-                safeLoad("agents", `/api/v1/agents/stats?${agentParams()}`, [], { timeoutMs: 15000 }),
-                safeLoad("finesseAgents", "/api/v1/finesse/agents", state.finesseAgents, { timeoutMs: 30000 }),
-                safeLoad("finesseDialogs", "/api/v1/finesse/dialogs", state.finesseDialogs, { timeoutMs: 30000 }),
-                safeLoad("finesseTeams", "/api/v1/finesse/teams", state.finesseTeams, { timeoutMs: 15000 }));
+        coreLoads.push(safeLoad("agents", `/api/v1/agents/stats?${agentParams()}`, [], { timeoutMs: 15000 }));
     }
     if (wantsSystem) {
         coreLoads.push(safeLoad("serverMetrics", "/api/v1/components/server-metrics", [], { timeoutMs: 8000 }));
@@ -425,12 +423,21 @@ async function refresh() {
     const coreResults = await Promise.all(coreLoads);
     errors.push(...coreResults.filter(Boolean));
     renderAll(errors);
+    if (wantsAgents) {
+        const finesseAgentError = await safeLoad("finesseAgents", "/api/v1/finesse/agents", state.finesseAgents, { timeoutMs: 12000 });
+        if (finesseAgentError) errors.push(finesseAgentError);
+        renderAgents();
+        renderFinesse();
+        const finesseDialogError = await safeLoad("finesseDialogs", "/api/v1/finesse/dialogs", state.finesseDialogs, { timeoutMs: 12000 });
+        if (finesseDialogError) errors.push(finesseDialogError);
+        renderAgents();
+        renderFinesse();
+    }
 
-    const supportLoads = [
-        safeLoad("skillGroups", "/api/v1/reference/skill-groups", state.skillGroups),
-        safeLoad("callTypeOptions", "/api/v1/reference/call-types", state.callTypeOptions),
-        safeLoad("agentOptions", "/api/v1/reference/agents", state.agentOptions)
-    ];
+    const supportLoads = [];
+    if (!state.skillGroups.length) supportLoads.push(safeLoad("skillGroups", "/api/v1/reference/skill-groups", state.skillGroups));
+    if (!state.callTypeOptions.length) supportLoads.push(safeLoad("callTypeOptions", "/api/v1/reference/call-types", state.callTypeOptions));
+    if (!state.agentOptions.length) supportLoads.push(safeLoad("agentOptions", "/api/v1/reference/agents", state.agentOptions));
     if (wantsIntegration || wantsAdvanced || wantsSpog) {
         supportLoads.push(
                 safeLoad("pcceApiStatus", "/api/v1/pcce-api/status", state.pcceApiStatus, { timeoutMs: 8000 }),
@@ -451,7 +458,8 @@ async function refresh() {
         supportLoads.push(
                 safeLoad("finesseCapabilities", "/api/v1/finesse/capabilities", state.finesseCapabilities),
                 safeLoad("finesseSystem", "/api/v1/finesse/system", state.finesseSystem, { timeoutMs: 12000 }),
-                safeLoad("finesseQueues", "/api/v1/finesse/queues", state.finesseQueues, { timeoutMs: 15000 }));
+                safeLoad("finesseTeams", "/api/v1/finesse/teams", state.finesseTeams, { timeoutMs: 12000 }),
+                safeLoad("finesseQueues", "/api/v1/finesse/queues", state.finesseQueues, { timeoutMs: 12000 }));
     }
     if (wantsAdvanced) {
         supportLoads.push(
@@ -524,23 +532,28 @@ async function refreshLiveData() {
                 safeLoad("ivr", `/api/v1/metrics/ivr-containment?${params}`, state.ivr, { timeoutMs: 8000 }));
     }
     if (activeView === "agents") {
+        await safeLoad("agents", `/api/v1/agents/stats?${agentParams()}`, state.agents, { timeoutMs: 8000 });
+        renderAgents();
+        renderFinesse();
         loads.push(
-                safeLoad("agents", `/api/v1/agents/stats?${agentParams()}`, state.agents, { timeoutMs: 8000 }),
-                safeLoad("finesseAgents", "/api/v1/finesse/agents", state.finesseAgents, { timeoutMs: 15000 }),
-                safeLoad("finesseDialogs", "/api/v1/finesse/dialogs", state.finesseDialogs, { timeoutMs: 15000 }));
+                safeLoad("finesseAgents", "/api/v1/finesse/agents", state.finesseAgents, { timeoutMs: 8000 }),
+                safeLoad("finesseDialogs", "/api/v1/finesse/dialogs", state.finesseDialogs, { timeoutMs: 8000 }));
     }
     if (activeView === "advanced" || activeView === "overview") {
         loads.push(safeLoad("realtimeSnapshots", "/api/v1/live-data/realtime-snapshots", state.realtimeSnapshots, { timeoutMs: 8000 }));
     }
-    await Promise.all(loads);
-    renderKpis();
-    renderCharts();
-    renderBusiness();
-    renderAgents();
-    renderFinesse();
-    renderCallTypes();
-    renderAdvanced();
-    liveRefreshInProgress = false;
+    try {
+        await Promise.all(loads);
+        renderKpis();
+        renderCharts();
+        renderBusiness();
+        renderAgents();
+        renderFinesse();
+        renderCallTypes();
+        renderAdvanced();
+    } finally {
+        liveRefreshInProgress = false;
+    }
 }
 
 function setStatus(items) {
