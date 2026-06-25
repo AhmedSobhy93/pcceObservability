@@ -148,7 +148,7 @@
         <div class="agent-card-grid" id="agentVisualCards"></div>
         <article class="panel full">
             <div class="panel-head"><h2>Agent Performance</h2><span id="agentCount"></span></div>
-            <div class="table-wrap"><table><thead><tr><th>Agent</th><th>Status</th><th>Calls</th><th>AHT</th><th>Occupancy</th><th>Adherence</th><th>Transfers</th><th>Not Ready</th></tr></thead><tbody id="agentsTable"></tbody></table></div>
+            <div class="table-wrap"><table><thead><tr><th>Agent</th><th>Status</th><th>Live Calls</th><th>Caller</th><th>Calls</th><th>AHT</th><th>Occupancy</th><th>Adherence</th><th>Transfers</th><th>Not Ready</th></tr></thead><tbody id="agentsTable"></tbody></table></div>
             <div class="table-pager"><button class="small-btn" id="agentPrevPage">Previous</button><span id="agentPageInfo"></span><button class="small-btn" id="agentNextPage">Next</button></div>
         </article>
         <div class="content-grid support-grid">
@@ -158,6 +158,14 @@
         <article class="panel full api-functions-panel">
             <div class="panel-head"><h2>Agent API Workspace</h2><span>Finesse live state + PCCE configuration actions</span></div>
             <div class="agent-api-grid" id="agentApiWorkspace"></div>
+        </article>
+        <article class="panel full api-functions-panel">
+            <div class="panel-head"><h2>Running Agent Calls</h2><span id="runningCallCount">Finesse dialog detail</span></div>
+            <div class="running-call-grid" id="runningCallGrid"></div>
+        </article>
+        <article class="panel full api-functions-panel">
+            <div class="panel-head"><h2>Agent Action Center</h2><span>Approved API actions and required payloads</span></div>
+            <div class="agent-action-grid" id="agentActionCenter"></div>
         </article>
         <div class="content-grid support-grid">
             <article class="panel wide">

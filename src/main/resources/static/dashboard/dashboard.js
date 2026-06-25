@@ -696,9 +696,13 @@ function renderAgents() {
         const status = effectiveAgentStatus(agent);
         const occupancy = pick(agent, "occupancy_pct", "occupancyPct");
         const adherence = pick(agent, "adherence_pct", "adherencePct");
+        const liveDialogs = activeDialogsForAgent(agent);
+        const firstDialog = liveDialogs[0] || {};
         return `<tr>
             <td><strong>${escapeHtml(pick(agent, "agent_name", "agentName") || "")}</strong><span class="subline">${escapeHtml(pick(agent, "agent_id", "agentId") || "")} - ${escapeHtml(pick(agent, "team") || "UNKNOWN")}</span></td>
             <td><span class="badge ${status}">${escapeHtml(status.replace("_", " "))}</span></td>
+            <td>${fmt(liveDialogs.length)}</td>
+            <td>${escapeHtml(firstDialog.fromAddress || firstDialog.ani || "--")}</td>
             <td>${fmt(pick(agent, "calls_handled", "callsHandled"))}</td>
             <td>${seconds(pick(agent, "avg_handle_time", "avgHandleTime"))}</td>
             <td>${progressCell(occupancy)}</td>
@@ -706,7 +710,7 @@ function renderAgents() {
             <td>${fmt(pick(agent, "transfers"))}</td>
             <td>${minutes(pick(agent, "not_ready_time_min", "notReadyTimeMin"))}</td>
         </tr>`;
-    }).join("") || `<tr><td colspan="8">No agents match current filters.</td></tr>`;
+    }).join("") || `<tr><td colspan="10">No agents match current filters.</td></tr>`;
 }
 
 function filteredAgents() {
@@ -733,6 +737,8 @@ function renderAgentVisuals(agents) {
     renderAgentCards(agents);
     renderAgentCharts(agents);
     renderAgentApiWorkspace();
+    renderRunningAgentCalls();
+    renderAgentActionCenter();
 }
 
 function renderAgentKpis(agents) {
@@ -742,12 +748,17 @@ function renderAgentKpis(agents) {
     const aht = average(agents.filter(agent => pick(agent, "avg_handle_time", "avgHandleTime") !== null), "avg_handle_time", "avgHandleTime");
     const teams = unique(agents.map(agent => pick(agent, "team") || "UNKNOWN")).length;
     const finesseUsers = finesseDirectoryCount();
+    const liveStates = parsedFinesseUsers();
+    const activeDialogs = parsedFinesseDialogs().filter(dialog => dialog.state && !/ended|dropped|failed/i.test(dialog.state)).length;
     qs("#agentKpis").innerHTML = [
         agentKpi("Agents", total, `${teams} teams`),
         agentKpi("Active", active, "handled calls in range"),
         agentKpi("Handled", fmt(handled), "selected interval"),
         agentKpi("AHT", metricSeconds(aht), "Cisco interval/proxy"),
-        agentKpi("Finesse Users", finesseUsers ?? "--", "live directory")
+        agentKpi("Finesse Users", finesseUsers ?? "--", "live directory"),
+        agentKpi("Ready", liveStates.filter(user => user.state === "READY").length, "Finesse live"),
+        agentKpi("Not Ready", liveStates.filter(user => user.state === "NOT_READY").length, "Finesse live"),
+        agentKpi("Running Calls", activeDialogs, "Finesse dialogs")
     ].join("");
 }
 
@@ -814,6 +825,56 @@ function renderAgentApiWorkspace() {
     });
 }
 
+function renderRunningAgentCalls() {
+    const calls = parsedFinesseDialogs();
+    const activeCalls = calls.filter(call => call.dialogId || call.fromAddress || call.toAddress || call.state);
+    qs("#runningCallCount").textContent = `${activeCalls.length} dialogs`;
+    qs("#runningCallGrid").innerHTML = activeCalls.map(call => `<article class="running-call-card">
+        <div class="running-call-head">
+            <div><strong>${escapeHtml(call.agentId || call.userId || "Unknown Agent")}</strong><span>${escapeHtml(call.dialogId || "No dialog id")}</span></div>
+            <span class="badge ${dialogBadge(call.state)}">${escapeHtml(call.state || "unknown")}</span>
+        </div>
+        <div class="running-call-meta">
+            <span>Caller <b>${escapeHtml(call.fromAddress || call.ani || "--")}</b></span>
+            <span>Dialed <b>${escapeHtml(call.toAddress || call.dnis || "--")}</b></span>
+            <span>Media <b>${escapeHtml(call.mediaType || "--")}</b></span>
+            <span>Call Type <b>${escapeHtml(call.callType || "--")}</b></span>
+        </div>
+        <div class="running-call-flow">
+            ${call.participants.map(participant => `<span>${escapeHtml(participant)}</span>`).join("") || "<span>No participant detail</span>"}
+        </div>
+        <details><summary>Raw Finesse Dialog</summary><pre class="mini-json">${escapeHtml(call.raw || "")}</pre></details>
+    </article>`).join("") || `<div class="empty-state"><strong>No running calls found</strong><span>Finesse Dialogs returned no active dialog details for discovered users.</span></div>`;
+}
+
+function renderAgentActionCenter() {
+    const pcceActions = state.pcceActions.filter(action => /agent|team|skill|precision|attribute/i.test(`${pick(action, "id")} ${pick(action, "name")} ${pick(action, "category")}`));
+    const finesseActions = [
+        ["Set Agent Ready", "PUT", "/finesse/api/User/{id}", "<User><state>READY</state></User>", "Agent or supervisor permission required"],
+        ["Set Agent Not Ready", "PUT", "/finesse/api/User/{id}", "<User><state>NOT_READY</state><reasonCodeId>{id}</reasonCodeId></User>", "Requires valid reason code"],
+        ["Dialog Hold", "PUT", "/finesse/api/Dialog/{dialogId}", "<Dialog><requestedAction>HOLD</requestedAction></Dialog>", "Only while dialog is active and permitted"],
+        ["Dialog Retrieve", "PUT", "/finesse/api/Dialog/{dialogId}", "<Dialog><requestedAction>RETRIEVE</requestedAction></Dialog>", "Only for held dialog"],
+        ["Dialog Drop", "PUT", "/finesse/api/Dialog/{dialogId}", "<Dialog><requestedAction>DROP</requestedAction></Dialog>", "High impact; keep disabled unless approved"]
+    ];
+    qs("#agentActionCenter").innerHTML = `
+        <div class="action-section">
+            <h3>PCCE Unified Config Actions</h3>
+            <div class="api-chip-row">${pcceActions.map(action => `<button class="small-btn" data-action-id="${escapeHtml(pick(action, "id") || "")}" ${pick(action, "enabled") ? "" : "disabled"}>${escapeHtml(pick(action, "name") || pick(action, "id") || "")}</button>`).join("") || "<span class='muted-value'>No agent configuration actions loaded</span>"}</div>
+        </div>
+        <div class="action-section">
+            <h3>Finesse Operational Actions</h3>
+            <div class="agent-action-list">${finesseActions.map(([name, method, path, body, note]) => `<article class="agent-action-card">
+                <strong>${escapeHtml(name)}</strong>
+                <span>${escapeHtml(method)} ${escapeHtml(path)}</span>
+                <code>${escapeHtml(body)}</code>
+                <small>${escapeHtml(note)}. Execution is intentionally not enabled until an admin approves action safety.</small>
+            </article>`).join("")}</div>
+        </div>`;
+    document.querySelectorAll("#agentActionCenter [data-action-id]").forEach(button => {
+        button.addEventListener("click", () => executePcceAction(button.dataset.actionId));
+    });
+}
+
 function apiWorkspaceCard(title, value, method, detail) {
     return `<article class="agent-api-card"><span>${escapeHtml(title)}</span><strong>${escapeHtml(String(value))}</strong><small>${escapeHtml(method)}</small><p>${escapeHtml(detail)}</p></article>`;
 }
@@ -821,6 +882,103 @@ function apiWorkspaceCard(title, value, method, detail) {
 function finesseDirectoryCount() {
     const directory = state.finesseAgents.find(item => String(pick(item, "name") || "").toLowerCase().includes("users directory"));
     return directory ? countXmlTags(pick(directory, "body"), "User") : null;
+}
+
+function parsedFinesseUsers() {
+    return state.finesseAgents
+        .filter(item => /^User\s+/i.test(String(pick(item, "name") || "")) && num(pick(item, "status_code", "statusCode")) < 400)
+        .map(item => {
+            const body = pick(item, "body") || "";
+            return {
+                id: xmlTag(body, "id") || String(pick(item, "name") || "").replace(/^User\s+/i, ""),
+                loginId: xmlTag(body, "loginId"),
+                firstName: xmlTag(body, "firstName"),
+                lastName: xmlTag(body, "lastName"),
+                extension: xmlTag(body, "extension"),
+                state: xmlTag(body, "state"),
+                teamId: xmlTag(body, "teamId"),
+                teamName: xmlTag(body, "teamName"),
+                roles: xmlTags(body, "role").join(", "),
+                raw: body
+            };
+        });
+}
+
+function parsedFinesseDialogs() {
+    const dialogs = [];
+    state.finesseDialogs.forEach(item => {
+        const userId = String(pick(item, "name") || "").replace(/^Dialogs\s+/i, "");
+        const body = String(pick(item, "body") || "");
+        splitXmlBlocks(body, "Dialog").forEach(block => {
+            const media = firstXmlBlock(block, "mediaProperties") || block;
+            const participants = splitXmlBlocks(block, "Participant").map(participant =>
+                [
+                    xmlTag(participant, "mediaAddress"),
+                    xmlTag(participant, "state"),
+                    xmlTag(participant, "stateCause")
+                ].filter(Boolean).join(" - "));
+            dialogs.push({
+                userId,
+                agentId: userId,
+                dialogId: xmlTag(block, "id"),
+                state: xmlTag(block, "state"),
+                mediaType: xmlTag(block, "mediaType"),
+                fromAddress: xmlTag(media, "fromAddress") || xmlTag(media, "fromAddressDisplayName"),
+                toAddress: xmlTag(media, "toAddress") || xmlTag(media, "DNIS"),
+                ani: xmlTag(media, "ANI"),
+                dnis: xmlTag(media, "DNIS"),
+                callType: xmlTag(media, "callTypeName") || xmlTag(media, "callTypeId"),
+                callKey: xmlTag(media, "callKeyCallId") || xmlTag(media, "callKeyPrefix"),
+                participants,
+                raw: block
+            });
+        });
+    });
+    return dialogs;
+}
+
+function activeDialogsForAgent(agent) {
+    const agentId = String(pick(agent, "agent_id", "agentId") || "").trim().toLowerCase();
+    const agentName = String(pick(agent, "agent_name", "agentName") || "").trim().toLowerCase();
+    return parsedFinesseDialogs().filter(dialog => {
+        const user = String(dialog.userId || dialog.agentId || "").toLowerCase();
+        const raw = String(dialog.raw || "").toLowerCase();
+        return (agentId && (user.includes(agentId) || raw.includes(agentId)))
+            || (agentName && raw.includes(agentName));
+    });
+}
+
+function splitXmlBlocks(xml, tagName) {
+    const text = String(xml || "");
+    const pattern = new RegExp(`<${tagName}\\b[^>]*>[\\s\\S]*?<\\/${tagName}>`, "gi");
+    return text.match(pattern) || [];
+}
+
+function firstXmlBlock(xml, tagName) {
+    return splitXmlBlocks(xml, tagName)[0] || "";
+}
+
+function xmlTags(xml, tagName) {
+    const text = String(xml || "");
+    const pattern = new RegExp(`<${tagName}\\b[^>]*>\\s*([\\s\\S]*?)\\s*<\\/${tagName}>`, "gi");
+    const values = [];
+    let match;
+    while ((match = pattern.exec(text)) !== null) {
+        values.push(stripXml(match[1]));
+    }
+    return values;
+}
+
+function stripXml(value) {
+    return String(value || "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+}
+
+function dialogBadge(state) {
+    const value = String(state || "").toLowerCase();
+    if (/active|talking|initiated|alerting|reserved/.test(value)) return "on_call";
+    if (/held|hold/.test(value)) return "warn";
+    if (/drop|fail|end/.test(value)) return "down";
+    return "up";
 }
 
 function agentInitials(agent) {
