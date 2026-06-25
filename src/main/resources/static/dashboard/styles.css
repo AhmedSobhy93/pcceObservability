@@ -943,6 +943,43 @@ pre { white-space: pre-wrap; margin: 0; color: #d9e5f7; }
 .plan-group-head span { font-size: 18px; font-weight: 800; }
 .plan-group-head em { color: var(--muted); font-style: normal; }
 .plan-group.collapsed .plan-group-body { display: none; }
+.plan-table-panel { overflow: hidden; }
+.plan-flat-table {
+    max-height: 720px;
+    overflow: auto;
+}
+.plan-flat-table table {
+    min-width: 1680px;
+}
+.plan-flat-table th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: var(--panel);
+}
+.plan-flat-table td {
+    vertical-align: top;
+}
+.plan-flat-table td:nth-child(2) {
+    min-width: 280px;
+}
+.plan-task-name {
+    font-weight: 800;
+    min-width: 260px;
+}
+.timeline-cell, .progress-cell, .notes-cell, .row-actions {
+    display: grid;
+    gap: 7px;
+}
+.timeline-cell { min-width: 150px; }
+.notes-cell { min-width: 230px; }
+.row-actions { min-width: 92px; }
+.tiny-input { max-width: 95px; }
+.plan-flat-table .inline-input {
+    height: 32px;
+    border-radius: 8px;
+    font-size: 13px;
+}
 .mini-badge {
     border-radius: 999px;
     padding: 5px 9px;

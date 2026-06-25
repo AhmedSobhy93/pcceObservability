@@ -482,10 +482,10 @@
                 <label class="date-field"><span>Task</span><input id="planEditTask" placeholder="Task name"></label>
                 <label class="date-field"><span>Priority</span><select id="planEditPriority"><option>CRITICAL</option><option>HIGH</option><option>MEDIUM</option><option>LOW</option></select></label>
                 <label class="date-field"><span>Status</span><select id="planEditStatus"><option>PLANNED</option><option>IN_PROGRESS</option><option>ON_HOLD</option><option>COMPLETED</option></select></label>
-                <label class="date-field"><span>Resource</span><input id="planEditResource" placeholder="Person / Team"></label>
-                <label class="date-field"><span>Owner</span><input id="planEditOwner" placeholder="Accountable owner"></label>
-                <label class="date-field"><span>Team</span><input id="planEditTeam" placeholder="Delivery team"></label>
-                <label class="date-field"><span>Milestone</span><input id="planEditMilestone" placeholder="Milestone / phase"></label>
+                <label class="date-field"><span>Resource</span><select id="planEditResource"></select></label>
+                <label class="date-field"><span>Owner</span><select id="planEditOwner"></select></label>
+                <label class="date-field"><span>Team</span><select id="planEditTeam"></select></label>
+                <label class="date-field"><span>Milestone</span><select id="planEditMilestone"></select></label>
                 <label class="date-field"><span>Start</span><input id="planEditStart" placeholder="1-Feb-26"></label>
                 <label class="date-field"><span>Finish</span><input id="planEditFinish" placeholder="30-Apr-26"></label>
                 <label class="date-field"><span>Duration</span><input id="planEditDuration" type="number" min="0" placeholder="days"></label>
@@ -505,10 +505,10 @@
         <article class="panel full api-functions-panel">
             <div class="panel-head"><h2>Generate Team Plan</h2><span>Create reusable starter plans for other teams</span></div>
             <div class="admin-form plan-editor-form">
-                <label class="date-field"><span>Template Topic</span><input id="planTemplateTopic" placeholder="Security, Network, Reporting, AppDynamics"></label>
-                <label class="date-field"><span>Team</span><input id="planTemplateTeam" placeholder="Team name"></label>
-                <label class="date-field"><span>Owner</span><input id="planTemplateOwner" placeholder="Plan owner"></label>
-                <label class="date-field"><span>Resource</span><input id="planTemplateResource" placeholder="Assigned resource(s)"></label>
+                <label class="date-field"><span>Template Topic</span><select id="planTemplateTopic"></select></label>
+                <label class="date-field"><span>Team</span><select id="planTemplateTeam"></select></label>
+                <label class="date-field"><span>Owner</span><select id="planTemplateOwner"></select></label>
+                <label class="date-field"><span>Resource</span><select id="planTemplateResource"></select></label>
                 <label class="date-field"><span>Start</span><input id="planTemplateStart" placeholder="1-Jul-26"></label>
                 <label class="date-field"><span>Finish</span><input id="planTemplateFinish" placeholder="31-Jul-26"></label>
                 <label class="date-field editor-wide"><span>Share With</span><input id="planTemplateShareWith" placeholder="Managers, business owners, support teams"></label>

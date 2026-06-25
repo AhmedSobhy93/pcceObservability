@@ -2061,6 +2061,7 @@ function populatePlanFilters() {
     fillSelect("#planStatusFilter", ["ALL", "COMPLETED", "IN_PROGRESS", "ON_HOLD", "PLANNED"]);
     fillSelect("#planPriorityFilter", ["ALL", "CRITICAL", "HIGH", "MEDIUM", "LOW"]);
     fillSelect("#planResourceFilter", ["ALL", ...unique(planTasks.flatMap(task => resourcesFor(task.resource)))]);
+    fillPlanConfigSelects();
 }
 
 function fillSelect(selector, values, forcedValue) {
@@ -2069,6 +2070,64 @@ function fillSelect(selector, values, forcedValue) {
     const current = forcedValue || select.value || "ALL";
     select.innerHTML = values.map(value => `<option value="${escapeHtml(value)}">${escapeHtml(value === "ALL" ? "All" : value.replace("_", " "))}</option>`).join("");
     select.value = values.includes(current) ? current : "ALL";
+}
+
+function fillPlanConfigSelects() {
+    fillSelect("#planEditResource", planResources(), qs("#planEditResource")?.value || "Unassigned");
+    fillSelect("#planEditOwner", planOwners(), qs("#planEditOwner")?.value || "Unassigned");
+    fillSelect("#planEditTeam", planTeams(), qs("#planEditTeam")?.value || "General");
+    fillSelect("#planEditMilestone", planMilestones(), qs("#planEditMilestone")?.value || "Delivery");
+    fillSelect("#planTemplateTopic", planTopics(), qs("#planTemplateTopic")?.value || planTopics()[0]);
+    fillSelect("#planTemplateResource", planResources(), qs("#planTemplateResource")?.value || "Unassigned");
+    fillSelect("#planTemplateOwner", planOwners(), qs("#planTemplateOwner")?.value || "Unassigned");
+    fillSelect("#planTemplateTeam", planTeams(), qs("#planTemplateTeam")?.value || "General");
+}
+
+function planSelect(field, index, values, selected) {
+    const normalized = selected || "";
+    const options = unique(["", ...values, normalized]).map(value =>
+        `<option value="${escapeHtml(value)}" ${value === normalized ? "selected" : ""}>${escapeHtml(value || "--")}</option>`).join("");
+    return `<select class="inline-input" data-plan-field="${field}" data-plan-index="${index}">${options}</select>`;
+}
+
+function planTopics() {
+    return unique(["PCCE", "Eleveo", "Dtech", "Cisco Portal", "Survey", "Chat", "One Content", ...planTasks.map(task => task.topic)]);
+}
+
+function planResources() {
+    return unique(["Unassigned", ...planTasks.flatMap(task => resourcesFor(task.resource)), ...planTasks.flatMap(task => resourcesFor(task.owner))]);
+}
+
+function planOwners() {
+    return unique(["Unassigned", ...planTasks.flatMap(task => resourcesFor(task.owner)), ...planTasks.flatMap(task => resourcesFor(task.resource))]);
+}
+
+function planTeams() {
+    return unique(["General", "Contact Center", "Reporting", "Network", "Security", "Business", ...planTasks.map(task => task.team), ...planTasks.map(task => task.topic)]);
+}
+
+function planMilestones() {
+    return unique(["Assessment", "Design", "Build", "UAT", "Migration", "Go Live", "Hypercare", "Delivery", ...planTasks.map(task => task.milestone)]);
+}
+
+function planDates(field) {
+    return unique(planTasks.map(task => task[field]).filter(Boolean));
+}
+
+function planBlockedByOptions() {
+    return unique(["", "Network team", "Security approval", "Vendor dependency", "Business sign-off", "Change window", ...planTasks.map(task => task.blockedBy)]);
+}
+
+function planDeliverables() {
+    return unique(["", "Design document", "Configured service", "Test evidence", "Migration package", "Runbook", "Dashboard", ...planTasks.map(task => task.deliverable)]);
+}
+
+function planShareGroups() {
+    return unique(["", "Managers", "Stakeholders", "Business owners", "Support team", "Project team", ...planTasks.map(task => task.shareWith)]);
+}
+
+function planDependencyOptions(task) {
+    return unique(["", ...planTasks.filter(candidate => candidate !== task).map(candidate => candidate.task)]);
 }
 
 function filteredPlanTasks() {
@@ -2120,29 +2179,13 @@ function renderTopicCards() {
 }
 
 function renderPlanTaskGroups(tasks) {
-    const topics = unique(tasks.map(task => task.topic));
-    qs("#planTaskView").innerHTML = topics.map(topic => {
-        const topicTasks = tasks.filter(task => task.topic === topic);
-        const pctDone = Math.round(average(topicTasks, "pct") || 0);
-        const collapsed = planState.collapsed.has(topic);
-        return `<article class="plan-group panel ${collapsed ? "collapsed" : ""}">
-            <button class="plan-group-head" data-collapse-topic="${escapeHtml(topic)}">
-                <span>${collapsed ? ">" : "v"} ${escapeHtml(topic)}</span>
-                <strong>${topicTasks.length} tasks</strong>
-                ${statusMiniBadges(topicTasks)}
-                <i><b style="width:${pctDone}%"></b></i>
-                <em>${pctDone}%</em>
-            </button>
-            <div class="table-wrap plan-group-body"><table><thead><tr><th>Task</th><th>Priority</th><th>Status</th><th>Resource / Owner</th><th>Timeline</th><th>Progress / Controls</th></tr></thead><tbody>
-                ${topicTasks.map(planTaskRow).join("")}
-            </tbody></table></div>
-        </article>`;
-    }).join("") || `<article class="panel"><h2>No tasks match filters</h2></article>`;
-    document.querySelectorAll("[data-collapse-topic]").forEach(button => button.addEventListener("click", () => {
-        const topic = button.dataset.collapseTopic;
-        planState.collapsed.has(topic) ? planState.collapsed.delete(topic) : planState.collapsed.add(topic);
-        renderPlan();
-    }));
+    qs("#planTaskView").innerHTML = `<article class="panel full plan-table-panel">
+        <div class="panel-head"><h2>Tasks</h2><span>One row per task, dropdown-managed fields</span></div>
+        <div class="table-wrap plan-flat-table"><table>
+            <thead><tr><th>Topic</th><th>Task</th><th>Priority</th><th>Status</th><th>Resource</th><th>Owner</th><th>Team</th><th>Milestone</th><th>Timeline</th><th>Progress</th><th>Notes</th><th></th></tr></thead>
+            <tbody>${tasks.map(planTaskRow).join("") || `<tr><td colspan="12">No tasks match filters</td></tr>`}</tbody>
+        </table></div>
+    </article>`;
     bindPlanEditors();
 }
 
@@ -2151,35 +2194,32 @@ function planTaskRow(task) {
     const index = planTasks.indexOf(task);
     const id = task.id || index;
     return `<tr class="${criticalOpen ? "critical-row" : ""}">
-        <td><strong>${escapeHtml(task.task)}</strong>${task.priorityNum ? `<span class="subline">Priority #${task.priorityNum}</span>` : ""}
-            <span class="subline">ID ${escapeHtml(id)}${task.milestone ? ` - ${escapeHtml(task.milestone)}` : ""}</span>
-            ${task.deliverable ? `<span class="subline">Deliverable: ${escapeHtml(task.deliverable)}</span>` : ""}
-            ${task.dependsOn ? `<span class="subline">Depends on: ${escapeHtml(task.dependsOn)}</span>` : ""}
-            ${task.blockedBy ? `<span class="subline danger-text">Blocked by: ${escapeHtml(task.blockedBy)}</span>` : ""}
+        <td>${planSelect("topic", index, planTopics(), task.topic)}</td>
+        <td><input class="inline-input plan-task-name" data-plan-field="task" data-plan-index="${index}" value="${escapeHtml(task.task || "")}"><span class="subline">ID ${escapeHtml(id)}${task.priorityNum ? ` | #${escapeHtml(task.priorityNum)}` : ""}</span></td>
+        <td>${planSelect("priority", index, ["CRITICAL", "HIGH", "MEDIUM", "LOW"], task.priority)}</td>
+        <td>${planSelect("status", index, ["COMPLETED", "IN_PROGRESS", "ON_HOLD", "PLANNED"], task.status)}</td>
+        <td>${planSelect("resource", index, planResources(), task.resource || "Unassigned")}</td>
+        <td>${planSelect("owner", index, planOwners(), task.owner || task.resource || "Unassigned")}</td>
+        <td>${planSelect("team", index, planTeams(), task.team || task.topic || "General")}</td>
+        <td>${planSelect("milestone", index, planMilestones(), task.milestone || "Delivery")}</td>
+        <td class="timeline-cell">
+            ${planSelect("start", index, planDates("start"), task.start || "")}
+            ${planSelect("finish", index, planDates("finish"), task.finish || "")}
+            <input class="inline-input tiny-input" data-plan-field="duration" data-plan-index="${index}" type="number" min="0" value="${escapeHtml(task.duration ?? "")}" placeholder="Days">
         </td>
-        <td>${badge(task.priority, priorityClass(task.priority))}</td>
-        <td><select class="inline-input" data-plan-field="status" data-plan-index="${index}">${["COMPLETED", "IN_PROGRESS", "ON_HOLD", "PLANNED"].map(status => `<option ${task.status === status ? "selected" : ""}>${status}</option>`).join("")}</select></td>
-        <td>
-            <input class="inline-input" data-plan-field="resource" data-plan-index="${index}" value="${escapeHtml(task.resource || "")}">
-            <input class="inline-input" data-plan-field="owner" data-plan-index="${index}" value="${escapeHtml(task.owner || "")}" placeholder="Owner">
-            <input class="inline-input" data-plan-field="team" data-plan-index="${index}" value="${escapeHtml(task.team || "")}" placeholder="Team">
-            ${task.shareWith ? `<span class="subline">Share: ${escapeHtml(task.shareWith)}</span>` : ""}
-        </td>
-        <td>
-            <input class="inline-input" data-plan-field="milestone" data-plan-index="${index}" value="${escapeHtml(task.milestone || "")}" placeholder="Milestone">
-            <input class="inline-input" data-plan-field="start" data-plan-index="${index}" value="${escapeHtml(task.start || "")}" placeholder="Start">
-            <input class="inline-input" data-plan-field="finish" data-plan-index="${index}" value="${escapeHtml(task.finish || "")}" placeholder="Finish">
-            <input class="inline-input" data-plan-field="duration" data-plan-index="${index}" type="number" min="0" value="${escapeHtml(task.duration ?? "")}" placeholder="Days">
-        </td>
-        <td>
+        <td class="progress-cell">
             <input class="inline-input plan-pct-input" type="number" min="0" max="100" data-plan-field="pct" data-plan-index="${index}" value="${escapeHtml(task.pct)}">
             ${inlineProgress(task.pct)}
-            <select class="inline-input" data-plan-field="risk" data-plan-index="${index}">${["LOW", "MEDIUM", "HIGH", "CRITICAL"].map(risk => `<option ${String(task.risk || "MEDIUM") === risk ? "selected" : ""}>${risk}</option>`).join("")}</select>
-            <input class="inline-input" data-plan-field="dependsOn" data-plan-index="${index}" value="${escapeHtml(task.dependsOn || "")}" placeholder="Depends on">
-            <input class="inline-input" data-plan-field="blockedBy" data-plan-index="${index}" value="${escapeHtml(task.blockedBy || "")}" placeholder="Blocked by">
-            <input class="inline-input" data-plan-field="deliverable" data-plan-index="${index}" value="${escapeHtml(task.deliverable || "")}" placeholder="Deliverable">
-            <input class="inline-input" data-plan-field="shareWith" data-plan-index="${index}" value="${escapeHtml(task.shareWith || "")}" placeholder="Share with">
-            <input class="inline-input" data-plan-field="comments" data-plan-index="${index}" value="${escapeHtml(task.comments)}">
+            ${planSelect("risk", index, ["LOW", "MEDIUM", "HIGH", "CRITICAL"], task.risk || "MEDIUM")}
+        </td>
+        <td class="notes-cell">
+            ${planSelect("dependsOn", index, planDependencyOptions(task), task.dependsOn || "")}
+            ${planSelect("blockedBy", index, planBlockedByOptions(), task.blockedBy || "")}
+            ${planSelect("deliverable", index, planDeliverables(), task.deliverable || "")}
+            ${planSelect("shareWith", index, planShareGroups(), task.shareWith || "")}
+            <input class="inline-input" data-plan-field="comments" data-plan-index="${index}" value="${escapeHtml(task.comments || "")}" placeholder="Comments">
+        </td>
+        <td class="row-actions">
             <button class="small-btn" data-plan-save="${index}">Save</button>
             <button class="small-btn danger-btn" data-plan-delete="${index}">Delete</button>
         </td>
@@ -2241,10 +2281,10 @@ async function addPlanTask() {
         priority: qs("#planEditPriority").value,
         priorityNum: null,
         status: qs("#planEditStatus").value,
-        resource: qs("#planEditResource").value.trim() || "Unassigned",
-        owner: qs("#planEditOwner").value.trim(),
-        team: qs("#planEditTeam").value.trim(),
-        milestone: qs("#planEditMilestone").value.trim(),
+        resource: qs("#planEditResource").value || "Unassigned",
+        owner: qs("#planEditOwner").value,
+        team: qs("#planEditTeam").value,
+        milestone: qs("#planEditMilestone").value,
         start: qs("#planEditStart").value.trim(),
         finish: qs("#planEditFinish").value.trim(),
         duration: Number(qs("#planEditDuration").value || 0),
@@ -2257,7 +2297,7 @@ async function addPlanTask() {
         externalRef: qs("#planEditExternalRef").value.trim(),
         comments: qs("#planEditComments").value.trim()
     }, "POST");
-    ["#planEditTask", "#planEditOwner", "#planEditTeam", "#planEditMilestone", "#planEditStart", "#planEditFinish",
+    ["#planEditTask", "#planEditStart", "#planEditFinish",
         "#planEditDuration", "#planEditDependsOn", "#planEditBlockedBy", "#planEditDeliverable", "#planEditShareWith",
         "#planEditExternalRef", "#planEditComments"].forEach(selector => qs(selector).value = "");
 }
@@ -2330,10 +2370,10 @@ async function copyProjectShareLink() {
 
 async function generatePlanTemplate() {
     const body = {
-        topic: qs("#planTemplateTopic").value.trim() || "Team Delivery",
-        team: qs("#planTemplateTeam").value.trim(),
-        owner: qs("#planTemplateOwner").value.trim(),
-        resource: qs("#planTemplateResource").value.trim(),
+        topic: qs("#planTemplateTopic").value || "Team Delivery",
+        team: qs("#planTemplateTeam").value,
+        owner: qs("#planTemplateOwner").value,
+        resource: qs("#planTemplateResource").value,
         start: qs("#planTemplateStart").value.trim(),
         finish: qs("#planTemplateFinish").value.trim(),
         shareWith: qs("#planTemplateShareWith").value.trim()
@@ -2352,8 +2392,7 @@ async function generatePlanTemplate() {
         planTasks = state.projectTasks || [];
         planState.topic = body.topic;
         renderPlan();
-        ["#planTemplateTopic", "#planTemplateTeam", "#planTemplateOwner", "#planTemplateResource",
-            "#planTemplateStart", "#planTemplateFinish", "#planTemplateShareWith"].forEach(selector => qs(selector).value = "");
+        ["#planTemplateStart", "#planTemplateFinish", "#planTemplateShareWith"].forEach(selector => qs(selector).value = "");
         showPlanMessage("Reusable team plan generated.");
     } catch (error) {
         showPlanMessage(error.message);
