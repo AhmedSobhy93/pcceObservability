@@ -24,6 +24,7 @@
         <button class="nav-item" data-view="system"><span class="icon icon-system"></span>System Health</button>
         <button class="nav-item" data-view="eleveo"><span class="icon icon-eleveo"></span>Eleveo QM</button>
         <button class="nav-item" data-view="integration"><span class="icon icon-integration"></span>PCCE Integration</button>
+        <button class="nav-item" data-view="cvp"><span class="icon icon-cvp"></span>CVP APIs</button>
         <button class="nav-item" data-view="advanced"><span class="icon icon-system"></span>Advanced Monitoring</button>
         <button class="nav-item" data-view="smtp"><span class="icon icon-alerts"></span>Alerts</button>
         <button class="nav-item" data-view="spog"><span class="icon icon-spog"></span>SPOG Ops</button>
@@ -267,6 +268,33 @@
             <article class="panel wide"><h2>Query Performance</h2><div class="metric-list" id="queryPerformanceList"></div></article>
             <article class="panel"><h2>Recent App Logs</h2><pre class="log-box" id="logBox"></pre></article>
         </div>
+    </section>
+
+    <section class="view" id="view-cvp">
+        <div class="content-grid">
+            <article class="panel wide">
+                <div class="panel-head"><h2>CVP API Surveillance</h2><span>Diagnostics, VXML apps, media, Syslog, SNMP and VVB checks</span></div>
+                <div class="component-grid" id="cvpApiGrid"></div>
+            </article>
+            <article class="panel">
+                <h2>CVP API Use Cases</h2>
+                <div class="metric-list" id="cvpCapabilityList"></div>
+            </article>
+        </div>
+        <article class="panel full api-functions-panel">
+            <div class="panel-head"><h2>CVP Function Catalog</h2><span>Cisco CVP developer use-case mapping</span></div>
+            <div class="table-wrap"><table><thead><tr><th>Category</th><th>Function</th><th>Method</th><th>Path</th><th>Business / Support Use</th></tr></thead><tbody id="cvpFunctionTable"></tbody></table></div>
+        </article>
+        <article class="panel full api-functions-panel">
+            <div class="panel-head"><h2>CVP API Action Console</h2><span>Read actions for support, mutating actions for admins only</span></div>
+            <div class="api-action-grid">
+                <textarea class="action-body" id="cvpPathParams" placeholder='Path params JSON, for example {"name":"OneBank_Main_IVR"}'></textarea>
+                <textarea class="action-body" id="cvpQueryParams" placeholder='Query params JSON, for example {"appName":"OneBank_Main_IVR"}'></textarea>
+            </div>
+            <textarea class="action-body" id="cvpActionBody" placeholder="Optional JSON body for enabled POST/PUT/PATCH actions"></textarea>
+            <div class="table-wrap"><table><thead><tr><th>Category</th><th>Action</th><th>Method</th><th>Path</th><th>Status</th><th></th></tr></thead><tbody id="cvpActionTable"></tbody></table></div>
+            <pre class="log-box action-result" id="cvpActionResult">No CVP API action executed yet.</pre>
+        </article>
     </section>
 
     <section class="view" id="view-advanced">

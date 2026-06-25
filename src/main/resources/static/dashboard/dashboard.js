@@ -16,6 +16,10 @@ const state = {
     pcceCapabilities: [],
     pcceFunctions: [],
     pcceActions: [],
+    cvpApiStatus: [],
+    cvpCapabilities: [],
+    cvpFunctions: [],
+    cvpActions: [],
     rtmtCapabilities: [],
     spogCapabilities: [],
     smtpCapabilities: [],
@@ -56,6 +60,7 @@ const pages = {
     system: ["System Health", "PCCE, CVP, CUIC, Finesse, PG, CTI, and gateway status"],
     eleveo: ["Eleveo QM & Recording", "Grafana monitoring for quality management and recording platforms"],
     integration: ["PCCE Integration", "AW/HDS SQL Server and CVP Informix connectivity"],
+    cvp: ["CVP APIs", "CVP REST use cases, VXML apps, media, Syslog, SNMP, diagnostics and VVB operations"],
     advanced: ["Advanced Monitoring", "Secure JMX, AppDynamics, and PCCE Live Data readiness"],
     smtp: ["Alerts", "Webhook, SMTP, SMS thresholds, escalation, and notification readiness"],
     spog: ["SPOG Operations", "Single pane operations, graceful actions, and log collection"],
@@ -380,7 +385,8 @@ async function refresh() {
         const wantsAgents = activeView === "agents";
         const wantsCalls = activeView === "calls";
         const wantsSystem = activeView === "system";
-        const wantsIntegration = activeView === "integration";
+    const wantsIntegration = activeView === "integration";
+    const wantsCvp = activeView === "cvp";
         const wantsAdvanced = activeView === "advanced";
         const wantsAlerts = activeView === "smtp";
         const wantsSpog = activeView === "spog";
@@ -433,6 +439,13 @@ async function refresh() {
                 safeLoad("pcceActions", "/api/v1/pcce-api/actions", state.pcceActions),
                 safeLoad("rtmtCapabilities", "/api/v1/pcce-api/rtmt-capabilities", state.rtmtCapabilities),
                 safeLoad("spogCapabilities", "/api/v1/pcce-api/spog-capabilities", state.spogCapabilities));
+    }
+    if (wantsCvp) {
+        supportLoads.push(
+                safeLoad("cvpApiStatus", "/api/v1/cvp-api/status", state.cvpApiStatus, { timeoutMs: 10000 }),
+                safeLoad("cvpCapabilities", "/api/v1/cvp-api/capabilities", state.cvpCapabilities),
+                safeLoad("cvpFunctions", "/api/v1/cvp-api/functions", state.cvpFunctions),
+                safeLoad("cvpActions", "/api/v1/cvp-api/actions", state.cvpActions));
     }
     if (wantsAgents || wantsIntegration) {
         supportLoads.push(
@@ -545,6 +558,7 @@ function renderAll(errors) {
     renderComponents();
     renderReferenceOptions();
     renderIntegration();
+    renderCvpApi();
     renderSmtp();
     renderSpog();
     renderEleveo();
@@ -1352,6 +1366,50 @@ function renderIntegration() {
     ).join("");
 }
 
+function renderCvpApi() {
+    const grid = qs("#cvpApiGrid");
+    if (!grid) return;
+    grid.innerHTML = state.cvpApiStatus.map(item => {
+        const stateValue = String(pick(item, "state") || "UNKNOWN").toLowerCase();
+        const badgeClass = stateValue === "up" ? "up" : stateValue === "down" ? "down" : stateValue === "disabled" ? "disabled" : "warn";
+        const statusCode = num(pick(item, "status_code", "statusCode"));
+        return `<article class="component-card api-health-card">
+            <div class="component-title"><h3>${escapeHtml(pick(item, "name") || "")}</h3><span class="badge ${badgeClass}">${escapeHtml(stateValue)}</span></div>
+            <p>${escapeHtml(pick(item, "category") || "")}</p>
+            <small>${escapeHtml(pick(item, "method") || "GET")} - ${escapeHtml(pick(item, "target") || "")}</small>
+            <div class="component-detail">${fmt(pick(item, "latency_ms", "latencyMs"))} ms - ${statusCode ? `HTTP ${statusCode}` : escapeHtml(pick(item, "detail") || "")}</div>
+        </article>`;
+    }).join("") || `<article class="component-card"><h3>CVP API</h3><span class="badge warn">disabled</span><p>Set CVP_API_ENABLED=true and CVP_API_BASE_URL to enable CVP REST visualization.</p></article>`;
+
+    qs("#cvpCapabilityList").innerHTML = state.cvpCapabilities.map(item =>
+        metricRow(pick(item, "category"), pick(item, "capability"))
+    ).join("") || metricRow("CVP Developer APIs", "Capability catalog unavailable");
+
+    qs("#cvpFunctionTable").innerHTML = state.cvpFunctions.map(item => `<tr>
+        <td>${escapeHtml(pick(item, "category") || "")}</td>
+        <td>${escapeHtml(pick(item, "function") || "")}</td>
+        <td><span class="badge up">${escapeHtml(pick(item, "method") || "GET")}</span></td>
+        <td>${escapeHtml(pick(item, "path") || "")}</td>
+        <td>${escapeHtml(pick(item, "description") || "")}</td>
+    </tr>`).join("");
+
+    qs("#cvpActionTable").innerHTML = state.cvpActions.map(item => {
+        const enabled = Boolean(pick(item, "enabled"));
+        const id = pick(item, "id") || "";
+        return `<tr>
+            <td>${escapeHtml(pick(item, "category") || "")}</td>
+            <td>${escapeHtml(pick(item, "name") || id)}</td>
+            <td><span class="badge ${enabled ? "up" : "warn"}">${escapeHtml(pick(item, "method") || "GET")}</span></td>
+            <td>${escapeHtml(pick(item, "path") || "")}</td>
+            <td>${enabled ? "Enabled" : "Disabled"}</td>
+            <td><button class="small-btn" data-cvp-action-id="${escapeHtml(id)}" ${enabled ? "" : "disabled"}>Run</button></td>
+        </tr>`;
+    }).join("");
+    document.querySelectorAll("[data-cvp-action-id]").forEach(button => {
+        button.addEventListener("click", () => executeCvpAction(button.dataset.cvpActionId));
+    });
+}
+
 function endpointCard(item) {
     const statusCode = num(pick(item, "status_code", "statusCode"));
     const ok = statusCode >= 200 && statusCode < 400;
@@ -1736,6 +1794,22 @@ async function executePcceAction(id) {
         }
     } catch (error) {
         qs("#pcceActionResult").textContent = error.message;
+    }
+}
+
+async function executeCvpAction(id) {
+    qs("#cvpActionResult").textContent = `Running ${id}...`;
+    try {
+        const bodyText = qs("#cvpActionBody").value.trim();
+        const pathParams = parseJsonObject(qs("#cvpPathParams").value.trim(), "Path params");
+        const queryParams = parseJsonObject(qs("#cvpQueryParams").value.trim(), "Query params");
+        const result = await api(`/api/v1/cvp-api/actions/${encodeURIComponent(id)}/execute`, {
+            method: "POST",
+            body: JSON.stringify({ body: bodyText || null, pathParams, queryParams })
+        });
+        qs("#cvpActionResult").textContent = JSON.stringify(result, null, 2);
+    } catch (error) {
+        qs("#cvpActionResult").textContent = error.message;
     }
 }
 

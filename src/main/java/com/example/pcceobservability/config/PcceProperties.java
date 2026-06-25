@@ -30,6 +30,7 @@ public class PcceProperties {
 
     @Valid
     private PcceApi pcceApi = new PcceApi();
+    private CvpApi cvpApi = new CvpApi();
 
     @Valid
     private Notifications notifications = new Notifications();
@@ -95,6 +96,14 @@ public class PcceProperties {
 
     public void setPcceApi(PcceApi pcceApi) {
         this.pcceApi = pcceApi;
+    }
+
+    public CvpApi getCvpApi() {
+        return cvpApi;
+    }
+
+    public void setCvpApi(CvpApi cvpApi) {
+        this.cvpApi = cvpApi;
     }
 
     public Notifications getNotifications() {
@@ -610,6 +619,54 @@ public class PcceProperties {
             action.setPath(path);
             action.setAdminOnly(adminOnly);
             action.setEnabled(!adminOnly);
+            return action;
+        }
+    }
+
+    public static class CvpApi extends PcceApi {
+        public CvpApi() {
+            setMonitors(List.of(
+                    monitor("CVP Diagnostics", "Diagnostics and Health", "/cvp/diag"),
+                    monitor("VXML Applications", "VXML Application Management", "/cvp/api/applications"),
+                    monitor("Media Files", "Media File Management", "/cvp/api/media"),
+                    monitor("Syslog Configuration", "Operations Configuration", "/cvp/api/syslog"),
+                    monitor("SNMP Configuration", "Operations Configuration", "/cvp/api/snmp"),
+                    monitor("VVB Services", "VVB and Voice Browser", "/cvp/api/vvb")));
+            setActions(List.of(
+                    action("cvp.diagnostics.get", "Diagnostics and Health", "Get CVP diagnostics", "GET", "/cvp/diag", false, true),
+                    action("cvp.apps.list", "VXML Application Management", "List VXML applications", "GET", "/cvp/api/applications", false, true),
+                    action("cvp.app.get", "VXML Application Management", "Get VXML application", "GET", "/cvp/api/applications/{name}", false, true),
+                    action("cvp.app.deploy", "VXML Application Management", "Deploy or update VXML application", "POST", "/cvp/api/applications/{name}", true, false),
+                    action("cvp.app.delete", "VXML Application Management", "Delete VXML application", "DELETE", "/cvp/api/applications/{name}", true, false),
+                    action("cvp.media.list", "Media File Management", "List media files", "GET", "/cvp/api/media", false, true),
+                    action("cvp.media.upload", "Media File Management", "Upload media metadata/file reference", "POST", "/cvp/api/media", true, false),
+                    action("cvp.syslog.get", "Operations Configuration", "Get Syslog configuration", "GET", "/cvp/api/syslog", false, true),
+                    action("cvp.syslog.update", "Operations Configuration", "Update Syslog configuration", "PUT", "/cvp/api/syslog", true, false),
+                    action("cvp.snmp.get", "Operations Configuration", "Get SNMP configuration", "GET", "/cvp/api/snmp", false, true),
+                    action("cvp.snmp.update", "Operations Configuration", "Update SNMP configuration", "PUT", "/cvp/api/snmp", true, false),
+                    action("cvp.vvb.list", "VVB and Voice Browser", "List VVB services", "GET", "/cvp/api/vvb", false, true)));
+        }
+
+        private static ApiMonitor monitor(String name, String category, String path) {
+            ApiMonitor monitor = new ApiMonitor();
+            monitor.setName(name);
+            monitor.setCategory(category);
+            monitor.setMethod("GET");
+            monitor.setPath(path);
+            monitor.setExpectedStatusMax(499);
+            monitor.setEnabled(true);
+            return monitor;
+        }
+
+        private static ApiAction action(String id, String category, String name, String method, String path, boolean adminOnly, boolean enabled) {
+            ApiAction action = new ApiAction();
+            action.setId(id);
+            action.setCategory(category);
+            action.setName(name);
+            action.setMethod(method);
+            action.setPath(path);
+            action.setAdminOnly(adminOnly);
+            action.setEnabled(enabled);
             return action;
         }
     }

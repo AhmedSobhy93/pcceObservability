@@ -93,6 +93,8 @@ body {
 .icon-eleveo::before, .icon-app::before { inset: 4px; border: 2px solid currentColor; border-radius: 4px; transform: rotate(45deg); }
 .icon-integration::before { left: 10px; top: 3px; width: 4px; height: 18px; background: currentColor; }
 .icon-integration::after { left: 5px; top: 7px; width: 14px; height: 10px; border: 2px solid currentColor; border-radius: 6px; }
+.icon-cvp::before { left: 3px; top: 5px; width: 18px; height: 14px; border: 2px solid currentColor; border-radius: 4px; }
+.icon-cvp::after { left: 7px; top: 9px; width: 10px; height: 2px; background: currentColor; box-shadow: 0 4px 0 0 currentColor; }
 .icon-alerts::before { left: 4px; top: 3px; width: 16px; height: 16px; border: 2px solid currentColor; border-radius: 50%; }
 .icon-alerts::after { left: 11px; top: 7px; width: 2px; height: 7px; background: currentColor; box-shadow: 0 9px 0 0 currentColor; }
 .icon-spog::before { inset: 3px; border: 2px solid currentColor; border-radius: 50%; }

@@ -263,6 +263,7 @@ pcce:
         admin-only: false
         method: GET
         path: /unifiedconfig/config/machineinventory
+
       - id: cvpReportingServer.get
         category: System Configuration
         name: Get CVP Reporting Server
@@ -291,6 +292,18 @@ pcce:
         admin-only: true
         method: PUT
         path: /unifiedconfig/config/businesshour/{id}
+
+  cvp-api:
+    enabled: ${CVP_API_ENABLED:false}
+    base-url: ${CVP_API_BASE_URL:http://10.10.90.194:8000}
+    username: ${CVP_API_USERNAME:}
+    password: ${CVP_API_PASSWORD:}
+    auth-mode: ${CVP_API_AUTH_MODE:BASIC}
+    bearer-token: ${CVP_API_BEARER_TOKEN:}
+    api-key-header-name: ${CVP_API_KEY_HEADER_NAME:}
+    api-key: ${CVP_API_KEY:}
+    timeout: ${CVP_API_TIMEOUT:10s}
+    trust-all-certificates: ${CVP_API_TRUST_ALL_CERTIFICATES:true}
 
   queries:
     call-metrics-tcd-fallback-enabled: true
