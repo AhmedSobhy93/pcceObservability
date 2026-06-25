@@ -31,9 +31,14 @@ import org.springframework.util.StringUtils;
 public class FinesseIntegrationService {
 
     private static final Pattern FINESSE_USER_ID_PATTERN = Pattern.compile("<id>\\s*([^<]+?)\\s*</id>", Pattern.CASE_INSENSITIVE);
+    private static final int CACHE_TTL_SECONDS = 20;
 
     private final PcceProperties pcceProperties;
     private final JdbcTemplate awJdbcTemplate;
+    private volatile List<FinesseEndpointResult> cachedAgents = List.of();
+    private volatile Instant cachedAgentsAt = Instant.EPOCH;
+    private volatile List<FinesseEndpointResult> cachedDialogs = List.of();
+    private volatile Instant cachedDialogsAt = Instant.EPOCH;
 
     public FinesseIntegrationService(
             PcceProperties pcceProperties,
@@ -56,7 +61,10 @@ public class FinesseIntegrationService {
         return List.of(request("SystemInfo", "/finesse/api/SystemInfo"));
     }
 
-    public List<FinesseEndpointResult> agents() {
+    public synchronized List<FinesseEndpointResult> agents() {
+        if (fresh(cachedAgentsAt) && !cachedAgents.isEmpty()) {
+            return cachedAgents;
+        }
         List<FinesseEndpointResult> results = new ArrayList<>();
         FinesseEndpointResult directory = request("Users Directory", "/finesse/api/Users");
         results.add(directory);
@@ -66,16 +74,24 @@ public class FinesseIntegrationService {
                 .limit(25)
                 .map(userId -> request("User " + userId, "/finesse/api/User/" + encodePath(userId)))
                 .toList());
+        cachedAgents = List.copyOf(results);
+        cachedAgentsAt = Instant.now();
         return results;
     }
 
-    public List<FinesseEndpointResult> dialogs() {
+    public synchronized List<FinesseEndpointResult> dialogs() {
+        if (fresh(cachedDialogsAt) && !cachedDialogs.isEmpty()) {
+            return cachedDialogs;
+        }
         Set<String> userIds = new LinkedHashSet<>(userIdsFromDirectory(request("Users Directory", "/finesse/api/Users").body()));
         userIds.addAll(configuredUserIds());
-        return userIds.parallelStream()
-                .limit(50)
+        List<FinesseEndpointResult> results = userIds.parallelStream()
+                .limit(25)
                 .map(userId -> request("Dialogs " + userId, "/finesse/api/User/" + encodePath(userId) + "/Dialogs"))
                 .toList();
+        cachedDialogs = List.copyOf(results);
+        cachedDialogsAt = Instant.now();
+        return results;
     }
 
     public List<FinesseEndpointResult> teams() {
@@ -255,5 +271,9 @@ public class FinesseIntegrationService {
 
     private long elapsedMs(long startNanos) {
         return (System.nanoTime() - startNanos) / 1_000_000;
+    }
+
+    private boolean fresh(Instant cachedAt) {
+        return cachedAt != null && cachedAt.plusSeconds(CACHE_TTL_SECONDS).isAfter(Instant.now());
     }
 }

@@ -68,6 +68,10 @@ const colors = ["#2ed3c2", "#3d82f6", "#f4a51c", "#8d6cf7", "#24e0a4", "#ff626c"
 const uiState = { ivrNodePage: 0, ivrNodePageSize: 50, agentPage: 0, agentPageSize: 25, journeyPage: 0, journeyPageSize: 12, callTypePage: 0, callTypePageSize: 50 };
 const businessSettings = loadBusinessSettings();
 const planState = { view: "tasks", topic: "ALL", collapsed: new Set() };
+let activeView = "overview";
+let refreshInProgress = false;
+let liveRefreshInProgress = false;
+let pendingRefresh = false;
 const permissionCatalog = [
     "CALL_METRICS_READ",
     "AGENT_STATS_READ",
@@ -183,6 +187,7 @@ document.addEventListener("DOMContentLoaded", () => {
         button.addEventListener("click", () => switchView(button.dataset.view));
     });
     refresh();
+    setInterval(refreshLiveData, 10000);
 });
 
 function qs(selector) {
@@ -362,61 +367,112 @@ async function logout() {
 }
 
 async function refresh() {
-    setStatus([{ text: "Refreshing live data...", level: "neutral" }]);
-    const params = dateParams();
-    const errors = [];
+    if (refreshInProgress) {
+        pendingRefresh = true;
+        return;
+    }
+    refreshInProgress = true;
+    try {
+        setStatus([{ text: "Refreshing live data...", level: "neutral" }]);
+        const params = dateParams();
+        const errors = [];
+        const wantsBusiness = ["overview", "business"].includes(activeView);
+        const wantsAgents = activeView === "agents";
+        const wantsCalls = activeView === "calls";
+        const wantsSystem = activeView === "system";
+        const wantsIntegration = activeView === "integration";
+        const wantsAdvanced = activeView === "advanced";
+        const wantsAlerts = activeView === "smtp";
+        const wantsSpog = activeView === "spog";
+        const wantsAdmin = activeView === "admin";
+        const wantsApp = activeView === "app";
+        const wantsPlan = activeView === "plan";
+        const wantsEleveo = activeView === "eleveo";
+
     const coreLoads = [
         safeLoad("user", "/api/v1/auth/me", null),
-        safeLoad("calls", `/api/v1/metrics/calls?${params}`, [], { timeoutMs: 15000 }),
-        safeLoad("callTypes", `/api/v1/metrics/call-types?${callTypeParams()}`, [], { timeoutMs: 15000 }),
-        safeLoad("callFlow", `/api/v1/calls/flow?${callFlowParams()}`, [], { timeoutMs: 15000 }),
-        safeLoad("agents", `/api/v1/agents/stats?${agentParams()}`, [], { timeoutMs: 15000 }),
-        safeLoad("drops", `/api/v1/calls/dropped?${params}`, []),
-        safeLoad("ivr", `/api/v1/metrics/ivr-containment?${params}`, []),
-        safeLoad("cvpIvrNodes", `/api/v1/metrics/cvp-ivr-nodes?${ivrNodeParams()}`, [], { timeoutMs: 18000 }),
-        safeLoad("components", "/api/v1/components/status", [], { timeoutMs: 16000 }),
-        safeLoad("serverMetrics", "/api/v1/components/server-metrics", [], { timeoutMs: 8000 })
+        safeLoad("components", "/api/v1/components/status", state.components, { timeoutMs: 12000 }),
+        safeLoad("assessment", "/api/v1/operations/assessment/last", state.assessment, { timeoutMs: 5000 })
     ];
+    if (wantsBusiness || wantsCalls) {
+        coreLoads.push(
+                safeLoad("calls", `/api/v1/metrics/calls?${params}`, [], { timeoutMs: 15000 }),
+                safeLoad("callTypes", `/api/v1/metrics/call-types?${callTypeParams()}`, [], { timeoutMs: 15000 }),
+                safeLoad("drops", `/api/v1/calls/dropped?${params}`, []),
+                safeLoad("ivr", `/api/v1/metrics/ivr-containment?${params}`, []));
+    }
+    if (wantsCalls) {
+        coreLoads.push(
+                safeLoad("callFlow", `/api/v1/calls/flow?${callFlowParams()}`, [], { timeoutMs: 15000 }),
+                safeLoad("cvpIvrNodes", `/api/v1/metrics/cvp-ivr-nodes?${ivrNodeParams()}`, [], { timeoutMs: 12000 }));
+    }
+    if (wantsAgents) {
+        coreLoads.push(
+                safeLoad("agents", `/api/v1/agents/stats?${agentParams()}`, [], { timeoutMs: 15000 }),
+                safeLoad("finesseAgents", "/api/v1/finesse/agents", state.finesseAgents, { timeoutMs: 30000 }),
+                safeLoad("finesseDialogs", "/api/v1/finesse/dialogs", state.finesseDialogs, { timeoutMs: 30000 }),
+                safeLoad("finesseTeams", "/api/v1/finesse/teams", state.finesseTeams, { timeoutMs: 15000 }));
+    }
+    if (wantsSystem) {
+        coreLoads.push(safeLoad("serverMetrics", "/api/v1/components/server-metrics", [], { timeoutMs: 8000 }));
+    }
     const coreResults = await Promise.all(coreLoads);
     errors.push(...coreResults.filter(Boolean));
     renderAll(errors);
 
     const supportLoads = [
-        safeLoad("assessment", "/api/v1/operations/assessment/last", null, { timeoutMs: 8000 }),
-        safeLoad("queryPerformance", "/api/v1/monitoring/query-performance?limit=50", []),
-        safeLoad("pcceApiStatus", "/api/v1/pcce-api/status", []),
-        safeLoad("pcceCapabilities", "/api/v1/pcce-api/capabilities", []),
-        safeLoad("pcceFunctions", "/api/v1/pcce-api/functions", []),
-        safeLoad("pcceActions", "/api/v1/pcce-api/actions", []),
-        safeLoad("rtmtCapabilities", "/api/v1/pcce-api/rtmt-capabilities", []),
-        safeLoad("spogCapabilities", "/api/v1/pcce-api/spog-capabilities", []),
-        safeLoad("smtpCapabilities", "/api/v1/operations/smtp-capabilities", []),
-        safeLoad("spogOps", "/api/v1/operations/spog-capabilities", []),
-        safeLoad("serverLogTargets", "/api/v1/operations/server-log-targets", []),
-        safeLoad("grafanaDashboards", "/api/v1/integrations/grafana/dashboards", []),
-        safeLoad("cuicReports", "/api/v1/cuic/reports", []),
-        safeLoad("integrationCapabilities", "/api/v1/integrations/capabilities", []),
-        safeLoad("finesseCapabilities", "/api/v1/finesse/capabilities", []),
-        safeLoad("finesseSystem", "/api/v1/finesse/system", [], { timeoutMs: 12000 }),
-        safeLoad("finesseAgents", "/api/v1/finesse/agents", [], { timeoutMs: 45000 }),
-        safeLoad("finesseDialogs", "/api/v1/finesse/dialogs", [], { timeoutMs: 45000 }),
-        safeLoad("finesseTeams", "/api/v1/finesse/teams", [], { timeoutMs: 30000 }),
-        safeLoad("finesseQueues", "/api/v1/finesse/queues", [], { timeoutMs: 30000 }),
-        safeLoad("jmxStatus", "/api/v1/integrations/advanced/jmx", []),
-        safeLoad("appDynamicsStatus", "/api/v1/integrations/advanced/app-dynamics", []),
-        safeLoad("liveDataStatus", "/api/v1/integrations/advanced/live-data", []),
-        safeLoad("liveDataTokenProbe", "/api/v1/live-data/token-probe", [], { timeoutMs: 15000 }),
-        safeLoad("realtimeSnapshots", "/api/v1/live-data/realtime-snapshots", [], { timeoutMs: 15000 }),
-        safeLoad("skillGroups", "/api/v1/reference/skill-groups", []),
-        safeLoad("callTypeOptions", "/api/v1/reference/call-types", []),
-        safeLoad("agentOptions", "/api/v1/reference/agents", []),
-        safeLoad("projectTasks", "/api/v1/project/tasks", [], { timeoutMs: 8000 })
+        safeLoad("skillGroups", "/api/v1/reference/skill-groups", state.skillGroups),
+        safeLoad("callTypeOptions", "/api/v1/reference/call-types", state.callTypeOptions),
+        safeLoad("agentOptions", "/api/v1/reference/agents", state.agentOptions)
     ];
+    if (wantsIntegration || wantsAdvanced || wantsSpog) {
+        supportLoads.push(
+                safeLoad("pcceApiStatus", "/api/v1/pcce-api/status", state.pcceApiStatus, { timeoutMs: 8000 }),
+                safeLoad("pcceCapabilities", "/api/v1/pcce-api/capabilities", state.pcceCapabilities),
+                safeLoad("pcceFunctions", "/api/v1/pcce-api/functions", state.pcceFunctions),
+                safeLoad("pcceActions", "/api/v1/pcce-api/actions", state.pcceActions),
+                safeLoad("rtmtCapabilities", "/api/v1/pcce-api/rtmt-capabilities", state.rtmtCapabilities),
+                safeLoad("spogCapabilities", "/api/v1/pcce-api/spog-capabilities", state.spogCapabilities));
+    }
+    if (wantsAgents || wantsIntegration) {
+        supportLoads.push(
+                safeLoad("finesseCapabilities", "/api/v1/finesse/capabilities", state.finesseCapabilities),
+                safeLoad("finesseSystem", "/api/v1/finesse/system", state.finesseSystem, { timeoutMs: 12000 }),
+                safeLoad("finesseQueues", "/api/v1/finesse/queues", state.finesseQueues, { timeoutMs: 15000 }));
+    }
+    if (wantsAdvanced) {
+        supportLoads.push(
+                safeLoad("jmxStatus", "/api/v1/integrations/advanced/jmx", state.jmxStatus),
+                safeLoad("appDynamicsStatus", "/api/v1/integrations/advanced/app-dynamics", state.appDynamicsStatus),
+                safeLoad("liveDataStatus", "/api/v1/integrations/advanced/live-data", state.liveDataStatus),
+                safeLoad("liveDataTokenProbe", "/api/v1/live-data/token-probe", state.liveDataTokenProbe, { timeoutMs: 10000 }),
+                safeLoad("realtimeSnapshots", "/api/v1/live-data/realtime-snapshots", state.realtimeSnapshots, { timeoutMs: 10000 }));
+    }
+    if (wantsAlerts || wantsSpog) {
+        supportLoads.push(
+                safeLoad("smtpCapabilities", "/api/v1/operations/smtp-capabilities", state.smtpCapabilities),
+                safeLoad("spogOps", "/api/v1/operations/spog-capabilities", state.spogOps),
+                safeLoad("serverLogTargets", "/api/v1/operations/server-log-targets", state.serverLogTargets));
+    }
+    if (wantsEleveo) {
+        supportLoads.push(safeLoad("grafanaDashboards", "/api/v1/integrations/grafana/dashboards", state.grafanaDashboards));
+    }
+    if (wantsIntegration) {
+        supportLoads.push(
+                safeLoad("cuicReports", "/api/v1/cuic/reports", state.cuicReports),
+                safeLoad("integrationCapabilities", "/api/v1/integrations/capabilities", state.integrationCapabilities));
+    }
+    if (wantsApp || wantsAdmin) {
+        supportLoads.push(
+                safeLoad("queryPerformance", "/api/v1/monitoring/query-performance?limit=50", state.queryPerformance),
+                safeLoad("logs", "/api/v1/monitoring/logs?limit=80", state.logs));
+    }
+    if (wantsPlan) {
+        supportLoads.push(safeLoad("projectTasks", "/api/v1/project/tasks", state.projectTasks, { timeoutMs: 8000 }));
+    }
     const results = await Promise.all(supportLoads);
     errors.push(...results.filter(Boolean));
-    if (hasPermission("SOLUTION_ADMIN")) {
-        const logError = await safeLoad("logs", "/api/v1/monitoring/logs?limit=80", []);
-        if (logError) errors.push(logError);
+    if (hasPermission("SOLUTION_ADMIN") && wantsAdmin) {
         const adminResults = await Promise.all([
             safeLoad("adminUsers", "/api/v1/admin/users", []),
             safeLoad("adminRoles", "/api/v1/admin/roles", []),
@@ -433,6 +489,45 @@ async function refresh() {
         state.adminComponents = [];
     }
     renderAll(errors);
+    } finally {
+        refreshInProgress = false;
+        if (pendingRefresh) {
+            pendingRefresh = false;
+            setTimeout(refresh, 0);
+        }
+    }
+}
+
+async function refreshLiveData() {
+    if (refreshInProgress || liveRefreshInProgress) return;
+    if (!["overview", "business", "agents", "calls", "advanced"].includes(activeView)) return;
+    liveRefreshInProgress = true;
+    const params = dateParams();
+    const loads = [];
+    if (["overview", "business", "calls"].includes(activeView)) {
+        loads.push(
+                safeLoad("calls", `/api/v1/metrics/calls?${params}`, state.calls, { timeoutMs: 8000 }),
+                safeLoad("drops", `/api/v1/calls/dropped?${params}`, state.drops, { timeoutMs: 8000 }),
+                safeLoad("ivr", `/api/v1/metrics/ivr-containment?${params}`, state.ivr, { timeoutMs: 8000 }));
+    }
+    if (activeView === "agents") {
+        loads.push(
+                safeLoad("agents", `/api/v1/agents/stats?${agentParams()}`, state.agents, { timeoutMs: 8000 }),
+                safeLoad("finesseAgents", "/api/v1/finesse/agents", state.finesseAgents, { timeoutMs: 15000 }),
+                safeLoad("finesseDialogs", "/api/v1/finesse/dialogs", state.finesseDialogs, { timeoutMs: 15000 }));
+    }
+    if (activeView === "advanced" || activeView === "overview") {
+        loads.push(safeLoad("realtimeSnapshots", "/api/v1/live-data/realtime-snapshots", state.realtimeSnapshots, { timeoutMs: 8000 }));
+    }
+    await Promise.all(loads);
+    renderKpis();
+    renderCharts();
+    renderBusiness();
+    renderAgents();
+    renderFinesse();
+    renderCallTypes();
+    renderAdvanced();
+    liveRefreshInProgress = false;
 }
 
 function setStatus(items) {
@@ -940,11 +1035,14 @@ function parsedFinesseDialogs() {
 function activeDialogsForAgent(agent) {
     const agentId = String(pick(agent, "agent_id", "agentId") || "").trim().toLowerCase();
     const agentName = String(pick(agent, "agent_name", "agentName") || "").trim().toLowerCase();
+    const user = matchingFinesseUser(agent);
+    const finesseIds = [user?.id, user?.loginId, user?.extension].filter(Boolean).map(value => String(value).toLowerCase());
     return parsedFinesseDialogs().filter(dialog => {
-        const user = String(dialog.userId || dialog.agentId || "").toLowerCase();
+        const dialogUser = String(dialog.userId || dialog.agentId || "").toLowerCase();
         const raw = String(dialog.raw || "").toLowerCase();
-        return (agentId && (user.includes(agentId) || raw.includes(agentId)))
-            || (agentName && raw.includes(agentName));
+        return (agentId && (dialogUser.includes(agentId) || raw.includes(agentId)))
+            || (agentName && raw.includes(agentName))
+            || finesseIds.some(value => dialogUser === value || dialogUser.includes(value) || raw.includes(value));
     });
 }
 
@@ -1005,17 +1103,24 @@ function effectiveAgentStatus(agent) {
 }
 
 function finesseStatusForAgent(agent) {
+    const match = matchingFinesseUser(agent);
+    return match ? mapFinesseState(match.state) : null;
+}
+
+function matchingFinesseUser(agent) {
     const agentId = String(pick(agent, "agent_id", "agentId") || "").trim().toLowerCase();
     const agentName = String(pick(agent, "agent_name", "agentName") || "").trim().toLowerCase();
     if (!agentId && !agentName) return null;
-    const match = state.finesseAgents.find(item => {
-        const name = String(pick(item, "name") || "").toLowerCase();
-        const body = String(pick(item, "body") || "").toLowerCase();
-        return (agentId && (name.includes(agentId) || xmlTag(body, "id").toLowerCase() === agentId))
-            || (agentName && body.includes(agentName));
-    });
-    if (!match || num(pick(match, "status_code", "statusCode")) >= 400) return null;
-    return mapFinesseState(xmlTag(pick(match, "body"), "state"));
+    return parsedFinesseUsers().find(user => {
+        const fields = [user.id, user.loginId, user.extension, `${user.firstName || ""} ${user.lastName || ""}`]
+            .filter(Boolean)
+            .map(value => String(value).trim().toLowerCase());
+        const raw = String(user.raw || "").toLowerCase();
+        return fields.some(value => (agentId && (value === agentId || value.includes(agentId) || agentId.includes(value)))
+                || (agentName && (value === agentName || value.includes(agentName) || agentName.includes(value))))
+            || (agentId && raw.includes(agentId))
+            || (agentName && raw.includes(agentName));
+    }) || null;
 }
 
 function mapFinesseState(value) {
@@ -2221,10 +2326,12 @@ function taskChip(task) {
 }
 
 function switchView(view) {
+    activeView = view;
     document.querySelectorAll(".nav-item[data-view]").forEach(button => button.classList.toggle("active", button.dataset.view === view));
     document.querySelectorAll(".view").forEach(section => section.classList.toggle("active", section.id === `view-${view}`));
     qs("#pageTitle").textContent = pages[view][0];
     qs("#pageSubtitle").textContent = pages[view][1];
+    refresh();
 }
 
 function hasPermission(permission) {
