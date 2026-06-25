@@ -72,7 +72,6 @@ pcce:
       - Agent Real Time
       - Agent Skill Group Real Time
       - Call Type Real Time
-      - Precision Queue Real Time
       - Skill Group Real Time
 
   jmx:

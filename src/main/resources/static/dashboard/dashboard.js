@@ -935,12 +935,12 @@ function renderAgentCharts(agents) {
 function renderAgentApiWorkspace() {
     const finesseUsers = finesseDirectoryCount();
     const finesseTeams = countXmlTags((state.finesseTeams.find(item => String(pick(item, "name") || "").toLowerCase().includes("teams directory")) || {}).body, "Team");
-    const agentActions = state.pcceActions.filter(action => /agent|team|skill|precision|attribute/i.test(`${pick(action, "id")} ${pick(action, "name")} ${pick(action, "category")}`));
+    const agentActions = state.pcceActions.filter(action => /agent|team|skill|attribute/i.test(`${pick(action, "id")} ${pick(action, "name")} ${pick(action, "category")}`));
     qs("#agentApiWorkspace").innerHTML = [
         apiWorkspaceCard("Finesse Users", finesseUsers ?? "--", "GET /finesse/api/Users", "Live agent directory and desktop-visible users"),
         apiWorkspaceCard("Finesse Teams", finesseTeams ?? "--", "GET /finesse/api/Teams", "Supervisor/team inventory from Finesse"),
         apiWorkspaceCard("Dialogs", state.finesseDialogs.length, "GET /finesse/api/User/{id}/Dialogs", "Live call/dialog state per user"),
-        apiWorkspaceCard("PCCE Agent Config", agentActions.length, "Unified Config", "Agent, team, skill group, attributes, precision queues")
+        apiWorkspaceCard("PCCE Agent Config", agentActions.length, "Unified Config", "Agent, team, skill group, and attribute APIs")
     ].join("") + `<div class="api-chip-row">${agentActions.slice(0, 10).map(action => `<button class="small-btn" data-action-id="${escapeHtml(pick(action, "id") || "")}" ${pick(action, "enabled") ? "" : "disabled"}>${escapeHtml(pick(action, "name") || pick(action, "id") || "")}</button>`).join("")}</div>`;
     document.querySelectorAll("#agentApiWorkspace [data-action-id]").forEach(button => {
         button.addEventListener("click", () => executePcceAction(button.dataset.actionId));
@@ -970,7 +970,7 @@ function renderRunningAgentCalls() {
 }
 
 function renderAgentActionCenter() {
-    const pcceActions = state.pcceActions.filter(action => /agent|team|skill|precision|attribute/i.test(`${pick(action, "id")} ${pick(action, "name")} ${pick(action, "category")}`));
+    const pcceActions = state.pcceActions.filter(action => /agent|team|skill|attribute/i.test(`${pick(action, "id")} ${pick(action, "name")} ${pick(action, "category")}`));
     const finesseActions = [
         ["Set Agent Ready", "PUT", "/finesse/api/User/{id}", "<User><state>READY</state></User>", "Agent or supervisor permission required"],
         ["Set Agent Not Ready", "PUT", "/finesse/api/User/{id}", "<User><state>NOT_READY</state><reasonCodeId>{id}</reasonCodeId></User>", "Requires valid reason code"],
@@ -1746,7 +1746,7 @@ function renderAdvanced() {
         metricRow("Alerting", "Keep AppDynamics as telemetry source; route business-impact alerts through this portal/SMS/SMTP.")
     ].join("");
     qs("#liveDataNotes").innerHTML = [
-        metricRow("Realtime first", "Use Live Data for agent state, skill group, call type and precision queue realtime widgets."),
+        metricRow("Realtime first", "Use Live Data for agent state, skill group and call type realtime widgets."),
         metricRow("HDS protection", "Keep historical dashboards on bounded HDS queries; avoid aggressive refresh against HDS."),
         metricRow("CUIC alignment", "Use the same Live Data host, token path and user configured in CUIC datasource.")
     ].join("");
@@ -1759,7 +1759,7 @@ function renderRealtimeSnapshots() {
         metricRow("Snapshot Sources", `${snapshots.length} configured`),
         metricRow("Available Now", `${up} responding`),
         metricRow("Refresh Strategy", "Use Live Data for wallboards; keep HDS for historical reporting."),
-        metricRow("Cisco Sources", "Agent, Skill Group, Call Type, Precision Queue realtime tables.")
+        metricRow("Cisco Sources", "Agent, Skill Group and Call Type realtime tables.")
     ].join("");
     qs("#realtimeSnapshotGrid").innerHTML = snapshots.map(item => {
         const rows = pick(item, "rows") || [];

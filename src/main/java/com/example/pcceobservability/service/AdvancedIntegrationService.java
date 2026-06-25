@@ -80,7 +80,7 @@ public class AdvancedIntegrationService {
                 new ExternalIntegrationStatus("Token API", "Live Data", configured(liveData.getHost()), api,
                         "Use for realtime token acquisition; keep timeouts short and cache tokens where supported."),
                 new ExternalIntegrationStatus("WebSocket", "Live Data", configured(liveData.getHost()), websocket,
-                        "Use for low-latency agent, skill group, call type and precision queue telemetry."),
+                        "Use for low-latency agent, skill group and call type telemetry."),
                 new ExternalIntegrationStatus("Credentials", "Live Data", readiness(liveData.getUsername(), liveData.getPassword()),
                         liveData.getUsername(), "Configured CUIC Live Data database/user identity."),
                 new ExternalIntegrationStatus("Stock Reports", "CUIC", safeSize(liveData.getStockReports()) > 0 ? "mapped" : "not mapped",

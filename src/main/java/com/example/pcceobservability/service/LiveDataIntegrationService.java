@@ -57,7 +57,7 @@ public class LiveDataIntegrationService {
                     status("Live Data Token", state, target,
                             "HTTP " + response.statusCode() + " in " + elapsedMs(started) + "ms - " + abbreviate(response.body())),
                     status("Live Data WebSocket", "configured", websocketUrl(liveData),
-                            "Use this WebSocket endpoint for Cisco stock realtime agent, skill group, call type and precision queue streams."));
+                            "Use this WebSocket endpoint for Cisco stock realtime agent, skill group and call type streams."));
         } catch (Exception ex) {
             return List.of(
                     status("Live Data Token", "down", target, ex.getMessage()),
@@ -105,13 +105,6 @@ public class LiveDataIntegrationService {
                             CallsAbandQ,
                             ServiceLevel
                         FROM t_Call_Type_Real_Time
-                        ORDER BY DateTime DESC
-                        """),
-                snapshot("Precision Queue Real Time", "AW t_Precision_Queue_Real_Time",
-                        "Cisco stock precision queue realtime table where Precision Routing is enabled.",
-                        """
-                        SELECT TOP 25 *
-                        FROM t_Precision_Queue_Real_Time
                         ORDER BY DateTime DESC
                         """));
     }

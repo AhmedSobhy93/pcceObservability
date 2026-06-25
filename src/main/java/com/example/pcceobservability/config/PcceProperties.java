@@ -593,7 +593,6 @@ public class PcceProperties {
                     action("skills.list", "Skill Group Management", "List skill groups", "GET", "/unifiedconfig/config/skillgroup", false),
                     action("agent.get", "Agents, Skills, Attributes, and Teams", "Get agent by ID", "GET", "/unifiedconfig/config/agent/{id}", false),
                     action("attributes.list", "Agents, Skills, Attributes, and Teams", "List attributes", "GET", "/unifiedconfig/config/attribute", false),
-                    action("precisionQueues.list", "Agents, Skills, Attributes, and Teams", "List precision queues", "GET", "/unifiedconfig/config/precisionqueue", false),
                     action("dialedNumbers.list", "Call Configuration and Management", "List dialed numbers", "GET", "/unifiedconfig/config/dialednumber", false),
                     action("callTypes.list", "Call Configuration and Management", "List call types", "GET", "/unifiedconfig/config/calltype", false),
                     action("labels.list", "Call Configuration and Management", "List labels", "GET", "/unifiedconfig/config/label", false),
@@ -1316,7 +1315,6 @@ public class PcceProperties {
                 "Agent Real Time",
                 "Agent Skill Group Real Time",
                 "Call Type Real Time",
-                "Precision Queue Real Time",
                 "Skill Group Real Time");
 
         public boolean isEnabled() {
