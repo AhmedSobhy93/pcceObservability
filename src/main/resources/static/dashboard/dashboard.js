@@ -34,6 +34,8 @@ const state = {
     jmxStatus: [],
     appDynamicsStatus: [],
     liveDataStatus: [],
+    liveDataTokenProbe: [],
+    realtimeSnapshots: [],
     callFlow: [],
     skillGroups: [],
     callTypeOptions: [],
@@ -403,6 +405,8 @@ async function refresh() {
         safeLoad("jmxStatus", "/api/v1/integrations/advanced/jmx", []),
         safeLoad("appDynamicsStatus", "/api/v1/integrations/advanced/app-dynamics", []),
         safeLoad("liveDataStatus", "/api/v1/integrations/advanced/live-data", []),
+        safeLoad("liveDataTokenProbe", "/api/v1/live-data/token-probe", [], { timeoutMs: 15000 }),
+        safeLoad("realtimeSnapshots", "/api/v1/live-data/realtime-snapshots", [], { timeoutMs: 15000 }),
         safeLoad("skillGroups", "/api/v1/reference/skill-groups", []),
         safeLoad("callTypeOptions", "/api/v1/reference/call-types", []),
         safeLoad("agentOptions", "/api/v1/reference/agents", []),
@@ -1395,6 +1399,8 @@ function renderAdvanced() {
     qs("#jmxGrid").innerHTML = renderIntegrationCards(state.jmxStatus, "Secure JMX");
     qs("#appDynamicsGrid").innerHTML = renderIntegrationCards(state.appDynamicsStatus, "AppDynamics");
     qs("#liveDataGrid").innerHTML = renderIntegrationCards(state.liveDataStatus, "PCCE Live Data");
+    qs("#liveDataTokenGrid").innerHTML = renderIntegrationCards(state.liveDataTokenProbe, "Live Data Token");
+    renderRealtimeSnapshots();
     qs("#jmxNotes").innerHTML = [
         metricRow("Cisco secure JMX", "Use CVP/OAMP secure JMX certificate exchange before enabling polling."),
         metricRow("Scope", "Best for CVP JVM health, memory, threads and selected MBeans; not a replacement for HDS/CUIC reporting."),
@@ -1410,6 +1416,28 @@ function renderAdvanced() {
         metricRow("HDS protection", "Keep historical dashboards on bounded HDS queries; avoid aggressive refresh against HDS."),
         metricRow("CUIC alignment", "Use the same Live Data host, token path and user configured in CUIC datasource.")
     ].join("");
+}
+
+function renderRealtimeSnapshots() {
+    const snapshots = state.realtimeSnapshots || [];
+    const up = snapshots.filter(item => String(pick(item, "state")).toLowerCase() === "up").length;
+    qs("#realtimeSnapshotSummary").innerHTML = [
+        metricRow("Snapshot Sources", `${snapshots.length} configured`),
+        metricRow("Available Now", `${up} responding`),
+        metricRow("Refresh Strategy", "Use Live Data for wallboards; keep HDS for historical reporting."),
+        metricRow("Cisco Sources", "Agent, Skill Group, Call Type, Precision Queue realtime tables.")
+    ].join("");
+    qs("#realtimeSnapshotGrid").innerHTML = snapshots.map(item => {
+        const rows = pick(item, "rows") || [];
+        const error = pick(item, "error");
+        return `<article class="component-card realtime-card">
+            <div class="component-title"><h3>${escapeHtml(pick(item, "name") || "")}</h3><span class="badge ${error ? "warn" : "up"}">${escapeHtml(pick(item, "state") || "")}</span></div>
+            <p>${escapeHtml(pick(item, "source") || "")}</p>
+            <small>${escapeHtml(pick(item, "description") || "")}</small>
+            ${error ? `<div class="component-detail warn-text">${escapeHtml(error)}</div>` : `<div class="component-detail">${rows.length} rows returned</div>`}
+            ${rows.length ? `<pre class="mini-json">${escapeHtml(JSON.stringify(rows.slice(0, 3), null, 2))}</pre>` : ""}
+        </article>`;
+    }).join("") || `<article class="component-card"><h3>AW Real Time</h3><span class="badge warn">not loaded</span><p>No realtime snapshots returned.</p></article>`;
 }
 
 function renderIntegrationCards(items, emptyTitle) {

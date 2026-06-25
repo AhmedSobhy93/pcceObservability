@@ -242,6 +242,17 @@ Recommended Live Data use cases:
 - Precision queue realtime
 - Supervisor/team wallboards
 
+Implemented app endpoints:
+
+- `GET /api/v1/live-data/token-probe` checks the CUIC Live Data token endpoint and exposes the WebSocket target.
+- `GET /api/v1/live-data/realtime-snapshots` checks bounded Cisco AW realtime stock sources:
+  - `t_Agent_Real_Time`
+  - `t_Skill_Group_Real_Time`
+  - `t_Call_Type_Real_Time`
+  - `t_Precision_Queue_Real_Time`
+
+Use Live Data for realtime wallboards and use these AW realtime snapshots as a safe validation/fallback path. Keep historical reports on HDS/CUIC stock SQL.
+
 ## AppDynamics
 
 If AppDynamics agents are already deployed on PCCE/CVP/Finesse/CUIC nodes, use this app as an operations portal that links or embeds approved controller dashboards.
