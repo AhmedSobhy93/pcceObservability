@@ -377,10 +377,10 @@ async function refresh() {
         return;
     }
     refreshInProgress = true;
+    const errors = [];
     try {
         setStatus([{ text: "Refreshing live data...", level: "neutral" }]);
         const params = dateParams();
-        const errors = [];
         const wantsBusiness = ["overview", "business"].includes(activeView);
         const wantsAgents = activeView === "agents";
         const wantsCalls = activeView === "calls";
@@ -426,12 +426,12 @@ async function refresh() {
     if (wantsAgents) {
         const finesseAgentError = await safeLoad("finesseAgents", "/api/v1/finesse/agents", state.finesseAgents, { timeoutMs: 12000 });
         if (finesseAgentError) errors.push(finesseAgentError);
-        renderAgents();
-        renderFinesse();
+        safeRender("agents", renderAgents, errors);
+        safeRender("finesse", renderFinesse, errors);
         const finesseDialogError = await safeLoad("finesseDialogs", "/api/v1/finesse/dialogs", state.finesseDialogs, { timeoutMs: 12000 });
         if (finesseDialogError) errors.push(finesseDialogError);
-        renderAgents();
-        renderFinesse();
+        safeRender("agents", renderAgents, errors);
+        safeRender("finesse", renderFinesse, errors);
     }
 
     const supportLoads = [];
@@ -510,6 +510,10 @@ async function refresh() {
         state.adminComponents = [];
     }
     renderAll(errors);
+    } catch (error) {
+        console.error("dashboard_refresh_failed", error);
+        errors.push(`refresh: ${error.message || error}`);
+        renderAll(errors);
     } finally {
         refreshInProgress = false;
         if (pendingRefresh) {
@@ -523,34 +527,36 @@ async function refreshLiveData() {
     if (refreshInProgress || liveRefreshInProgress) return;
     if (!["overview", "business", "agents", "calls", "advanced"].includes(activeView)) return;
     liveRefreshInProgress = true;
-    const params = dateParams();
-    const loads = [];
-    if (["overview", "business", "calls"].includes(activeView)) {
-        loads.push(
-                safeLoad("calls", `/api/v1/metrics/calls?${params}`, state.calls, { timeoutMs: 8000 }),
-                safeLoad("drops", `/api/v1/calls/dropped?${params}`, state.drops, { timeoutMs: 8000 }),
-                safeLoad("ivr", `/api/v1/metrics/ivr-containment?${params}`, state.ivr, { timeoutMs: 8000 }));
-    }
-    if (activeView === "agents") {
-        await safeLoad("agents", `/api/v1/agents/stats?${agentParams()}`, state.agents, { timeoutMs: 8000 });
-        renderAgents();
-        renderFinesse();
-        loads.push(
-                safeLoad("finesseAgents", "/api/v1/finesse/agents", state.finesseAgents, { timeoutMs: 8000 }),
-                safeLoad("finesseDialogs", "/api/v1/finesse/dialogs", state.finesseDialogs, { timeoutMs: 8000 }));
-    }
-    if (activeView === "advanced" || activeView === "overview") {
-        loads.push(safeLoad("realtimeSnapshots", "/api/v1/live-data/realtime-snapshots", state.realtimeSnapshots, { timeoutMs: 8000 }));
-    }
     try {
+        const params = dateParams();
+        const loads = [];
+        if (["overview", "business", "calls"].includes(activeView)) {
+            loads.push(
+                    safeLoad("calls", `/api/v1/metrics/calls?${params}`, state.calls, { timeoutMs: 8000 }),
+                    safeLoad("drops", `/api/v1/calls/dropped?${params}`, state.drops, { timeoutMs: 8000 }),
+                    safeLoad("ivr", `/api/v1/metrics/ivr-containment?${params}`, state.ivr, { timeoutMs: 8000 }));
+        }
+        if (activeView === "agents") {
+            await safeLoad("agents", `/api/v1/agents/stats?${agentParams()}`, state.agents, { timeoutMs: 8000 });
+            safeRender("agents", renderAgents);
+            safeRender("finesse", renderFinesse);
+            loads.push(
+                    safeLoad("finesseAgents", "/api/v1/finesse/agents", state.finesseAgents, { timeoutMs: 8000 }),
+                    safeLoad("finesseDialogs", "/api/v1/finesse/dialogs", state.finesseDialogs, { timeoutMs: 8000 }));
+        }
+        if (activeView === "advanced" || activeView === "overview") {
+            loads.push(safeLoad("realtimeSnapshots", "/api/v1/live-data/realtime-snapshots", state.realtimeSnapshots, { timeoutMs: 8000 }));
+        }
         await Promise.all(loads);
-        renderKpis();
-        renderCharts();
-        renderBusiness();
-        renderAgents();
-        renderFinesse();
-        renderCallTypes();
-        renderAdvanced();
+        safeRender("kpis", renderKpis);
+        safeRender("charts", renderCharts);
+        safeRender("business", renderBusiness);
+        safeRender("agents", renderAgents);
+        safeRender("finesse", renderFinesse);
+        safeRender("callTypes", renderCallTypes);
+        safeRender("advanced", renderAdvanced);
+    } catch (error) {
+        console.error("live_refresh_failed", error);
     } finally {
         liveRefreshInProgress = false;
     }
@@ -560,27 +566,36 @@ function setStatus(items) {
     qs("#statusStrip").innerHTML = items.map(item => `<div class="status-pill ${item.level}">${escapeHtml(item.text)}</div>`).join("");
 }
 
+function safeRender(name, renderer, errors = []) {
+    try {
+        renderer();
+    } catch (error) {
+        console.error(`render_${name}_failed`, error);
+        errors.push(`${name}: ${error.message || error}`);
+    }
+}
+
 function renderAll(errors) {
-    renderKpis();
-    renderCharts();
-    renderBusiness();
-    renderAgents();
-    renderFinesse();
-    renderDrops();
-    renderCallTypes();
-    renderComponents();
-    renderReferenceOptions();
-    renderIntegration();
-    renderCvpApi();
-    renderSmtp();
-    renderSpog();
-    renderEleveo();
-    renderAdvanced();
-    renderOperations();
-    renderSupport();
-    renderAdmin();
+    safeRender("kpis", renderKpis, errors);
+    safeRender("charts", renderCharts, errors);
+    safeRender("business", renderBusiness, errors);
+    safeRender("agents", renderAgents, errors);
+    safeRender("finesse", renderFinesse, errors);
+    safeRender("drops", renderDrops, errors);
+    safeRender("callTypes", renderCallTypes, errors);
+    safeRender("components", renderComponents, errors);
+    safeRender("referenceOptions", renderReferenceOptions, errors);
+    safeRender("integration", renderIntegration, errors);
+    safeRender("cvpApi", renderCvpApi, errors);
+    safeRender("smtp", renderSmtp, errors);
+    safeRender("spog", renderSpog, errors);
+    safeRender("eleveo", renderEleveo, errors);
+    safeRender("advanced", renderAdvanced, errors);
+    safeRender("operations", renderOperations, errors);
+    safeRender("support", renderSupport, errors);
+    safeRender("admin", renderAdmin, errors);
     planTasks = state.projectTasks || [];
-    renderPlan();
+    safeRender("plan", renderPlan, errors);
 
     const componentDown = state.components.filter(c => String(pick(c, "state")).toUpperCase() === "DOWN").length;
     const alertCount = pick(state.assessment, "alerts")?.length || 0;
@@ -1394,11 +1409,15 @@ function renderCvpApi() {
         </article>`;
     }).join("") || `<article class="component-card"><h3>CVP API</h3><span class="badge warn">disabled</span><p>Set CVP_API_ENABLED=true and CVP_API_BASE_URL to enable CVP REST visualization.</p></article>`;
 
-    qs("#cvpCapabilityList").innerHTML = state.cvpCapabilities.map(item =>
-        metricRow(pick(item, "category"), pick(item, "capability"))
-    ).join("") || metricRow("CVP Developer APIs", "Capability catalog unavailable");
+    const capabilityList = qs("#cvpCapabilityList");
+    if (capabilityList) {
+        capabilityList.innerHTML = state.cvpCapabilities.map(item =>
+            metricRow(pick(item, "category"), pick(item, "capability"))
+        ).join("") || metricRow("CVP Developer APIs", "Capability catalog unavailable");
+    }
 
-    qs("#cvpFunctionTable").innerHTML = state.cvpFunctions.map(item => `<tr>
+    const functionTable = qs("#cvpFunctionTable");
+    if (functionTable) functionTable.innerHTML = state.cvpFunctions.map(item => `<tr>
         <td>${escapeHtml(pick(item, "category") || "")}</td>
         <td>${escapeHtml(pick(item, "function") || "")}</td>
         <td><span class="badge up">${escapeHtml(pick(item, "method") || "GET")}</span></td>
@@ -1406,7 +1425,8 @@ function renderCvpApi() {
         <td>${escapeHtml(pick(item, "description") || "")}</td>
     </tr>`).join("");
 
-    qs("#cvpActionTable").innerHTML = state.cvpActions.map(item => {
+    const actionTable = qs("#cvpActionTable");
+    if (actionTable) actionTable.innerHTML = state.cvpActions.map(item => {
         const enabled = Boolean(pick(item, "enabled"));
         const id = pick(item, "id") || "";
         return `<tr>

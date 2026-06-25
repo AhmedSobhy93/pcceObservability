@@ -1926,8 +1926,10 @@ public class PcceProperties {
                 SELECT
                     EXTEND(c.startdatetime, YEAR TO DAY) AS call_date,
                     CAST(TO_CHAR(c.startdatetime, '%H') AS INTEGER) AS call_hour,
-                    CAST(100.0 * SUM(CASE WHEN vs.causeid NOT IN (2, 18, 1001, 1044) THEN 1 ELSE 0 END)
-                        / NULLIF(COUNT(*), 0) AS DECIMAL(9,2)) AS ivr_containment_rate
+                    CASE
+                        WHEN COUNT(*) = 0 THEN 0
+                        ELSE CAST(100.0 * SUM(CASE WHEN vs.causeid NOT IN (2, 18, 1001, 1044) THEN 1 ELSE 0 END) / COUNT(*) AS DECIMAL(9,2))
+                    END AS ivr_containment_rate
                 FROM call c
                 JOIN vxmlsession vs
                   ON c.callguid = vs.callguid
