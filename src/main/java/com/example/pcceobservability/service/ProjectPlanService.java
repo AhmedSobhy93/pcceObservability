@@ -2,6 +2,7 @@ package com.example.pcceobservability.service;
 
 import com.example.pcceobservability.entity.ProjectTaskEntity;
 import com.example.pcceobservability.model.ProjectTaskDto;
+import com.example.pcceobservability.model.ProjectTemplateRequest;
 import com.example.pcceobservability.model.ProjectTaskUpdateRequest;
 import com.example.pcceobservability.model.ResourceStat;
 import com.example.pcceobservability.model.TopicStat;
@@ -68,6 +69,28 @@ public class ProjectPlanService {
             throw new IllegalArgumentException("Unknown task id: " + id);
         }
         projectTaskRepository.deleteById(id);
+    }
+
+    public List<ProjectTaskDto> generateTemplate(ProjectTemplateRequest request) {
+        String topic = textOr(request == null ? null : request.topic(), "Team Delivery");
+        String team = textOr(request == null ? null : request.team(), topic);
+        String owner = valueOr(request == null ? null : request.owner(), null);
+        String resource = textOr(request == null ? null : request.resource(), owner == null ? "Unassigned" : owner);
+        String start = valueOr(request == null ? null : request.start(), null);
+        String finish = valueOr(request == null ? null : request.finish(), null);
+        String shareWith = valueOr(request == null ? null : request.shareWith(), "Stakeholders");
+        List<String> steps = templateSteps(topic);
+        List<ProjectTaskDto> created = new ArrayList<>();
+        for (int index = 0; index < steps.size(); index++) {
+            String status = index == 0 ? "IN_PROGRESS" : "PLANNED";
+            String priority = index < 2 ? "HIGH" : "MEDIUM";
+            ProjectTaskDto task = new ProjectTaskDto(null, topic, steps.get(index), priority, index + 1, status,
+                    resource, owner, team, milestoneFor(index), start, finish, null, index == 0 ? 10 : 0,
+                    index == 0 ? null : steps.get(index - 1), null, "MEDIUM",
+                    deliverableFor(steps.get(index)), shareWith, null, "Generated template for " + team);
+            created.add(toDto(projectTaskRepository.save(toEntity(task, nextSortOrder()))));
+        }
+        return created;
     }
 
     public String csv() {
@@ -294,6 +317,47 @@ public class ProjectPlanService {
     private String csv(Object value) {
         String text = value == null ? "" : String.valueOf(value);
         return "\"" + text.replace("\"", "\"\"") + "\"";
+    }
+
+    private List<String> templateSteps(String topic) {
+        String normalized = topic == null ? "" : topic.toLowerCase();
+        if (normalized.contains("security")) {
+            return List.of("Define security scope and owners", "Review access and hardening baseline",
+                    "Validate certificates, secrets and audit controls", "Run UAT and risk acceptance",
+                    "Prepare production change and rollback plan");
+        }
+        if (normalized.contains("network")) {
+            return List.of("Confirm topology and firewall matrix", "Validate routing, VIPs and DNS",
+                    "Test connectivity and failover paths", "Document monitoring ports and probes",
+                    "Production readiness sign-off");
+        }
+        if (normalized.contains("report") || normalized.contains("cuic")) {
+            return List.of("Confirm stock report mapping", "Validate AW/HDS/CVP query alignment",
+                    "Build dashboards and filters", "Reconcile numbers with business owners",
+                    "Publish stakeholder report pack");
+        }
+        if (normalized.contains("appd") || normalized.contains("monitor")) {
+            return List.of("Confirm monitoring scope and node inventory", "Validate agent/controller connectivity",
+                    "Build dashboard links and alert policies", "Run incident simulation",
+                    "Operational handover and support guide");
+        }
+        return List.of("Confirm scope and stakeholders", "Define work packages and dependencies",
+                "Assign resources and delivery owners", "Run UAT and readiness review",
+                "Production rollout and handover");
+    }
+
+    private String milestoneFor(int index) {
+        return switch (index) {
+            case 0 -> "Scope";
+            case 1 -> "Design";
+            case 2 -> "Build";
+            case 3 -> "Validation";
+            default -> "Handover";
+        };
+    }
+
+    private String deliverableFor(String task) {
+        return task + " completed, documented and accepted by owner.";
     }
 
     private static List<ProjectTaskDto> defaultTasks() {

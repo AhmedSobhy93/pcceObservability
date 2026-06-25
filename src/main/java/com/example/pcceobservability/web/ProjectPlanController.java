@@ -1,6 +1,7 @@
 package com.example.pcceobservability.web;
 
 import com.example.pcceobservability.model.ProjectTaskDto;
+import com.example.pcceobservability.model.ProjectTemplateRequest;
 import com.example.pcceobservability.model.ProjectTaskUpdateRequest;
 import com.example.pcceobservability.service.ProjectPlanService;
 import java.util.List;
@@ -47,6 +48,14 @@ public class ProjectPlanController {
     @PreAuthorize("isAuthenticated()")
     public ProjectTaskDto addTask(@RequestBody ProjectTaskUpdateRequest request) {
         return projectPlanService.add(request);
+    }
+
+    @PostMapping("/api/v1/project/templates")
+    @ResponseBody
+    @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("isAuthenticated()")
+    public List<ProjectTaskDto> generateTemplate(@RequestBody ProjectTemplateRequest request) {
+        return projectPlanService.generateTemplate(request);
     }
 
     @PutMapping("/api/v1/project/tasks/{index}")

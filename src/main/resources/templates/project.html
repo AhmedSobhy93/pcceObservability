@@ -158,9 +158,16 @@
         .row-edit {
             display: grid;
             gap: 7px;
-            min-width: 220px;
+            min-width: 260px;
         }
         .row-edit input, .row-edit select { width: 100%; height: 33px; }
+        .manage-edit {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(120px, 1fr));
+            gap: 7px;
+            min-width: 280px;
+        }
+        .manage-edit input { width: 100%; height: 33px; }
         .task-list.hidden, .resource-view.hidden { display: none; }
         .resource-view {
             display: grid;
@@ -280,6 +287,8 @@
                 <option th:each="resource : ${resources}" th:value="${resource}" th:text="${resource}">Ahmed</option>
             </select>
         </label>
+        <label>Team<input id="teamFilter" placeholder="All teams"></label>
+        <label>Milestone<input id="milestoneFilter" placeholder="All milestones"></label>
         <strong class="count" id="taskCount" th:text="${totalTasks + ' tasks'}">0 tasks</strong>
     </section>
 
@@ -329,7 +338,7 @@
                 <table>
                     <thead>
                     <tr>
-                        <th>Task</th><th>Priority</th><th>Status</th><th class="resource-col">Resource / Owner</th><th class="timeline-col">Timeline</th><th>Progress + Comments</th>
+                        <th>Task</th><th>Priority</th><th>Status</th><th class="resource-col">Assignee / Owner</th><th class="timeline-col">Timeline</th><th>Progress + Controls</th>
                     </tr>
                     </thead>
                     <tbody>
@@ -337,10 +346,13 @@
                         th:if="${task.topic == entry.key}"
                         th:classappend="${task.priority == 'CRITICAL' and task.status != 'COMPLETED'} ? 'critical-row'"
                         th:data-index="${iter.index}"
+                        th:data-id="${task.id}"
                         th:data-topic="${task.topic}"
                         th:data-status="${task.status}"
                         th:data-priority="${task.priority}"
-                        th:data-resource="${task.resource}">
+                        th:data-resource="${task.resource}"
+                        th:data-team="${task.team}"
+                        th:data-milestone="${task.milestone}">
                         <td>
                             <span class="task-title" th:text="${task.task}">Task</span>
                             <span class="sub" th:if="${task.priorityNum != null}" th:text="'Priority #' + ${task.priorityNum}">Priority #1</span>
@@ -352,18 +364,30 @@
                         <td><span class="badge" th:classappend="' priority-' + ${#strings.toLowerCase(task.priority)}" th:text="${task.priority}">HIGH</span></td>
                         <td><span class="badge" th:classappend="${#strings.toLowerCase(#strings.replace(task.status, '_', '-'))}" th:text="${#strings.replace(task.status, '_', ' ')}">IN PROGRESS</span></td>
                         <td class="resource-col">
-                            <span th:text="${task.resource}">Ahmed</span>
-                            <span class="sub" th:if="${task.owner != null && !task.owner.isBlank()}" th:text="'Owner: ' + ${task.owner}">Owner</span>
-                            <span class="sub" th:if="${task.team != null && !task.team.isBlank()}" th:text="'Team: ' + ${task.team}">Team</span>
-                            <span class="sub" th:if="${task.shareWith != null && !task.shareWith.isBlank()}" th:text="'Share: ' + ${task.shareWith}">Share</span>
+                            <div class="manage-edit">
+                                <input data-field="resource" th:value="${task.resource}" placeholder="Assignee">
+                                <input data-field="owner" th:value="${task.owner}" placeholder="Owner">
+                                <input data-field="team" th:value="${task.team}" placeholder="Team">
+                                <input data-field="shareWith" th:value="${task.shareWith}" placeholder="Share with">
+                            </div>
                         </td>
-                        <td class="timeline-col"><span th:text="${(task.start == null ? '--' : task.start) + ' / ' + (task.finish == null ? '--' : task.finish)}">--</span><span class="sub" th:text="${(task.duration == null ? 0 : task.duration) + ' days'}">0 days</span></td>
+                        <td class="timeline-col">
+                            <div class="manage-edit">
+                                <input data-field="milestone" th:value="${task.milestone}" placeholder="Milestone">
+                                <input data-field="start" th:value="${task.start}" placeholder="Start">
+                                <input data-field="finish" th:value="${task.finish}" placeholder="Finish">
+                                <input data-field="duration" type="number" min="0" th:value="${task.duration}" placeholder="Days">
+                            </div>
+                        </td>
                         <td>
                             <div class="row-edit">
                                 <select data-field="status"><option th:selected="${task.status == 'COMPLETED'}">COMPLETED</option><option th:selected="${task.status == 'IN_PROGRESS'}">IN_PROGRESS</option><option th:selected="${task.status == 'ON_HOLD'}">ON_HOLD</option><option th:selected="${task.status == 'PLANNED'}">PLANNED</option></select>
                                 <input data-field="pct" type="number" min="0" max="100" th:value="${task.pct}">
                                 <select data-field="risk"><option th:selected="${task.risk == 'LOW'}">LOW</option><option th:selected="${task.risk == null || task.risk == 'MEDIUM'}">MEDIUM</option><option th:selected="${task.risk == 'HIGH'}">HIGH</option><option th:selected="${task.risk == 'CRITICAL'}">CRITICAL</option></select>
                                 <div class="progress"><i th:style="'width:' + ${task.pct} + '%'"></i></div>
+                                <input data-field="dependsOn" th:value="${task.dependsOn}" placeholder="Depends on">
+                                <input data-field="blockedBy" th:value="${task.blockedBy}" placeholder="Blocked by">
+                                <input data-field="deliverable" th:value="${task.deliverable}" placeholder="Deliverable">
                                 <input data-field="comments" th:value="${task.comments}" placeholder="Comments">
                                 <button class="btn" type="button" onclick="saveRow(this)">Save</button>
                             </div>
@@ -428,13 +452,19 @@
         const status = document.getElementById("statusFilter").value;
         const priority = document.getElementById("priorityFilter").value;
         const resource = document.getElementById("resourceFilter").value;
+        const team = document.getElementById("teamFilter").value.trim().toLowerCase();
+        const milestone = document.getElementById("milestoneFilter").value.trim().toLowerCase();
         let visible = 0;
         document.querySelectorAll("tbody tr[data-topic]").forEach(row => {
             const resourceMatch = resource === "ALL" || row.dataset.resource.split(/,|\/|&/).map(item => item.trim()).includes(resource);
+            const teamMatch = !team || String(row.dataset.team || "").toLowerCase().includes(team);
+            const milestoneMatch = !milestone || String(row.dataset.milestone || "").toLowerCase().includes(milestone);
             const show = (!activeTopic || row.dataset.topic === activeTopic)
                 && (status === "ALL" || row.dataset.status === status)
                 && (priority === "ALL" || row.dataset.priority === priority)
-                && resourceMatch;
+                && resourceMatch
+                && teamMatch
+                && milestoneMatch;
             row.hidden = !show;
             if (show) visible++;
         });
@@ -456,6 +486,9 @@
     ["statusFilter", "priorityFilter", "resourceFilter"].forEach(id => {
         document.getElementById(id).addEventListener("change", applyFilters);
     });
+    ["teamFilter", "milestoneFilter"].forEach(id => {
+        document.getElementById(id).addEventListener("input", applyFilters);
+    });
 
     document.getElementById("taskMode").addEventListener("click", () => setView("tasks"));
     document.getElementById("resourceMode").addEventListener("click", () => setView("resources"));
@@ -471,13 +504,13 @@
         const row = button.closest("tr");
         const index = Number(row.dataset.index);
         const existing = originalTasks[index];
-        const body = {
-            ...existing,
-            status: row.querySelector('[data-field="status"]').value,
-            pct: Number(row.querySelector('[data-field="pct"]').value || 0),
-            comments: row.querySelector('[data-field="comments"]').value
-        };
-        await fetch(`/api/v1/project/tasks/${index}`, {
+        const body = { ...existing };
+        row.querySelectorAll("[data-field]").forEach(input => {
+            const field = input.dataset.field;
+            body[field] = ["pct", "duration"].includes(field) ? Number(input.value || 0) : input.value;
+        });
+        const target = row.dataset.id ? `/api/v1/project/tasks/id/${row.dataset.id}` : `/api/v1/project/tasks/${index}`;
+        await fetch(target, {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(body)

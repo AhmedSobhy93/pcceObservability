@@ -452,6 +452,19 @@
                 <pre class="log-box action-result editor-wide" id="planActionResult">Project plan changes are persisted in the app database.</pre>
             </div>
         </article>
+        <article class="panel full api-functions-panel">
+            <div class="panel-head"><h2>Generate Team Plan</h2><span>Create reusable starter plans for other teams</span></div>
+            <div class="admin-form plan-editor-form">
+                <label class="date-field"><span>Template Topic</span><input id="planTemplateTopic" placeholder="Security, Network, Reporting, AppDynamics"></label>
+                <label class="date-field"><span>Team</span><input id="planTemplateTeam" placeholder="Team name"></label>
+                <label class="date-field"><span>Owner</span><input id="planTemplateOwner" placeholder="Plan owner"></label>
+                <label class="date-field"><span>Resource</span><input id="planTemplateResource" placeholder="Assigned resource(s)"></label>
+                <label class="date-field"><span>Start</span><input id="planTemplateStart" placeholder="1-Jul-26"></label>
+                <label class="date-field"><span>Finish</span><input id="planTemplateFinish" placeholder="31-Jul-26"></label>
+                <label class="date-field editor-wide"><span>Share With</span><input id="planTemplateShareWith" placeholder="Managers, business owners, support teams"></label>
+                <button class="primary-btn" id="planGenerateTemplateBtn">Generate Plan</button>
+            </div>
+        </article>
         <div id="planTaskView"></div>
         <div class="resource-grid" id="planResourceView"></div>
     </section>

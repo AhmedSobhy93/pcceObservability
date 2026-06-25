@@ -126,6 +126,7 @@ document.addEventListener("DOMContentLoaded", () => {
     qs("#planResetBtn")?.addEventListener("click", resetPlanTasks);
     qs("#planExportCsvBtn")?.addEventListener("click", () => window.open("/api/v1/project/tasks/export.csv", "_blank"));
     qs("#planCopyShareBtn")?.addEventListener("click", copyProjectShareLink);
+    qs("#planGenerateTemplateBtn")?.addEventListener("click", generatePlanTemplate);
     qs("#adminUsername")?.addEventListener("change", fillAdminUserForm);
     qs("#adminRoleSelect")?.addEventListener("change", renderPermissionEditor);
     qs("#taskListMode")?.addEventListener("click", () => setPlanView("tasks"));
@@ -1787,6 +1788,7 @@ function planTaskRow(task) {
             ${task.shareWith ? `<span class="subline">Share: ${escapeHtml(task.shareWith)}</span>` : ""}
         </td>
         <td>
+            <input class="inline-input" data-plan-field="milestone" data-plan-index="${index}" value="${escapeHtml(task.milestone || "")}" placeholder="Milestone">
             <input class="inline-input" data-plan-field="start" data-plan-index="${index}" value="${escapeHtml(task.start || "")}" placeholder="Start">
             <input class="inline-input" data-plan-field="finish" data-plan-index="${index}" value="${escapeHtml(task.finish || "")}" placeholder="Finish">
             <input class="inline-input" data-plan-field="duration" data-plan-index="${index}" type="number" min="0" value="${escapeHtml(task.duration ?? "")}" placeholder="Days">
@@ -1795,6 +1797,10 @@ function planTaskRow(task) {
             <input class="inline-input plan-pct-input" type="number" min="0" max="100" data-plan-field="pct" data-plan-index="${index}" value="${escapeHtml(task.pct)}">
             ${inlineProgress(task.pct)}
             <select class="inline-input" data-plan-field="risk" data-plan-index="${index}">${["LOW", "MEDIUM", "HIGH", "CRITICAL"].map(risk => `<option ${String(task.risk || "MEDIUM") === risk ? "selected" : ""}>${risk}</option>`).join("")}</select>
+            <input class="inline-input" data-plan-field="dependsOn" data-plan-index="${index}" value="${escapeHtml(task.dependsOn || "")}" placeholder="Depends on">
+            <input class="inline-input" data-plan-field="blockedBy" data-plan-index="${index}" value="${escapeHtml(task.blockedBy || "")}" placeholder="Blocked by">
+            <input class="inline-input" data-plan-field="deliverable" data-plan-index="${index}" value="${escapeHtml(task.deliverable || "")}" placeholder="Deliverable">
+            <input class="inline-input" data-plan-field="shareWith" data-plan-index="${index}" value="${escapeHtml(task.shareWith || "")}" placeholder="Share with">
             <input class="inline-input" data-plan-field="comments" data-plan-index="${index}" value="${escapeHtml(task.comments)}">
             <button class="small-btn" data-plan-save="${index}">Save</button>
             <button class="small-btn danger-btn" data-plan-delete="${index}">Delete</button>
@@ -1941,6 +1947,38 @@ async function copyProjectShareLink() {
         showPlanMessage(`Share link copied: ${link}`);
     } catch {
         showPlanMessage(`Share link: ${link}`);
+    }
+}
+
+async function generatePlanTemplate() {
+    const body = {
+        topic: qs("#planTemplateTopic").value.trim() || "Team Delivery",
+        team: qs("#planTemplateTeam").value.trim(),
+        owner: qs("#planTemplateOwner").value.trim(),
+        resource: qs("#planTemplateResource").value.trim(),
+        start: qs("#planTemplateStart").value.trim(),
+        finish: qs("#planTemplateFinish").value.trim(),
+        shareWith: qs("#planTemplateShareWith").value.trim()
+    };
+    showPlanMessage("Generating team plan...");
+    try {
+        await api("/api/v1/project/templates", {
+            method: "POST",
+            body: JSON.stringify(body)
+        });
+        const error = await safeLoad("projectTasks", "/api/v1/project/tasks", [], { timeoutMs: 8000 });
+        if (error) {
+            showPlanMessage(error);
+            return;
+        }
+        planTasks = state.projectTasks || [];
+        planState.topic = body.topic;
+        renderPlan();
+        ["#planTemplateTopic", "#planTemplateTeam", "#planTemplateOwner", "#planTemplateResource",
+            "#planTemplateStart", "#planTemplateFinish", "#planTemplateShareWith"].forEach(selector => qs(selector).value = "");
+        showPlanMessage("Reusable team plan generated.");
+    } catch (error) {
+        showPlanMessage(error.message);
     }
 }
 
