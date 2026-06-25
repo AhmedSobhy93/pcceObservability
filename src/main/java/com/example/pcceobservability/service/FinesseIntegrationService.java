@@ -20,9 +20,7 @@ import java.util.List;
 import java.util.Set;
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.HttpsURLConnection;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.TrustManager;
-import javax.net.ssl.X509TrustManager;
+import javax.net.ssl.SSLSocketFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -37,6 +35,8 @@ public class FinesseIntegrationService {
 
     private final PcceProperties pcceProperties;
     private final JdbcTemplate awJdbcTemplate;
+    private final SSLSocketFactory sslSocketFactory;
+    private final HostnameVerifier hostnameVerifier;
     private volatile List<FinesseEndpointResult> cachedAgents = List.of();
     private volatile Instant cachedAgentsAt = Instant.EPOCH;
     private volatile List<FinesseEndpointResult> cachedDialogs = List.of();
@@ -46,9 +46,13 @@ public class FinesseIntegrationService {
 
     public FinesseIntegrationService(
             PcceProperties pcceProperties,
-            @Qualifier("awJdbcTemplate") JdbcTemplate awJdbcTemplate) {
+            @Qualifier("awJdbcTemplate") JdbcTemplate awJdbcTemplate,
+            SSLSocketFactory sslSocketFactory,
+            HostnameVerifier hostnameVerifier) {
         this.pcceProperties = pcceProperties;
         this.awJdbcTemplate = awJdbcTemplate;
+        this.sslSocketFactory = sslSocketFactory;
+        this.hostnameVerifier = hostnameVerifier;
     }
 
     public List<IntegrationCapability> capabilities() {
@@ -165,8 +169,9 @@ public class FinesseIntegrationService {
 
     private HttpURLConnection open(PcceProperties.Finesse finesse, String target) throws IOException {
         HttpURLConnection connection = (HttpURLConnection) new URL(target).openConnection();
-        if (finesse.isTrustAllCertificates() && connection instanceof HttpsURLConnection httpsConnection) {
-            trustAll(httpsConnection);
+        if (connection instanceof HttpsURLConnection httpsConnection) {
+            httpsConnection.setSSLSocketFactory(sslSocketFactory);
+            httpsConnection.setHostnameVerifier(hostnameVerifier);
         }
         int timeoutMs = (int) (finesse.getTimeout() == null ? 10000 : finesse.getTimeout().toMillis());
         connection.setConnectTimeout(timeoutMs);
@@ -179,34 +184,6 @@ public class FinesseIntegrationService {
             connection.setRequestProperty("Authorization", "Basic " + token);
         }
         return connection;
-    }
-
-    private void trustAll(HttpsURLConnection connection) throws IOException {
-        try {
-            TrustManager[] trustManagers = new TrustManager[] {
-                    new X509TrustManager() {
-                        @Override
-                        public java.security.cert.X509Certificate[] getAcceptedIssuers() {
-                            return new java.security.cert.X509Certificate[0];
-                        }
-
-                        @Override
-                        public void checkClientTrusted(java.security.cert.X509Certificate[] certs, String authType) {
-                        }
-
-                        @Override
-                        public void checkServerTrusted(java.security.cert.X509Certificate[] certs, String authType) {
-                        }
-                    }
-            };
-            SSLContext context = SSLContext.getInstance("TLS");
-            context.init(null, trustManagers, new java.security.SecureRandom());
-            HostnameVerifier verifier = (hostname, session) -> true;
-            connection.setSSLSocketFactory(context.getSocketFactory());
-            connection.setHostnameVerifier(verifier);
-        } catch (Exception ex) {
-            throw new IOException("Unable to initialize relaxed TLS for Finesse API", ex);
-        }
     }
 
     private String readBody(HttpURLConnection connection, int statusCode) throws IOException {

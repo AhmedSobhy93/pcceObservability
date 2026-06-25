@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -50,5 +51,17 @@ public class AuditService {
         while (events.size() > retention) {
             events.removeLast();
         }
+        purgeOlderThanRetentionDays();
+    }
+
+    @Scheduled(cron = "0 3 * * * *")
+    public synchronized void purgeOldAuditEvents() {
+        purgeOlderThanRetentionDays();
+    }
+
+    private void purgeOlderThanRetentionDays() {
+        int retentionDays = Math.max(1, pcceProperties.getAudit().getRetentionDays());
+        Instant cutoff = Instant.now().minusSeconds(retentionDays * 24L * 60L * 60L);
+        events.removeIf(event -> event.timestamp().isBefore(cutoff));
     }
 }

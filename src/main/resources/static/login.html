@@ -17,7 +17,7 @@
             </div>
         </div>
         <div class="status-message" id="loginMessage"></div>
-        <form class="login-form" method="post" action="/login">
+        <form class="login-form" method="post" action="/login" id="loginForm">
             <label>
                 <span>Username</span>
                 <input name="username" autocomplete="username" required autofocus>
@@ -47,6 +47,14 @@
     } else {
         message.textContent = "Use your assigned operations account.";
         message.className = "status-message";
+    }
+    const token = document.cookie.split("; ").find(row => row.startsWith("XSRF-TOKEN="));
+    if (token) {
+        const input = document.createElement("input");
+        input.type = "hidden";
+        input.name = "_csrf";
+        input.value = decodeURIComponent(token.split("=")[1]);
+        document.getElementById("loginForm").appendChild(input);
     }
 </script>
 </body>

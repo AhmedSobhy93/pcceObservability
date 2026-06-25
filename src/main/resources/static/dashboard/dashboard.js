@@ -339,10 +339,14 @@ function saveBusinessSettings() {
 async function api(path, options = {}) {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), options.timeoutMs || 12000);
+    const method = options.method || "GET";
     const response = await fetch(path, {
         credentials: "same-origin",
-        method: options.method || "GET",
-        headers: options.body ? { "Content-Type": "application/json" } : undefined,
+        method,
+        headers: {
+            ...(options.body ? { "Content-Type": "application/json" } : {}),
+            ...csrfHeaders(method)
+        },
         body: options.body,
         signal: controller.signal
     }).finally(() => clearTimeout(timeout));
@@ -351,6 +355,16 @@ async function api(path, options = {}) {
         throw new Error(`${response.status} ${response.statusText}: ${text.slice(0, 220)}`);
     }
     return response.json();
+}
+
+function csrfHeaders(method = "GET") {
+    if (String(method).toUpperCase() === "GET") {
+        return {};
+    }
+    const token = document.cookie
+            .split("; ")
+            .find(row => row.startsWith("XSRF-TOKEN="));
+    return token ? { "X-XSRF-TOKEN": decodeURIComponent(token.split("=")[1]) } : {};
 }
 
 async function safeLoad(key, path, fallback, options = {}) {
@@ -365,7 +379,7 @@ async function safeLoad(key, path, fallback, options = {}) {
 
 async function logout() {
     try {
-        await fetch("/logout", { method: "POST", credentials: "same-origin" });
+        await fetch("/logout", { method: "POST", credentials: "same-origin", headers: csrfHeaders("POST") });
     } finally {
         location.href = "/logout.html";
     }

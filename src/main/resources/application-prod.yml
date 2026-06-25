@@ -8,6 +8,9 @@ server:
     key-store-type: ${SERVER_SSL_KEY_STORE_TYPE:PKCS12}
 
 spring:
+  h2:
+    console:
+      enabled: false
   datasource:
     url: ${APP_DB_URL:jdbc:postgresql://localhost:5432/pcce_observability}
     username: ${APP_DB_USERNAME:pcce_observability}
@@ -46,6 +49,19 @@ logging:
     org.springframework.security: WARN
 
 pcce:
+  ssl:
+    trust-store-path: ${PCCE_SSL_TRUST_STORE:}
+    trust-store-password: ${PCCE_SSL_TRUST_STORE_PASS:changeit}
+    verify-hostname: ${PCCE_SSL_VERIFY_HOSTNAME:true}
+
+  audit:
+    retention-days: ${PCCE_AUDIT_RETENTION_DAYS:90}
+
+  security:
+    rate-limit:
+      enabled: ${PCCE_RATE_LIMIT_ENABLED:true}
+      max-requests-per-minute: ${PCCE_RATE_LIMIT_RPM:120}
+
   datasources:
     aw:
       hikari:
@@ -185,7 +201,7 @@ pcce:
       probe: HTTP
       url: ${AW_A_HEALTH_URL:https://aw-a.example.local/unifiedconfig/config/deploymenttype}
       timeout: 10s
-      trust-all-certificates: true
+      trust-all-certificates: false
       expected-status-min: 200
       expected-status-max: 499
     - name: ICM_Distributor_AW
@@ -197,7 +213,7 @@ pcce:
       probe: HTTP
       url: ${AW_B_HEALTH_URL:https://aw-b.example.local/unifiedconfig/config/deploymenttype}
       timeout: 10s
-      trust-all-certificates: true
+      trust-all-certificates: false
       expected-status-min: 200
       expected-status-max: 499
     - name: Live_Data
@@ -209,7 +225,7 @@ pcce:
       probe: HTTP
       url: ${LIVEDATA_A_URL:https://livedata-a.example.local}
       timeout: 10s
-      trust-all-certificates: true
+      trust-all-certificates: false
       expected-status-min: 200
       expected-status-max: 499
     - name: CTI_Server
@@ -317,7 +333,7 @@ pcce:
       probe: HTTP
       url: ${VVB_1_URL:https://vvb-1.example.local}
       timeout: 10s
-      trust-all-certificates: true
+      trust-all-certificates: false
       expected-status-min: 200
       expected-status-max: 499
     - name: Finesse
@@ -329,7 +345,7 @@ pcce:
       probe: HTTP
       url: ${FINESSE_A_URL:https://finesse-a.example.local:8445/desktop}
       timeout: 15s
-      trust-all-certificates: true
+      trust-all-certificates: false
       expected-status-min: 200
       expected-status-max: 499
     - name: Finesse
@@ -341,7 +357,7 @@ pcce:
       probe: HTTP
       url: ${FINESSE_B_URL:https://finesse-b.example.local:8445/desktop}
       timeout: 15s
-      trust-all-certificates: true
+      trust-all-certificates: false
       expected-status-min: 200
       expected-status-max: 499
     - name: CUIC
@@ -353,7 +369,7 @@ pcce:
       probe: HTTP
       url: ${CUIC_PUB_URL:https://cuic-pub.example.local/cuic}
       timeout: 15s
-      trust-all-certificates: true
+      trust-all-certificates: false
       expected-status-min: 200
       expected-status-max: 499
     - name: CUCM_Publisher
@@ -365,7 +381,7 @@ pcce:
       probe: HTTP
       url: ${CUCM_PUB_URL:https://cucm-pub.example.local}
       timeout: 10s
-      trust-all-certificates: true
+      trust-all-certificates: false
       expected-status-min: 200
       expected-status-max: 499
     - name: CUCM_Subscriber
@@ -377,7 +393,7 @@ pcce:
       probe: HTTP
       url: ${CUCM_SUB1_URL:https://cucm-sub1.example.local}
       timeout: 10s
-      trust-all-certificates: true
+      trust-all-certificates: false
       expected-status-min: 200
       expected-status-max: 499
     - name: VoIP_Gateway
@@ -399,7 +415,7 @@ pcce:
       probe: HTTP
       url: ${CC_VIP_URL:https://cc-vip.example.local}
       timeout: 10s
-      trust-all-certificates: true
+      trust-all-certificates: false
       expected-status-min: 200
       expected-status-max: 499
     - name: Eleveo_Recording
@@ -411,6 +427,6 @@ pcce:
       probe: HTTP
       url: ${ELEVEO_RECORDING_URL:https://eleveo.example.local}
       timeout: 10s
-      trust-all-certificates: true
+      trust-all-certificates: false
       expected-status-min: 200
       expected-status-max: 499

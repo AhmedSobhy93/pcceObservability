@@ -49,7 +49,21 @@ public class AdminDiagnosticsController {
         PcceProperties.Jmx jmx = pcceProperties.getJmx();
         PcceProperties.LiveData liveData = pcceProperties.getLiveData();
         PcceProperties.AppDynamics appDynamics = pcceProperties.getAppDynamics();
+        PcceProperties.Ssl ssl = pcceProperties.getSsl();
+        PcceProperties.Security.RateLimit rateLimit = pcceProperties.getSecurity().getRateLimit();
         List<ProductionReadinessItem> items = new ArrayList<>();
+        items.add(item("TLS Trust",
+                ssl != null && ssl.isVerifyHostname(),
+                ssl != null && hasText(ssl.getTrustStorePath())
+                        ? "Custom trust store configured"
+                        : "Using JVM default trust store",
+                "Import Cisco/PCCE/Finesse/CVP issuing CA certificates into a JKS/PKCS12 trust store and set PCCE_SSL_TRUST_STORE. Keep PCCE_SSL_VERIFY_HOSTNAME=true in production."));
+        items.add(item("Rate Limiting",
+                rateLimit != null && rateLimit.isEnabled() && rateLimit.getMaxRequestsPerMinute() > 0,
+                rateLimit != null && rateLimit.isEnabled()
+                        ? "Enabled at " + rateLimit.getMaxRequestsPerMinute() + " requests/minute/client"
+                        : "Disabled",
+                "Keep PCCE_RATE_LIMIT_ENABLED=true and tune PCCE_RATE_LIMIT_RPM for NOC wallboards and admin users."));
         items.add(item("PCCE API",
                 pcceApi != null && pcceApi.isEnabled() && hasText(pcceApi.getBaseUrl()) && hasText(pcceApi.getUsername()),
                 pcceApi != null && pcceApi.isEnabled() ? "PCCE API enabled" : "PCCE API disabled",

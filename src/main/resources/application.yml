@@ -27,7 +27,7 @@ spring:
     locations: classpath:db/migration
   h2:
     console:
-      enabled: ${H2_CONSOLE_ENABLED:true}
+      enabled: ${H2_CONSOLE_ENABLED:false}
       path: /h2-console
   mail:
     host: ${PCCE_SMTP_HOST:}
@@ -53,6 +53,14 @@ management:
         include: health,info,metrics
 
 pcce:
+  ssl:
+    trust-store-path: ${PCCE_SSL_TRUST_STORE:}
+    trust-store-password: ${PCCE_SSL_TRUST_STORE_PASS:changeit}
+    verify-hostname: ${PCCE_SSL_VERIFY_HOSTNAME:true}
+
+  audit:
+    retention-days: ${PCCE_AUDIT_RETENTION_DAYS:90}
+
   performance:
     jdbc-query-timeout-seconds: 30
     slow-query-warning-ms: 2000
@@ -67,7 +75,7 @@ pcce:
     username: ${PCCE_LIVE_DATA_USERNAME:LDi1edulmtibl2}
     password: ${PCCE_LIVE_DATA_PASSWORD:}
     timeout: ${PCCE_LIVE_DATA_TIMEOUT:10s}
-    trust-all-certificates: ${PCCE_LIVE_DATA_TRUST_ALL_CERTIFICATES:true}
+    trust-all-certificates: ${PCCE_LIVE_DATA_TRUST_ALL_CERTIFICATES:false}
     stock-reports:
       - Agent Real Time
       - Agent Skill Group Real Time
@@ -125,7 +133,7 @@ pcce:
     username: ${FINESSE_USERNAME:administrator}
     password: ${FINESSE_PASSWORD:}
     timeout: ${FINESSE_TIMEOUT:10s}
-    trust-all-certificates: ${FINESSE_TRUST_ALL_CERTIFICATES:true}
+    trust-all-certificates: ${FINESSE_TRUST_ALL_CERTIFICATES:false}
     user-ids: ${FINESSE_USER_IDS:}
     team-ids: ${FINESSE_TEAM_IDS:}
     queue-ids: ${FINESSE_QUEUE_IDS:}
@@ -140,7 +148,7 @@ pcce:
     api-key-header-name: ${PCCE_API_KEY_HEADER_NAME:}
     api-key: ${PCCE_API_KEY:}
     timeout: 10s
-    trust-all-certificates: true
+    trust-all-certificates: ${PCCE_API_TRUST_ALL_CERTIFICATES:false}
     monitors:
       - name: Users
         category: User Configuration and Management
@@ -352,6 +360,10 @@ pcce:
         description: Recording platform health, storage, and service telemetry
 
   security:
+    rate-limit:
+      enabled: ${PCCE_RATE_LIMIT_ENABLED:true}
+      max-requests-per-minute: ${PCCE_RATE_LIMIT_RPM:120}
+
     ldap:
       enabled: ${APP_LDAP_ENABLED:false}
       user-search-base: ${APP_LDAP_USER_SEARCH_BASE:}
@@ -546,7 +558,7 @@ pcce:
       probe: HTTP
       url: https://vssitfin01.dev.mdi:8445/desktop
       timeout: 15s
-      trust-all-certificates: true
+      trust-all-certificates: false
       expected-status-min: 200
       expected-status-max: 499
     - name: MediaSense
@@ -566,6 +578,6 @@ pcce:
       probe: HTTP
       url: https://vssitcuic01.dev.mdi/cuic
       timeout: 15s
-      trust-all-certificates: true
+      trust-all-certificates: false
       expected-status-min: 200
       expected-status-max: 499

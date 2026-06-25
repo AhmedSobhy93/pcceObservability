@@ -23,6 +23,12 @@ public class PcceProperties {
     private Security security = new Security();
 
     @Valid
+    private Ssl ssl = new Ssl();
+
+    @Valid
+    private Audit audit = new Audit();
+
+    @Valid
     private Operations operations = new Operations();
 
     @Valid
@@ -72,6 +78,22 @@ public class PcceProperties {
 
     public void setSecurity(Security security) {
         this.security = security;
+    }
+
+    public Ssl getSsl() {
+        return ssl;
+    }
+
+    public void setSsl(Ssl ssl) {
+        this.ssl = ssl;
+    }
+
+    public Audit getAudit() {
+        return audit;
+    }
+
+    public void setAudit(Audit audit) {
+        this.audit = audit;
     }
 
     public Operations getOperations() {
@@ -1530,10 +1552,53 @@ public class PcceProperties {
         }
     }
 
+    public static class Ssl {
+        private String trustStorePath;
+        private String trustStorePassword = "changeit";
+        private boolean verifyHostname = true;
+
+        public String getTrustStorePath() {
+            return trustStorePath;
+        }
+
+        public void setTrustStorePath(String trustStorePath) {
+            this.trustStorePath = trustStorePath;
+        }
+
+        public String getTrustStorePassword() {
+            return trustStorePassword;
+        }
+
+        public void setTrustStorePassword(String trustStorePassword) {
+            this.trustStorePassword = trustStorePassword;
+        }
+
+        public boolean isVerifyHostname() {
+            return verifyHostname;
+        }
+
+        public void setVerifyHostname(boolean verifyHostname) {
+            this.verifyHostname = verifyHostname;
+        }
+    }
+
+    public static class Audit {
+        private int retentionDays = 90;
+
+        public int getRetentionDays() {
+            return retentionDays;
+        }
+
+        public void setRetentionDays(int retentionDays) {
+            this.retentionDays = retentionDays;
+        }
+    }
+
     public static class Security {
         private List<AppUser> users = defaultUsers();
         private Map<AppRole, List<Permission>> rolePermissions = defaultRolePermissions();
         private Ldap ldap = new Ldap();
+        private RateLimit rateLimit = new RateLimit();
 
         public List<AppUser> getUsers() {
             return users;
@@ -1557,6 +1622,35 @@ public class PcceProperties {
 
         public void setLdap(Ldap ldap) {
             this.ldap = ldap;
+        }
+
+        public RateLimit getRateLimit() {
+            return rateLimit;
+        }
+
+        public void setRateLimit(RateLimit rateLimit) {
+            this.rateLimit = rateLimit;
+        }
+
+        public static class RateLimit {
+            private boolean enabled = true;
+            private int maxRequestsPerMinute = 120;
+
+            public boolean isEnabled() {
+                return enabled;
+            }
+
+            public void setEnabled(boolean enabled) {
+                this.enabled = enabled;
+            }
+
+            public int getMaxRequestsPerMinute() {
+                return maxRequestsPerMinute;
+            }
+
+            public void setMaxRequestsPerMinute(int maxRequestsPerMinute) {
+                this.maxRequestsPerMinute = maxRequestsPerMinute;
+            }
         }
 
         private static List<AppUser> defaultUsers() {

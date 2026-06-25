@@ -24,9 +24,7 @@ import java.util.List;
 import java.util.Map;
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.HttpsURLConnection;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.TrustManager;
-import javax.net.ssl.X509TrustManager;
+import javax.net.ssl.SSLSocketFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -34,9 +32,16 @@ import org.springframework.util.StringUtils;
 public class PcceApiMonitoringService {
 
     private final PcceProperties pcceProperties;
+    private final SSLSocketFactory sslSocketFactory;
+    private final HostnameVerifier hostnameVerifier;
 
-    public PcceApiMonitoringService(PcceProperties pcceProperties) {
+    public PcceApiMonitoringService(
+            PcceProperties pcceProperties,
+            SSLSocketFactory sslSocketFactory,
+            HostnameVerifier hostnameVerifier) {
         this.pcceProperties = pcceProperties;
+        this.sslSocketFactory = sslSocketFactory;
+        this.hostnameVerifier = hostnameVerifier;
     }
 
     public List<ApiCapability> capabilities() {
@@ -180,8 +185,9 @@ public class PcceApiMonitoringService {
             String target,
             String contentType) throws IOException {
         HttpURLConnection connection = (HttpURLConnection) new URL(target).openConnection();
-        if (api.isTrustAllCertificates() && connection instanceof HttpsURLConnection httpsConnection) {
-            trustAll(httpsConnection);
+        if (connection instanceof HttpsURLConnection httpsConnection) {
+            httpsConnection.setSSLSocketFactory(sslSocketFactory);
+            httpsConnection.setHostnameVerifier(hostnameVerifier);
         }
         connection.setConnectTimeout((int) api.getTimeout().toMillis());
         connection.setReadTimeout((int) api.getTimeout().toMillis());
@@ -216,34 +222,6 @@ public class PcceApiMonitoringService {
                     connection.setRequestProperty(api.getApiKeyHeaderName(), api.getApiKey());
                 }
             }
-        }
-    }
-
-    private void trustAll(HttpsURLConnection connection) throws IOException {
-        try {
-            TrustManager[] trustManagers = new TrustManager[] {
-                    new X509TrustManager() {
-                        @Override
-                        public java.security.cert.X509Certificate[] getAcceptedIssuers() {
-                            return new java.security.cert.X509Certificate[0];
-                        }
-
-                        @Override
-                        public void checkClientTrusted(java.security.cert.X509Certificate[] certs, String authType) {
-                        }
-
-                        @Override
-                        public void checkServerTrusted(java.security.cert.X509Certificate[] certs, String authType) {
-                        }
-                    }
-            };
-            SSLContext context = SSLContext.getInstance("TLS");
-            context.init(null, trustManagers, new java.security.SecureRandom());
-            HostnameVerifier verifier = (hostname, session) -> true;
-            connection.setSSLSocketFactory(context.getSocketFactory());
-            connection.setHostnameVerifier(verifier);
-        } catch (Exception ex) {
-            throw new IOException("Unable to initialize relaxed TLS for PCCE API monitor", ex);
         }
     }
 

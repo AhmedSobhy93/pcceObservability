@@ -500,6 +500,11 @@
         document.getElementById("resourceView").classList.toggle("hidden", view !== "resources");
     }
 
+    function csrfHeaders() {
+        const token = document.cookie.split("; ").find(row => row.startsWith("XSRF-TOKEN="));
+        return token ? { "X-XSRF-TOKEN": decodeURIComponent(token.split("=")[1]) } : {};
+    }
+
     async function saveRow(button) {
         const row = button.closest("tr");
         const index = Number(row.dataset.index);
@@ -512,7 +517,7 @@
         const target = row.dataset.id ? `/api/v1/project/tasks/id/${row.dataset.id}` : `/api/v1/project/tasks/${index}`;
         await fetch(target, {
             method: "PUT",
-            headers: { "Content-Type": "application/json" },
+            headers: { "Content-Type": "application/json", ...csrfHeaders() },
             body: JSON.stringify(body)
         });
         location.reload();
@@ -527,7 +532,7 @@
         body.pct = body.pct ? Number(body.pct) : 0;
         await fetch("/api/v1/project/tasks", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: { "Content-Type": "application/json", ...csrfHeaders() },
             body: JSON.stringify(body)
         });
         location.reload();

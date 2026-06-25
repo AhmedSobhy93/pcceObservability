@@ -15,9 +15,7 @@ import java.util.List;
 import java.util.Map;
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.HttpsURLConnection;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.TrustManager;
-import javax.net.ssl.X509TrustManager;
+import javax.net.ssl.SSLSocketFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -28,12 +26,18 @@ public class LiveDataIntegrationService {
 
     private final PcceProperties pcceProperties;
     private final JdbcTemplate awJdbcTemplate;
+    private final SSLSocketFactory sslSocketFactory;
+    private final HostnameVerifier hostnameVerifier;
 
     public LiveDataIntegrationService(
             PcceProperties pcceProperties,
-            @Qualifier("awJdbcTemplate") JdbcTemplate awJdbcTemplate) {
+            @Qualifier("awJdbcTemplate") JdbcTemplate awJdbcTemplate,
+            SSLSocketFactory sslSocketFactory,
+            HostnameVerifier hostnameVerifier) {
         this.pcceProperties = pcceProperties;
         this.awJdbcTemplate = awJdbcTemplate;
+        this.sslSocketFactory = sslSocketFactory;
+        this.hostnameVerifier = hostnameVerifier;
     }
 
     public List<ExternalIntegrationStatus> tokenProbe() {
@@ -120,8 +124,9 @@ public class LiveDataIntegrationService {
 
     private ProbeResponse requestToken(PcceProperties.LiveData liveData, String target, String method) throws IOException {
         HttpURLConnection connection = (HttpURLConnection) new URL(target).openConnection();
-        if (liveData.isTrustAllCertificates() && connection instanceof HttpsURLConnection httpsConnection) {
-            trustAll(httpsConnection);
+        if (connection instanceof HttpsURLConnection httpsConnection) {
+            httpsConnection.setSSLSocketFactory(sslSocketFactory);
+            httpsConnection.setHostnameVerifier(hostnameVerifier);
         }
         int timeoutMs = (int) (liveData.getTimeout() == null ? 10000 : liveData.getTimeout().toMillis());
         connection.setConnectTimeout(timeoutMs);
@@ -173,32 +178,6 @@ public class LiveDataIntegrationService {
         }
         String normalized = value.replaceAll("\\s+", " ").trim();
         return normalized.length() > 240 ? normalized.substring(0, 240) + "..." : normalized;
-    }
-
-    private void trustAll(HttpsURLConnection connection) {
-        try {
-            TrustManager[] trustManagers = new TrustManager[]{new X509TrustManager() {
-                @Override
-                public java.security.cert.X509Certificate[] getAcceptedIssuers() {
-                    return new java.security.cert.X509Certificate[0];
-                }
-
-                @Override
-                public void checkClientTrusted(java.security.cert.X509Certificate[] certs, String authType) {
-                }
-
-                @Override
-                public void checkServerTrusted(java.security.cert.X509Certificate[] certs, String authType) {
-                }
-            }};
-            SSLContext sslContext = SSLContext.getInstance("TLS");
-            sslContext.init(null, trustManagers, new java.security.SecureRandom());
-            connection.setSSLSocketFactory(sslContext.getSocketFactory());
-            HostnameVerifier verifier = (hostname, session) -> true;
-            connection.setHostnameVerifier(verifier);
-        } catch (Exception ex) {
-            throw new IllegalStateException("Unable to configure Live Data SSL trust override", ex);
-        }
     }
 
     private record ProbeResponse(int statusCode, String body) {

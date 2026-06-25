@@ -4,6 +4,8 @@ import com.example.pcceobservability.config.PcceProperties;
 import com.example.pcceobservability.config.PcceProperties.ComponentTarget;
 import com.example.pcceobservability.model.ComponentState;
 import com.example.pcceobservability.model.ComponentStatus;
+import io.micrometer.core.instrument.Gauge;
+import io.micrometer.core.instrument.MeterRegistry;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.InetAddress;
@@ -12,11 +14,12 @@ import java.net.Socket;
 import java.net.URL;
 import java.time.Instant;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicReference;
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.HttpsURLConnection;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.TrustManager;
-import javax.net.ssl.X509TrustManager;
+import javax.net.ssl.SSLSocketFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -29,18 +32,28 @@ public class ComponentStatusService {
     private final JdbcTemplate hdsJdbcTemplate;
     private final JdbcTemplate cvpReportingJdbcTemplate;
     private final ComponentHistoryService componentHistoryService;
+    private final SSLSocketFactory sslSocketFactory;
+    private final HostnameVerifier hostnameVerifier;
+    private final MeterRegistry meterRegistry;
+    private final ConcurrentMap<String, AtomicReference<Double>> componentStatusGauges = new ConcurrentHashMap<>();
 
     public ComponentStatusService(
             PcceProperties pcceProperties,
             @Qualifier("awJdbcTemplate") JdbcTemplate awJdbcTemplate,
             @Qualifier("hdsJdbcTemplate") JdbcTemplate hdsJdbcTemplate,
             @Qualifier("cvpReportingJdbcTemplate") JdbcTemplate cvpReportingJdbcTemplate,
-            ComponentHistoryService componentHistoryService) {
+            ComponentHistoryService componentHistoryService,
+            SSLSocketFactory sslSocketFactory,
+            HostnameVerifier hostnameVerifier,
+            MeterRegistry meterRegistry) {
         this.pcceProperties = pcceProperties;
         this.awJdbcTemplate = awJdbcTemplate;
         this.hdsJdbcTemplate = hdsJdbcTemplate;
         this.cvpReportingJdbcTemplate = cvpReportingJdbcTemplate;
         this.componentHistoryService = componentHistoryService;
+        this.sslSocketFactory = sslSocketFactory;
+        this.hostnameVerifier = hostnameVerifier;
+        this.meterRegistry = meterRegistry;
     }
 
     public List<ComponentStatus> status() {
@@ -58,6 +71,7 @@ public class ComponentStatusService {
                     ComponentState.DISABLED, target.getProbe(), describeTarget(target), 0,
                     "Probe disabled in configuration", checkedAt);
             componentHistoryService.record(status);
+            updateStatusGauge(status);
             return status;
         }
 
@@ -79,6 +93,7 @@ public class ComponentStatusService {
                     elapsedMs(start), ex.getMessage(), checkedAt);
         }
         componentHistoryService.record(status);
+        updateStatusGauge(status);
         return status;
     }
 
@@ -96,8 +111,9 @@ public class ComponentStatusService {
             throw new IllegalArgumentException("HTTP probe requires url");
         }
         HttpURLConnection connection = (HttpURLConnection) new URL(target.getUrl()).openConnection();
-        if (target.isTrustAllCertificates() && connection instanceof HttpsURLConnection httpsConnection) {
-            trustAll(httpsConnection);
+        if (connection instanceof HttpsURLConnection httpsConnection) {
+            httpsConnection.setSSLSocketFactory(sslSocketFactory);
+            httpsConnection.setHostnameVerifier(hostnameVerifier);
         }
         connection.setConnectTimeout((int) target.getTimeout().toMillis());
         connection.setReadTimeout((int) target.getTimeout().toMillis());
@@ -114,34 +130,6 @@ public class ComponentStatusService {
             throw new IllegalArgumentException("HOST probe requires host");
         }
         InetAddress.getByName(target.getHost());
-    }
-
-    private void trustAll(HttpsURLConnection connection) throws IOException {
-        try {
-            TrustManager[] trustManagers = new TrustManager[] {
-                    new X509TrustManager() {
-                        @Override
-                        public java.security.cert.X509Certificate[] getAcceptedIssuers() {
-                            return new java.security.cert.X509Certificate[0];
-                        }
-
-                        @Override
-                        public void checkClientTrusted(java.security.cert.X509Certificate[] certs, String authType) {
-                        }
-
-                        @Override
-                        public void checkServerTrusted(java.security.cert.X509Certificate[] certs, String authType) {
-                        }
-                    }
-            };
-            SSLContext context = SSLContext.getInstance("TLS");
-            context.init(null, trustManagers, new java.security.SecureRandom());
-            HostnameVerifier verifier = (hostname, session) -> true;
-            connection.setSSLSocketFactory(context.getSocketFactory());
-            connection.setHostnameVerifier(verifier);
-        } catch (Exception ex) {
-            throw new IOException("Unable to initialize relaxed TLS for component probe", ex);
-        }
     }
 
     private void jdbcProbe(JdbcTemplate jdbcTemplate, String sql) {
@@ -167,5 +155,38 @@ public class ComponentStatusService {
 
     private long elapsedMs(long startNanos) {
         return (System.nanoTime() - startNanos) / 1_000_000;
+    }
+
+    private void updateStatusGauge(ComponentStatus status) {
+        String key = status.name() + "|" + nullSafe(status.side()) + "|" + nullSafe(status.site());
+        AtomicReference<Double> value = componentStatusGauges.computeIfAbsent(key, ignored -> {
+            AtomicReference<Double> reference = new AtomicReference<>(-1.0);
+            Gauge.builder("pcce.component.status", reference, AtomicReference::get)
+                    .description("PCCE component status: UP=1, DOWN=0, DISABLED=-0.5, UNKNOWN=-1")
+                    .tag("name", String.valueOf(status.name()))
+                    .tag("display_name", nullSafe(status.displayName()))
+                    .tag("side", nullSafe(status.side()))
+                    .tag("site", nullSafe(status.site()))
+                    .tag("tier", nullSafe(status.tier()))
+                    .register(meterRegistry);
+            return reference;
+        });
+        value.set(statusValue(status.state()));
+    }
+
+    private double statusValue(ComponentState state) {
+        if (state == null) {
+            return -1.0;
+        }
+        return switch (state) {
+            case UP -> 1.0;
+            case DOWN -> 0.0;
+            case DISABLED -> -0.5;
+            case UNKNOWN -> -1.0;
+        };
+    }
+
+    private String nullSafe(Object value) {
+        return value == null ? "unknown" : value.toString();
     }
 }
