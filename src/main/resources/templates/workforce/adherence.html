@@ -1,0 +1,5 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout/base :: head('Adherence')}"></head>
+<body><main th:replace="~{layout/base :: page('Adherence', 'Workforce adherence and productivity')}"><section th:fragment="content" class="panel"><a th:href="@{/dashboard/index.html(view='agents')}">Open Adherence</a></section></main></body>
+</html>

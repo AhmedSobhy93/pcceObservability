@@ -1,0 +1,11 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout/base :: head('Agent Performance')}"></head>
+<body>
+<main th:replace="~{layout/base :: page('Agent Performance', 'Finesse, teams, skills, and agent productivity')}">
+    <section th:fragment="content" class="panel">
+        <a th:href="@{/dashboard/index.html(view='agents')}">Open Agent Performance</a>
+    </section>
+</main>
+</body>
+</html>

@@ -1,0 +1,5 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout/base :: head('Capacity')}"></head>
+<body><main th:replace="~{layout/base :: page('Capacity', 'Server capacity, JMX, and AppDynamics')}"><section th:fragment="content" class="panel"><a th:href="@{/dashboard/index.html(view='advanced')}">Open Capacity</a></section></main></body>
+</html>

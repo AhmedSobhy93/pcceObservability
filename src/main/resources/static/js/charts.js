@@ -1,0 +1,1 @@
+window.cxCharts = window.cxCharts || {};

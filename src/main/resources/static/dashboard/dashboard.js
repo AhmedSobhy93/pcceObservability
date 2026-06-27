@@ -93,6 +93,8 @@ document.addEventListener("DOMContentLoaded", () => {
     qs("#fromDate").value = today;
     qs("#toDate").value = today;
     initBusinessSettings();
+    activeView = requestedView();
+    applyActiveView(false);
     qs("#refreshBtn").addEventListener("click", refresh);
     qs("#agentFilterBtn")?.addEventListener("click", refresh);
     qs("#callsFilterBtn")?.addEventListener("click", refresh);
@@ -194,6 +196,11 @@ document.addEventListener("DOMContentLoaded", () => {
     refresh();
     setInterval(refreshLiveData, 10000);
 });
+
+function requestedView() {
+    const view = new URLSearchParams(window.location.search).get("view") || "overview";
+    return pages[view] ? view : "overview";
+}
 
 function qs(selector) {
     return document.querySelector(selector);
@@ -2486,12 +2493,24 @@ function taskChip(task) {
 }
 
 function switchView(view) {
+    if (!pages[view]) {
+        view = "overview";
+    }
     activeView = view;
-    document.querySelectorAll(".nav-item[data-view]").forEach(button => button.classList.toggle("active", button.dataset.view === view));
-    document.querySelectorAll(".view").forEach(section => section.classList.toggle("active", section.id === `view-${view}`));
-    qs("#pageTitle").textContent = pages[view][0];
-    qs("#pageSubtitle").textContent = pages[view][1];
+    applyActiveView(true);
     refresh();
+}
+
+function applyActiveView(updateUrl) {
+    document.querySelectorAll(".nav-item[data-view]").forEach(button => button.classList.toggle("active", button.dataset.view === activeView));
+    document.querySelectorAll(".view").forEach(section => section.classList.toggle("active", section.id === `view-${activeView}`));
+    qs("#pageTitle").textContent = pages[activeView][0];
+    qs("#pageSubtitle").textContent = pages[activeView][1];
+    if (updateUrl) {
+        const url = new URL(window.location.href);
+        url.searchParams.set("view", activeView);
+        history.replaceState(null, "", url);
+    }
 }
 
 function hasPermission(permission) {

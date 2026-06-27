@@ -66,4 +66,11 @@ Do not do a large file split and behavior change in the same commit. Move classe
 - Maven coordinates have been renamed to `com.cisco.cx:cx-observability:1.0.0`.
 - Java base package has been renamed to `com.cisco.cx.observability`.
 - Application class has been renamed to `CxObservabilityApplication`.
+- The legacy IntelliJ launcher `com.example.pcceobservability.PcceObservabilityApplication` remains as a compatibility shim only.
+- Stable dashboard aliases now route to the SPA shell with view selection, for example `/business`, `/agents`, `/calls`, `/system`, `/pcce`, `/cvp`, `/alerts`, `/spog`, `/admin`, and `/app`.
+- Shared dashboard CSS now exposes `--cx-*` variables while keeping older variable aliases intact.
+- The requested target folders now exist as tracked migration scaffolding:
+  - `controller/`, `domain/*`, `infrastructure/*`, and `poller/`
+  - `templates/layout`, `templates/auth`, `templates/core`, `templates/operations`, `templates/workforce`, `templates/technical`, and `templates/executive`
+  - `static/css/dashboard.css`, `static/js/charts.js`, `static/js/wallboard.js`, and `static/js/sidebar.js`
 - Domain package splitting remains planned and should be done incrementally.

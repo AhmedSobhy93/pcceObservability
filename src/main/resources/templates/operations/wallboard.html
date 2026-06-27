@@ -1,0 +1,5 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout/base :: head('Wallboard')}"></head>
+<body><main th:replace="~{layout/base :: page('Wallboard', 'Live operations wallboard')}"><section th:fragment="content" class="panel"><a th:href="@{/dashboard/index.html(view='overview')}">Open Wallboard</a></section></main></body>
+</html>

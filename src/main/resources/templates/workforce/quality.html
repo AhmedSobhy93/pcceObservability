@@ -1,0 +1,5 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout/base :: head('Quality')}"></head>
+<body><main th:replace="~{layout/base :: page('Quality', 'Quality, recording, and Eleveo monitoring')}"><section th:fragment="content" class="panel"><a th:href="@{/dashboard/index.html(view='eleveo')}">Open Quality</a></section></main></body>
+</html>

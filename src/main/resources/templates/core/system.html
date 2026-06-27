@@ -1,0 +1,11 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout/base :: head('System Health')}"></head>
+<body>
+<main th:replace="~{layout/base :: page('System Health', 'PCCE, CVP, Finesse, CUIC, and server health')}">
+    <section th:fragment="content" class="panel">
+        <a th:href="@{/dashboard/index.html(view='system')}">Open System Health</a>
+    </section>
+</main>
+</body>
+</html>

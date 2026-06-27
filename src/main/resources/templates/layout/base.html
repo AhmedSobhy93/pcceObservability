@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:fragment="head(title)">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title th:text="${title} ?: 'CX Observability Platform'">CX Observability Platform</title>
+    <link rel="stylesheet" th:href="@{/dashboard/styles.css}">
+    <link rel="stylesheet" th:href="@{/css/dashboard.css}">
+</head>
+<body>
+<main th:fragment="page(title, subtitle)">
+    <section class="content">
+        <header class="page-header">
+            <div>
+                <h1 th:text="${title}">CX Observability Platform</h1>
+                <p th:text="${subtitle}">Cisco PCCE observability and operations</p>
+            </div>
+        </header>
+        <div th:insert="~{::content}"></div>
+    </section>
+</main>
+</body>
+</html>

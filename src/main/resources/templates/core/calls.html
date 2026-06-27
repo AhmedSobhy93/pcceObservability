@@ -1,0 +1,11 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout/base :: head('Call Analytics')}"></head>
+<body>
+<main th:replace="~{layout/base :: page('Call Analytics', 'Call flow, disposition, queue, and IVR journey analytics')}">
+    <section th:fragment="content" class="panel">
+        <a th:href="@{/dashboard/index.html(view='calls')}">Open Call Analytics</a>
+    </section>
+</main>
+</body>
+</html>

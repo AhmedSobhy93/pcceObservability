@@ -1,17 +1,32 @@
 :root {
-    --bg: #0b1017;
-    --sidebar: #080d13;
-    --panel: #151a23;
-    --panel-2: #111720;
-    --border: #273140;
-    --muted: #87a1c2;
-    --text: #f6f8fb;
-    --teal: #2ed3c2;
-    --blue: #3d82f6;
-    --green: #24e0a4;
-    --red: #ff626c;
-    --amber: #f4a51c;
-    --purple: #8d6cf7;
+    --cx-bg: #0b1017;
+    --cx-sidebar: #080d13;
+    --cx-panel: #151a23;
+    --cx-panel-subtle: #111720;
+    --cx-border: #273140;
+    --cx-muted: #87a1c2;
+    --cx-text: #f6f8fb;
+    --cx-primary: #2ed3c2;
+    --cx-blue: #3d82f6;
+    --cx-ok: #24e0a4;
+    --cx-danger: #ff626c;
+    --cx-warn: #f4a51c;
+    --cx-violet: #8d6cf7;
+
+    --bg: var(--cx-bg);
+    --sidebar: var(--cx-sidebar);
+    --panel: var(--cx-panel);
+    --panel-2: var(--cx-panel-subtle);
+    --border: var(--cx-border);
+    --muted: var(--cx-muted);
+    --text: var(--cx-text);
+    --teal: var(--cx-primary);
+    --blue: var(--cx-blue);
+    --green: var(--cx-ok);
+    --red: var(--cx-danger);
+    --danger: var(--cx-danger);
+    --amber: var(--cx-warn);
+    --purple: var(--cx-violet);
 }
 
 * { box-sizing: border-box; }

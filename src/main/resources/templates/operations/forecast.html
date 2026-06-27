@@ -1,0 +1,5 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout/base :: head('Forecast')}"></head>
+<body><main th:replace="~{layout/base :: page('Forecast', 'Operational forecast planning')}"><section th:fragment="content" class="panel"><a th:href="@{/project}">Open Project Plan</a></section></main></body>
+</html>
