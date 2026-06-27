@@ -3,7 +3,7 @@ server:
 
 spring:
   application:
-    name: pcce-observability
+    name: cx-observability
   jackson:
     property-naming-strategy: SNAKE_CASE
   datasource:
@@ -332,7 +332,7 @@ pcce:
     webhook-enabled: false
     webhook-url: ${PCCE_ALERT_WEBHOOK_URL:}
     smtp-enabled: ${PCCE_SMTP_ENABLED:false}
-    smtp-from: ${PCCE_SMTP_FROM:pcce-observability@localhost}
+    smtp-from: ${PCCE_SMTP_FROM:cx-observability@localhost}
     smtp-recipients: ${PCCE_SMTP_RECIPIENTS:}
     smtp-subject-prefix: ${PCCE_SMTP_SUBJECT_PREFIX:[PCCE Observability]}
     sms-enabled: ${PCCE_SMS_ENABLED:false}

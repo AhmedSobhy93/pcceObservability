@@ -42,10 +42,10 @@ management:
 
 logging:
   file:
-    name: ${LOG_FILE:logs/pcce-observability.log}
+    name: ${LOG_FILE:logs/cx-observability.log}
   level:
     root: INFO
-    com.example.pcceobservability: INFO
+    com.cisco.cx.observability: INFO
     org.springframework.security: WARN
 
 pcce:

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
-    <property name="LOG_FILE" value="${LOG_FILE:-logs/pcce-observability.log}"/>
+    <property name="LOG_FILE" value="${LOG_FILE:-logs/cx-observability.log}"/>
 
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
@@ -11,7 +11,7 @@
     <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <file>${LOG_FILE}</file>
         <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
-            <fileNamePattern>logs/pcce-observability.%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
+            <fileNamePattern>logs/cx-observability.%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
             <maxFileSize>20MB</maxFileSize>
             <maxHistory>30</maxHistory>
             <totalSizeCap>2GB</totalSizeCap>
@@ -21,7 +21,7 @@
         </encoder>
     </appender>
 
-    <logger name="com.example.pcceobservability" level="INFO"/>
+    <logger name="com.cisco.cx.observability" level="INFO"/>
     <logger name="org.springframework.security" level="WARN"/>
 
     <root level="INFO">
