@@ -25,6 +25,9 @@
         .icon-btn { width:40px; padding:0; display:grid; place-items:center; color:var(--muted); }
         .btn:hover, .icon-btn:hover { border-color:var(--primary); color:var(--primary); }
         .btn.primary { background:var(--primary); color:#062522; border-color:var(--primary); font-weight:800; }
+        .icon-btn[title="Filters"], .chev { font-size:0; }
+        .icon-btn[title="Filters"]::before { content:"F"; font-size:14px; font-weight:900; }
+        .chev::before { content:"v"; font-size:16px; }
         .kpis { display:grid; grid-template-columns:repeat(5, minmax(150px, 1fr)); gap:14px; margin-bottom:18px; }
         .kpi, .topic-card, .panel, .resource-card {
             background:var(--card); border:1px solid var(--border); border-radius:16px;
@@ -54,11 +57,14 @@
         }
         input::placeholder { color:#627895; }
         .count { color:var(--muted); font-weight:800; white-space:nowrap; }
-        .add-panel { padding:16px; margin-bottom:18px; display:none; }
-        .add-panel.open { display:block; }
+        .add-panel, .manage-panel { padding:16px; margin-bottom:18px; display:none; }
+        .add-panel.open, .manage-panel.open { display:block; }
         .add-grid { display:grid; grid-template-columns:repeat(6, minmax(130px, 1fr)); gap:10px; }
         .span2 { grid-column:span 2; } .span3 { grid-column:span 3; }
         label { color:var(--muted); font-size:12px; display:grid; gap:6px; }
+        .manager-grid { display:grid; grid-template-columns:repeat(4, minmax(180px, 1fr)); gap:12px; align-items:end; }
+        .manager-grid .btn { width:100%; }
+        .hint { color:var(--muted); font-size:12px; line-height:1.4; margin-top:10px; }
         .plan-group { margin-bottom:16px; overflow:hidden; }
         .group-head {
             display:grid; grid-template-columns:1fr auto auto 150px 70px; gap:18px; align-items:center;
@@ -99,6 +105,7 @@
         .inline-select, .inline-input {
             height:34px; min-width:0; width:100%; border-radius:9px; padding:0 10px; background:#1b2330;
         }
+        .inline-select.compact { min-width:120px; }
         .priority-cell, .status-cell { min-width:132px; }
         .resource-cell { min-width:230px; }
         .mini-grid { display:grid; gap:7px; }
@@ -137,7 +144,7 @@
             .top { align-items:flex-start; flex-direction:column; }
             .kpis { grid-template-columns:repeat(2, minmax(0,1fr)); }
             .group-head { grid-template-columns:1fr; padding:16px; }
-            .add-grid { grid-template-columns:repeat(2, minmax(0,1fr)); }
+            .add-grid, .manager-grid { grid-template-columns:repeat(2, minmax(0,1fr)); }
             th, td { padding:12px 16px; }
         }
     </style>
@@ -185,20 +192,22 @@
             <select id="statusFilter"><option value="ALL">All Status</option><option>COMPLETED</option><option>IN_PROGRESS</option><option>ON_HOLD</option><option>PLANNED</option></select>
             <select id="priorityFilter"><option value="ALL">All Priorities</option><option>CRITICAL</option><option>HIGH</option><option>MEDIUM</option><option>LOW</option></select>
             <select id="resourceFilter"><option value="ALL">All Resources</option><option th:each="resource : ${resources}" th:value="${resource}" th:text="${resource}"></option></select>
+            <button class="btn" type="button" id="manageOptionsToggle">Manage Lists</button>
+            <button class="btn" type="button" id="clearFilters">Clear</button>
             <strong class="count" id="taskCount" th:text="${totalTasks + ' tasks'}">0 tasks</strong>
         </div>
     </section>
 
     <section class="panel add-panel" id="addPanel">
         <form class="add-grid" id="addTaskForm">
-            <label>Topic<input name="topic" list="topicOptions" value="PCCE"></label>
+            <label>Topic<select name="topic" data-managed-list="topic"><option th:each="topic : ${topics}" th:value="${topic}" th:text="${topic}" th:selected="${topic == 'PCCE'}"></option></select></label>
             <label class="span2">Task<input name="task" required placeholder="Task name"></label>
             <label>Priority<select name="priority"><option>CRITICAL</option><option>HIGH</option><option selected>MEDIUM</option><option>LOW</option></select></label>
             <label>Status<select name="status"><option>PLANNED</option><option>IN_PROGRESS</option><option>ON_HOLD</option><option>COMPLETED</option></select></label>
-            <label>Resource<input name="resource" list="resourceOptions" value="Unassigned"></label>
-            <label>Owner<input name="owner" list="ownerOptions"></label>
-            <label>Team<input name="team" list="teamOptions"></label>
-            <label>Milestone<input name="milestone" list="milestoneOptions"></label>
+            <label>Resource<select name="resource" data-managed-list="resource"><option>Unassigned</option><option th:each="resource : ${resources}" th:value="${resource}" th:text="${resource}"></option></select></label>
+            <label>Owner<select name="owner" data-managed-list="owner"><option value="">None</option><option th:each="owner : ${owners}" th:value="${owner}" th:text="${owner}"></option></select></label>
+            <label>Team<select name="team" data-managed-list="team"><option value="">None</option><option th:each="team : ${teams}" th:value="${team}" th:text="${team}"></option></select></label>
+            <label>Milestone<select name="milestone" data-managed-list="milestone"><option value="">None</option><option th:each="milestone : ${milestones}" th:value="${milestone}" th:text="${milestone}"></option></select></label>
             <label>Start<input name="start" placeholder="1-Feb-26"></label>
             <label>Finish<input name="finish" placeholder="30-Apr-26"></label>
             <label>Duration<input name="duration" type="number" min="0"></label>
@@ -209,6 +218,25 @@
             <label class="span3">Comments<input name="comments" placeholder="Progress note"></label>
             <button class="btn primary" type="submit">Create Task</button>
         </form>
+    </section>
+
+    <section class="panel manage-panel" id="manageOptionsPanel">
+        <div class="manager-grid">
+            <label>List
+                <select id="managedListType">
+                    <option value="topic">Topics</option>
+                    <option value="resource">Resources</option>
+                    <option value="owner">Owners</option>
+                    <option value="team">Teams</option>
+                    <option value="milestone">Milestones</option>
+                </select>
+            </label>
+            <label class="span2">New option
+                <input id="managedListValue" placeholder="Example: Network Team">
+            </label>
+            <button class="btn primary" type="button" id="addManagedOption">Add To Dropdowns</button>
+        </div>
+        <p class="hint">Options are shown immediately. Save a task using the new value to persist it in the app database.</p>
     </section>
 
     <datalist id="topicOptions"><option th:each="topic : ${topics}" th:value="${topic}"></option></datalist>
@@ -250,7 +278,10 @@
                             <input type="hidden" data-field="shareWith" th:value="${task.shareWith}">
                             <input type="hidden" data-field="externalRef" th:value="${task.externalRef}">
                             <div class="task-name" contenteditable="true" data-field="task" th:text="${task.task}">Task</div>
-                            <input class="inline-input" data-field="topic" list="topicOptions" th:value="${task.topic}" placeholder="Topic">
+                            <select class="inline-select compact" data-field="topic" data-managed-list="topic">
+                                <option th:value="${task.topic}" th:text="${task.topic}" selected></option>
+                                <option th:each="topic : ${topics}" th:value="${topic}" th:text="${topic}"></option>
+                            </select>
                             <span class="sub" th:if="${task.priorityNum != null}" th:text="'#' + ${task.priorityNum}">#1</span>
                             <input type="hidden" data-field="priorityNum" th:value="${task.priorityNum}">
                             <span class="sub" th:if="${task.team != null && !task.team.isBlank()}" th:text="${task.team}">Team</span>
@@ -274,14 +305,30 @@
                         </td>
                         <td class="resource-cell">
                             <div class="mini-grid">
-                                <input class="inline-input" data-field="resource" list="resourceOptions" th:value="${task.resource}" placeholder="Assignee">
-                                <input class="inline-input" data-field="owner" list="ownerOptions" th:value="${task.owner}" placeholder="Owner">
-                                <input class="inline-input" data-field="team" list="teamOptions" th:value="${task.team}" placeholder="Team">
+                                <select class="inline-select" data-field="resource" data-managed-list="resource">
+                                    <option th:value="${task.resource}" th:text="${task.resource ?: 'Unassigned'}" selected></option>
+                                    <option>Unassigned</option>
+                                    <option th:each="resource : ${resources}" th:value="${resource}" th:text="${resource}"></option>
+                                </select>
+                                <select class="inline-select" data-field="owner" data-managed-list="owner">
+                                    <option th:value="${task.owner}" th:text="${task.owner ?: 'No owner'}" selected></option>
+                                    <option value="">No owner</option>
+                                    <option th:each="owner : ${owners}" th:value="${owner}" th:text="${owner}"></option>
+                                </select>
+                                <select class="inline-select" data-field="team" data-managed-list="team">
+                                    <option th:value="${task.team}" th:text="${task.team ?: 'No team'}" selected></option>
+                                    <option value="">No team</option>
+                                    <option th:each="team : ${teams}" th:value="${team}" th:text="${team}"></option>
+                                </select>
                             </div>
                         </td>
                         <td class="timeline">
                             <div class="mini-grid">
-                                <input class="inline-input" data-field="milestone" list="milestoneOptions" th:value="${task.milestone}" placeholder="Milestone">
+                                <select class="inline-select" data-field="milestone" data-managed-list="milestone">
+                                    <option th:value="${task.milestone}" th:text="${task.milestone ?: 'No milestone'}" selected></option>
+                                    <option value="">No milestone</option>
+                                    <option th:each="milestone : ${milestones}" th:value="${milestone}" th:text="${milestone}"></option>
+                                </select>
                                 <input class="inline-input" data-field="start" th:value="${task.start}" placeholder="Start">
                                 <input class="inline-input" data-field="finish" th:value="${task.finish}" placeholder="Finish">
                                 <input class="inline-input" data-field="duration" type="number" min="0" th:value="${task.duration}" placeholder="Days">
@@ -342,6 +389,9 @@
     let activeTopic = "";
     const originalTasks = /*[[${tasks}]]*/ [];
 
+    document.querySelector('.icon-btn[title="Filters"]').textContent = "F";
+    document.querySelectorAll(".chev").forEach(chevron => chevron.textContent = "v");
+
     function csrfHeaders() {
         const token = document.cookie.split("; ").find(row => row.startsWith("XSRF-TOKEN="));
         return token ? { "X-XSRF-TOKEN": decodeURIComponent(token.split("=")[1]) } : {};
@@ -380,6 +430,7 @@
     }
 
     function setSelectSkin(select) {
+        if (!["priority", "status"].includes(select.dataset.field)) return;
         const isPriority = select.dataset.field === "priority";
         const prefix = isPriority ? "priority-" : "status-";
         select.className = `badge inline-select ${prefix}${select.value.toLowerCase().replaceAll("_", "-")}`;
@@ -390,7 +441,16 @@
         input.addEventListener("input", () => input.closest("tr")?.classList.add("dirty"));
         input.addEventListener("change", () => {
             if (input.tagName === "SELECT") setSelectSkin(input);
-            input.closest("tr")?.classList.add("dirty");
+            const row = input.closest("tr");
+            if (row) {
+                row.classList.add("dirty");
+                if (input.dataset.field === "topic") row.dataset.topic = input.value;
+                if (input.dataset.field === "status") row.dataset.status = input.value;
+                if (input.dataset.field === "priority") row.dataset.priority = input.value;
+                if (input.dataset.field === "resource") row.dataset.resource = input.value;
+                if (input.dataset.field === "pct") updateProgress(row, input.value);
+            }
+            applyFilters();
         });
     });
 
@@ -403,8 +463,43 @@
     });
     ["topicFilter", "statusFilter", "priorityFilter", "resourceFilter"].forEach(id => document.getElementById(id).addEventListener("change", applyFilters));
     document.getElementById("addToggle").addEventListener("click", () => document.getElementById("addPanel").classList.toggle("open"));
+    document.getElementById("manageOptionsToggle").addEventListener("click", () => document.getElementById("manageOptionsPanel").classList.toggle("open"));
+    document.getElementById("clearFilters").addEventListener("click", clearFilters);
+    document.getElementById("addManagedOption").addEventListener("click", addManagedOption);
     document.getElementById("taskMode").addEventListener("click", () => setView("tasks"));
     document.getElementById("resourceMode").addEventListener("click", () => setView("resources"));
+
+    function updateProgress(row, value) {
+        const pct = Math.max(0, Math.min(100, Number(value || 0)));
+        const fill = row.querySelector(".progress-cell .bar i");
+        if (fill) fill.style.width = `${pct}%`;
+    }
+
+    function clearFilters() {
+        activeTopic = "";
+        ["topicFilter", "statusFilter", "priorityFilter", "resourceFilter"].forEach(id => document.getElementById(id).value = "ALL");
+        document.querySelectorAll(".topic-card").forEach(item => item.classList.remove("active"));
+        applyFilters();
+    }
+
+    function addManagedOption() {
+        const type = document.getElementById("managedListType").value;
+        const input = document.getElementById("managedListValue");
+        const value = input.value.trim();
+        if (!value) return;
+        document.querySelectorAll(`[data-managed-list="${type}"]`).forEach(select => addOption(select, value));
+        if (type === "topic") addOption(document.getElementById("topicFilter"), value);
+        if (type === "resource") addOption(document.getElementById("resourceFilter"), value);
+        input.value = "";
+    }
+
+    function addOption(select, value) {
+        if (!select || [...select.options].some(option => option.value === value)) return;
+        const option = document.createElement("option");
+        option.value = value;
+        option.textContent = value;
+        select.appendChild(option);
+    }
 
     function setView(view) {
         document.getElementById("taskMode").classList.toggle("active", view === "tasks");
