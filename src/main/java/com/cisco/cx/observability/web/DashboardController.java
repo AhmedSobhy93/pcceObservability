@@ -13,27 +13,27 @@ public class DashboardController {
 
     @GetMapping({"/overview", "/home"})
     public String overview() {
-        return dashboardView("overview");
+        return "core/home";
     }
 
     @GetMapping("/business")
     public String business() {
-        return dashboardView("business");
+        return "core/business";
     }
 
     @GetMapping("/agents")
     public String agents() {
-        return dashboardView("agents");
+        return "core/agents";
     }
 
     @GetMapping("/calls")
     public String calls() {
-        return dashboardView("calls");
+        return "core/calls";
     }
 
     @GetMapping({"/system", "/infra"})
     public String system() {
-        return dashboardView("system");
+        return "core/system";
     }
 
     @GetMapping({"/integrations", "/pcce"})
@@ -77,8 +77,21 @@ public class DashboardController {
     }
 
     @GetMapping({"/wallboard", "/supervisor", "/sla-trends", "/ivr", "/forecast", "/adherence", "/cti", "/capacity", "/executive", "/cost"})
-    public String plannedPageAliases() {
-        return dashboardView("overview");
+    public String plannedPageAliases(jakarta.servlet.http.HttpServletRequest request) {
+        String path = request.getRequestURI();
+        return switch (path) {
+            case "/wallboard" -> "operations/wallboard";
+            case "/supervisor" -> "operations/supervisor";
+            case "/sla-trends" -> "operations/sla-trends";
+            case "/ivr" -> "operations/ivr";
+            case "/forecast" -> "operations/forecast";
+            case "/adherence" -> "workforce/adherence";
+            case "/cti" -> "technical/cti";
+            case "/capacity" -> "technical/capacity";
+            case "/executive" -> "executive/executive";
+            case "/cost" -> "executive/cost";
+            default -> dashboardView("overview");
+        };
     }
 
     @GetMapping("/login")
