@@ -69,6 +69,7 @@ public class ReportingService {
     public List<CallMetric> callMetrics(LocalDate from, LocalDate to, String skillGroup) {
         validateDateRange(from, to);
         String normalizedSkillGroup = blankToNull(skillGroup);
+        boolean filtered = normalizedSkillGroup != null;
         List<CallMetric> intervalMetrics = timedQuery("hds.callMetrics", () -> hdsJdbcTemplate.query(
                     pcceProperties.getQueries().getCallMetrics(),
                     this::mapCallMetric,
@@ -92,7 +93,20 @@ public class ReportingService {
                         normalizedSkillGroup,
                         normalizedSkillGroup,
                         normalizedSkillGroup));
-            return enrichCallMetricLabels(fallbackMetrics);
+            List<CallMetric> enriched = enrichCallMetricLabels(fallbackMetrics);
+            if (filtered && enriched.stream().mapToLong(metric -> nullToZero(metric.callsOffered())).sum() == 0) {
+                log.warn("call_metrics_filtered_empty retrying_unfiltered=true from={} to={} skillGroup={}", from, to, normalizedSkillGroup);
+                List<CallMetric> unfiltered = timedQuery("hds.callMetrics.tcdFallback.unfiltered", () -> hdsJdbcTemplate.query(
+                        pcceProperties.getQueries().getCallMetricsTcdFallback(),
+                        this::mapCallMetric,
+                        start(from),
+                        exclusiveEnd(to),
+                        null,
+                        null,
+                        null));
+                return filterCallMetrics(enrichCallMetricLabels(unfiltered), normalizedSkillGroup);
+            }
+            return enriched;
         } catch (DataAccessException ex) {
             log.warn("call_metrics_tcd_fallback_unavailable error={}", ex.getMostSpecificCause().getMessage());
             return intervalMetrics;
@@ -150,7 +164,30 @@ public class ReportingService {
                 normalizedSkillGroup,
                 normalizedSkillGroup,
                 normalizedSkillGroup));
-        return enrichCallTypeLabels(metrics);
+        List<CallTypeMetric> enriched = enrichCallTypeLabels(metrics);
+        if ((normalizedCallType != null || normalizedSkillGroup != null) && enriched.isEmpty()) {
+            log.warn("call_type_metrics_filtered_empty retrying_unfiltered=true from={} to={} callType={} skillGroup={}",
+                    from, to, normalizedCallType, normalizedSkillGroup);
+            List<CallTypeMetric> unfiltered = timedQuery("hds.callTypeMetrics.unfiltered", () -> hdsJdbcTemplate.query(
+                    pcceProperties.getQueries().getCallTypeMetrics(),
+                    (rs, rowNum) -> new CallTypeMetric(
+                            rs.getObject("date", LocalDate.class),
+                            rs.getInt("hour"),
+                            rs.getString("call_type"),
+                            rs.getString("skill_group"),
+                            rs.getLong("calls"),
+                            rs.getLong("handled_calls")),
+                    start(from),
+                    exclusiveEnd(to),
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null));
+            return filterCallTypeMetrics(enrichCallTypeLabels(unfiltered), normalizedCallType, normalizedSkillGroup);
+        }
+        return enriched;
     }
 
     public List<CuicReportView> cuicReports() {
@@ -300,7 +337,7 @@ public class ReportingService {
             return List.of();
         }
         String normalizedSkillGroup = blankToNull(skillGroup);
-        return timedQuery("hds.droppedCalls", () -> hdsJdbcTemplate.query(
+        List<DroppedCallMetric> drops = timedQuery("hds.droppedCalls", () -> hdsJdbcTemplate.query(
                     pcceProperties.getQueries().getDroppedCalls(),
                     this::mapDroppedCallMetric,
                     start(from),
@@ -308,6 +345,20 @@ public class ReportingService {
                     normalizedSkillGroup,
                     normalizedSkillGroup,
                     normalizedSkillGroup));
+        List<DroppedCallMetric> enriched = enrichDroppedLabels(drops);
+        if (normalizedSkillGroup != null && enriched.isEmpty()) {
+            log.warn("dropped_calls_filtered_empty retrying_unfiltered=true from={} to={} skillGroup={}", from, to, normalizedSkillGroup);
+            List<DroppedCallMetric> unfiltered = timedQuery("hds.droppedCalls.unfiltered", () -> hdsJdbcTemplate.query(
+                    pcceProperties.getQueries().getDroppedCalls(),
+                    this::mapDroppedCallMetric,
+                    start(from),
+                    exclusiveEnd(to),
+                    null,
+                    null,
+                    null));
+            return filterDroppedCalls(enrichDroppedLabels(unfiltered), normalizedSkillGroup);
+        }
+        return enriched;
     }
 
     public List<DispositionBreakdown> dispositionBreakdown(LocalDate from, LocalDate to) {
@@ -502,6 +553,18 @@ public class ReportingService {
                 .toList();
     }
 
+    private List<DroppedCallMetric> enrichDroppedLabels(List<DroppedCallMetric> metrics) {
+        Map<String, String> skills = referenceMap("aw.reference.skillMap", "t_Skill_Group", "SkillTargetID");
+        return metrics.stream()
+                .map(metric -> new DroppedCallMetric(
+                        metric.date(),
+                        metric.hour(),
+                        resolveLabel(metric.skillGroup(), "SkillTarget ", skills),
+                        metric.droppedCalls(),
+                        metric.lastDropTime()))
+                .toList();
+    }
+
     private List<AgentStat> enrichAgentLabels(List<AgentStat> agents) {
         Map<String, String> skills = referenceMap("aw.reference.skillMap", "t_Skill_Group", "SkillTargetID");
         Map<String, String> agentNames = agentNameMap();
@@ -524,6 +587,59 @@ public class ReportingService {
                         agent.loginDurationMin(),
                         agent.notReadyTimeMin()))
                 .toList();
+    }
+
+    private List<CallMetric> filterCallMetrics(List<CallMetric> metrics, String skillGroup) {
+        if (!StringUtils.hasText(skillGroup)) {
+            return metrics;
+        }
+        return metrics.stream()
+                .filter(metric -> looseMatches(metric.skillGroup(), skillGroup))
+                .toList();
+    }
+
+    private List<CallTypeMetric> filterCallTypeMetrics(List<CallTypeMetric> metrics, String callType, String skillGroup) {
+        return metrics.stream()
+                .filter(metric -> !StringUtils.hasText(callType) || looseMatches(metric.callType(), callType))
+                .filter(metric -> !StringUtils.hasText(skillGroup) || looseMatches(metric.skillGroup(), skillGroup))
+                .toList();
+    }
+
+    private List<DroppedCallMetric> filterDroppedCalls(List<DroppedCallMetric> metrics, String skillGroup) {
+        if (!StringUtils.hasText(skillGroup)) {
+            return metrics;
+        }
+        return metrics.stream()
+                .filter(metric -> looseMatches(metric.skillGroup(), skillGroup))
+                .toList();
+    }
+
+    private boolean looseMatches(String actual, String expected) {
+        if (!StringUtils.hasText(expected)) {
+            return true;
+        }
+        if (!StringUtils.hasText(actual)) {
+            return false;
+        }
+        String normalizedActual = normalizeFilterToken(actual);
+        for (String expectedToken : expected.split("[,;]")) {
+            String normalizedExpected = normalizeFilterToken(expectedToken);
+            if (!normalizedExpected.isBlank()
+                    && (normalizedActual.equals(normalizedExpected)
+                    || normalizedActual.contains(normalizedExpected)
+                    || normalizedExpected.contains(normalizedActual))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private String normalizeFilterToken(String value) {
+        return value == null ? "" : value
+                .replace("SkillTarget ", "")
+                .replace("CallType ", "")
+                .replaceAll("[^A-Za-z0-9]+", "")
+                .toUpperCase();
     }
 
     private List<AgentStat> aggregateAgents(List<AgentStat> agents) {

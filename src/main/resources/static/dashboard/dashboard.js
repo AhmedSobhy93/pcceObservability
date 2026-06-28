@@ -284,9 +284,7 @@ function callFlowParams() {
         to: dates.to
     });
     const callKey = firstFilterValue("#callKeyFilter");
-    const agent = firstFilterValue("#agentPageFilter");
     if (callKey) params.set("callKey", callKey);
-    if (agent) params.set("agentId", agent);
     return params.toString();
 }
 
@@ -296,7 +294,7 @@ function ivrNodeParams() {
         from: dates.from,
         to: dates.to
     });
-    const appName = firstFilterValue("#ivrAppFilter");
+    const appName = activeView === "business" || activeView === "cvp" ? firstFilterValue("#ivrAppFilter") : "";
     if (appName) params.set("appName", appName);
     return params.toString();
 }
@@ -700,7 +698,7 @@ function renderKpis() {
     qs("#trendService").textContent = businessServiceLevel(state.calls).source;
     qs("#kpiAht").nextElementSibling.textContent = businessAht(state.calls).source;
     qs("#chartRange").textContent = `${qs("#fromDate").value} to ${qs("#toDate").value}`;
-    const skillLabel = firstFilterValue("#overviewSkillFilter", "#businessSkillFilter", "#callsSkillFilter");
+    const skillLabel = pageSkillFilter();
     if (skillLabel) {
         qs("#trendOffered").textContent = `Skill: ${skillLabel}`;
         qs("#trendHandled").textContent = `Skill: ${skillLabel}`;
@@ -1315,8 +1313,14 @@ function renderCallTypes() {
 }
 
 function renderCallFlow() {
-    qs("#callFlowCount").textContent = `${state.callFlow.length} events`;
-    qs("#callFlowTimeline").innerHTML = state.callFlow.slice(0, 80).map(event => `<div class="trace-event">
+    const selectedCallKey = firstFilterValue("#callKeyFilter");
+    const cvpTrace = selectedCallKey ? cvpTraceEvents(selectedCallKey) : [];
+    const hdsEvents = selectedCallKey
+        ? state.callFlow.filter(event => normalizeToken(pick(event, "call_key", "callKey")) === normalizeToken(selectedCallKey))
+        : state.callFlow;
+    const events = hdsEvents.length ? hdsEvents : cvpTrace;
+    qs("#callFlowCount").textContent = `${events.length} events`;
+    qs("#callFlowTimeline").innerHTML = events.slice(0, 80).map(event => `<div class="trace-event">
         <div class="trace-dot"></div>
         <div>
             <strong>${escapeHtml(pick(event, "stage") || "")}</strong>
@@ -1325,6 +1329,26 @@ function renderCallFlow() {
             <small>${escapeHtml(pick(event, "detail") || "")}</small>
         </div>
     </div>`).join("") || `<div class="empty-state"><strong>No call flow events</strong><span>Enter a call key or widen the selected date range.</span></div>`;
+}
+
+function cvpTraceEvents(callKey) {
+    const target = normalizeToken(callKey);
+    return (state.cvpIvrNodes || [])
+        .filter(row => normalizeToken(pick(row, "call_id", "callId")) === target)
+        .map((row, index) => ({
+            stage: pick(row, "flag") || `CVP node ${index + 1}`,
+            event_time: pick(row, "call_start_time", "callStartTime"),
+            node: pick(row, "app_name", "appName") || "CVP IVR",
+            call_key: pick(row, "call_id", "callId"),
+            call_type: "CVP IVR",
+            skill_group: "IVR Journey",
+            agent: "",
+            detail: `${pick(row, "caller_number", "callerNumber") || "Unknown caller"} | ${pick(row, "call_disposition_flag_desc", "callDispositionFlagDesc") || ""} | Duration ${pick(row, "duration") || "--"} sec`
+        }));
+}
+
+function normalizeToken(value) {
+    return String(value || "").replace(/[^A-Za-z0-9]/g, "").toUpperCase();
 }
 
 function renderComponents() {
@@ -2912,15 +2936,16 @@ function minutes(value) {
 }
 
 function renderCallFunnel() {
-    const offered = sum(state.calls, "calls_offered", "callsOffered");
-    const handled = sum(state.calls, "calls_handled", "callsHandled");
-    const abandoned = sum(state.calls, "calls_abandoned", "callsAbandoned");
-    const hasAbandonSource = state.calls.some(row => pick(row, "calls_abandoned", "callsAbandoned") !== null && pick(row, "calls_abandoned", "callsAbandoned") !== undefined);
+    const source = funnelSource();
+    const offered = source.offered;
+    const handled = source.handled;
+    const abandoned = source.abandoned;
+    const hasAbandonSource = source.hasAbandonSource;
     const ivr = average(state.ivr, "ivr_containment_rate", "ivrContainmentRate");
     const routed = Math.max(0, offered - (ivr === null ? 0 : offered * ivr / 100));
     const hasIvr = ivr !== null;
     const queued = hasIvr ? routed : Math.max(0, offered);
-    const unknownMapping = state.calls.some(row => isUnknownLabel(pick(row, "skill_group", "skillGroup")));
+    const unknownMapping = source.unknownMapping;
     const node = (tone, label, value, percent, note) => `<div class="flow-node ${tone}">
         <span>${escapeHtml(label)}</span>
         <strong>${value === null ? "--" : fmt(value)}</strong>
@@ -2939,7 +2964,31 @@ function renderCallFunnel() {
             ${node("red", "Abandoned", hasAbandonSource ? abandoned : null, hasAbandonSource && offered ? abandoned / offered * 100 : null, hasAbandonSource ? "not handled" : "source missing")}
         </div>
     </div>
-    <div class="flow-note">${unknownMapping ? "Some calls are unmapped to skill groups. Use Admin diagnostics or CUIC SQL to map SkillGroupSkillTargetID/CallTypeID exactly." : "Funnel uses live HDS/CVP fields available for the selected filters."}</div>`;
+    <div class="flow-note">${source.note}${unknownMapping ? " Some calls are unmapped to skill groups. Use Admin diagnostics or CUIC SQL to map SkillGroupSkillTargetID/CallTypeID exactly." : ""}</div>`;
+}
+
+function funnelSource() {
+    const callTypeFilter = firstFilterValue("#callsCallTypeFilter");
+    if (callTypeFilter && state.callTypes.length) {
+        const offered = sum(state.callTypes, "calls");
+        const handled = sum(state.callTypes, "handled_calls", "handledCalls");
+        return {
+            offered,
+            handled,
+            abandoned: Math.max(0, offered - handled),
+            hasAbandonSource: false,
+            unknownMapping: state.callTypes.some(row => isUnknownLabel(pick(row, "skill_group", "skillGroup"))),
+            note: "Funnel uses HDS call-type rows for the selected call type and period."
+        };
+    }
+    return {
+        offered: sum(state.calls, "calls_offered", "callsOffered"),
+        handled: sum(state.calls, "calls_handled", "callsHandled"),
+        abandoned: sum(state.calls, "calls_abandoned", "callsAbandoned"),
+        hasAbandonSource: state.calls.some(row => pick(row, "calls_abandoned", "callsAbandoned") !== null && pick(row, "calls_abandoned", "callsAbandoned") !== undefined),
+        unknownMapping: state.calls.some(row => isUnknownLabel(pick(row, "skill_group", "skillGroup"))),
+        note: "Funnel uses live HDS/CVP fields available for the selected filters."
+    };
 }
 
 function abandonmentByHour() {

@@ -2030,7 +2030,7 @@ public class PcceProperties {
                  AND c.callstartdate = vs.callstartdate
                 WHERE c.startdatetime >= ?
                   AND c.startdatetime < ?
-                GROUP BY 1
+                GROUP BY EXTEND(c.startdatetime, YEAR TO HOUR)
                 ORDER BY call_date, call_hour
                 """;
 

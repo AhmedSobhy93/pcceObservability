@@ -69,7 +69,7 @@
 
     <section class="view active" id="view-overview">
         <div class="filter-bar page-filter">
-            <label class="date-field"><span>Skill Group</span><input type="text" id="overviewSkillFilter" list="skillOptions" placeholder="All"></label>
+            <label class="date-field"><span>Skill Group</span><input type="text" id="overviewSkillFilter" list="skillOptions" placeholder="All or comma-separated"></label>
         </div>
         <div class="kpi-grid">
             <article class="kpi-card"><div class="kpi-top"><span>Calls Offered</span><b class="teal">CO</b></div><strong id="kpiOffered">--</strong><small id="trendOffered">Live HDS</small></article>
@@ -95,7 +95,7 @@
 
     <section class="view" id="view-business">
         <div class="filter-bar page-filter">
-            <label class="date-field"><span>Skill Group</span><input type="text" id="businessSkillFilter" list="skillOptions" placeholder="All"></label>
+            <label class="date-field"><span>Skill Group</span><input type="text" id="businessSkillFilter" list="skillOptions" placeholder="All or comma-separated"></label>
             <label class="date-field"><span>IVR App</span><input type="text" id="ivrAppFilter" value="OneBank_Main_IVR"></label>
             <label class="date-field"><span>SL Target %</span><input type="number" id="businessSlTarget" min="0" max="100" step="1"></label>
             <label class="date-field"><span>AHT Target Sec</span><input type="number" id="businessAhtTarget" min="1" step="1"></label>
@@ -202,8 +202,8 @@
 
     <section class="view" id="view-calls">
         <div class="filter-bar page-filter">
-            <label class="date-field"><span>Skill Group</span><input type="text" id="callsSkillFilter" list="skillOptions" placeholder="All"></label>
-            <label class="date-field"><span>Call Type</span><input type="text" id="callsCallTypeFilter" list="callTypeOptions" placeholder="All"></label>
+            <label class="date-field"><span>Skill Group</span><input type="text" id="callsSkillFilter" list="skillOptions" placeholder="All or comma-separated"></label>
+            <label class="date-field"><span>Call Type</span><input type="text" id="callsCallTypeFilter" list="callTypeOptions" placeholder="All or comma-separated"></label>
             <label class="date-field"><span>Call Key</span><input type="text" id="callKeyFilter" placeholder="Router/Peripheral/Recovery key"></label>
             <button class="primary-btn" id="callsFilterBtn">Apply</button>
         </div>
