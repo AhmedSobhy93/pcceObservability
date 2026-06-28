@@ -107,7 +107,7 @@ public class FinesseIntegrationService {
             }
             Set<String> userIds = activeFinesseUserIds(cachedAgents);
             if (userIds.isEmpty()) {
-                cachedDialogs = List.of(new FinesseEndpointResult("Dialogs", "GET", target("/finesse/api/User/{id}/Dialogs"),
+                cachedDialogs = List.of(new FinesseEndpointResult("Dialogs", "GET", targetTemplate("/finesse/api/User/{id}/Dialogs"),
                         204, 0, "No active TALKING/RESERVED/HOLD agents discovered in cached Finesse user state.", Instant.now()));
                 cachedDialogsAt = Instant.now();
                 return cachedDialogs;
@@ -304,6 +304,14 @@ public class FinesseIntegrationService {
             return path;
         }
         return URI.create(finesse.getBaseUrl().replaceAll("/+$", "") + "/" + path.replaceAll("^/+", "")).toString();
+    }
+
+    private String targetTemplate(String path) {
+        PcceProperties.Finesse finesse = pcceProperties.getFinesse();
+        if (finesse == null || !StringUtils.hasText(finesse.getBaseUrl())) {
+            return path;
+        }
+        return finesse.getBaseUrl().replaceAll("/+$", "") + "/" + path.replaceAll("^/+", "");
     }
 
     private String encodePath(String value) {

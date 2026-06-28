@@ -164,7 +164,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const element = qs(selector);
         element?.addEventListener(element.type === "date" ? "change" : "input", debouncedRefresh);
     });
-    ["#businessSlTarget", "#businessAhtTarget", "#businessFallbackMode", "#businessAhtProxyMode", "#businessMinCalls"].forEach(selector => {
+    ["#businessSlTarget", "#businessAhtTarget", "#businessFallbackMode", "#businessAhtProxyMode", "#businessMinCalls", "#businessFcrWindowDays"].forEach(selector => {
         qs(selector)?.addEventListener("change", () => {
             saveBusinessSettings();
             renderBusiness();
@@ -241,23 +241,23 @@ function metricSeconds(value) {
 }
 
 function dateParams() {
+    const dates = selectedDates();
     const params = new URLSearchParams({
-        from: qs("#fromDate").value,
-        to: qs("#toDate").value
+        from: dates.from,
+        to: dates.to
     });
-    const skill = firstFilterValue("#callsSkillFilter", "#businessSkillFilter", "#overviewSkillFilter");
-    const agent = firstFilterValue("#agentPageFilter");
+    const skill = pageSkillFilter();
     if (skill) params.set("skillGroup", skill);
-    if (agent) params.set("agentId", agent);
     return params.toString();
 }
 
 function callTypeParams() {
+    const dates = selectedDates();
     const params = new URLSearchParams({
-        from: qs("#fromDate").value,
-        to: qs("#toDate").value
+        from: dates.from,
+        to: dates.to
     });
-    const skill = firstFilterValue("#callsSkillFilter", "#overviewSkillFilter");
+    const skill = firstFilterValue("#callsSkillFilter");
     const callType = firstFilterValue("#callsCallTypeFilter");
     if (skill) params.set("skillGroup", skill);
     if (callType) params.set("callType", callType);
@@ -265,9 +265,10 @@ function callTypeParams() {
 }
 
 function agentParams() {
+    const dates = selectedDates();
     const params = new URLSearchParams({
-        from: qs("#fromDate").value,
-        to: qs("#toDate").value
+        from: dates.from,
+        to: dates.to
     });
     const agent = firstFilterValue("#agentPageFilter");
     const team = firstFilterValue("#agentTeamInput");
@@ -277,9 +278,10 @@ function agentParams() {
 }
 
 function callFlowParams() {
+    const dates = selectedDates();
     const params = new URLSearchParams({
-        from: qs("#fromDate").value,
-        to: qs("#toDate").value
+        from: dates.from,
+        to: dates.to
     });
     const callKey = firstFilterValue("#callKeyFilter");
     const agent = firstFilterValue("#agentPageFilter");
@@ -289,13 +291,32 @@ function callFlowParams() {
 }
 
 function ivrNodeParams() {
+    const dates = selectedDates();
     const params = new URLSearchParams({
-        from: qs("#fromDate").value,
-        to: qs("#toDate").value
+        from: dates.from,
+        to: dates.to
     });
     const appName = firstFilterValue("#ivrAppFilter");
     if (appName) params.set("appName", appName);
     return params.toString();
+}
+
+function selectedDates() {
+    const today = new Date().toISOString().slice(0, 10);
+    const from = validDate(qs("#fromDate")?.value) || today;
+    const to = validDate(qs("#toDate")?.value) || from;
+    return { from, to: to < from ? from : to };
+}
+
+function validDate(value) {
+    return /^\d{4}-\d{2}-\d{2}$/.test(value || "") ? value : "";
+}
+
+function pageSkillFilter() {
+    if (activeView === "business") return firstFilterValue("#businessSkillFilter");
+    if (activeView === "calls") return firstFilterValue("#callsSkillFilter");
+    if (activeView === "overview") return firstFilterValue("#overviewSkillFilter");
+    return "";
 }
 
 function firstFilterValue(...selectors) {
@@ -323,10 +344,11 @@ function loadBusinessSettings() {
             fallbackMode: "derived",
             ahtProxyMode: "none",
             minCalls: 0,
+            fcrWindowDays: 7,
             ...JSON.parse(localStorage.getItem("pcceBusinessSettings") || "{}")
         };
     } catch {
-        return { slTarget: 80, ahtTarget: 300, fallbackMode: "derived", ahtProxyMode: "none", minCalls: 0 };
+        return { slTarget: 80, ahtTarget: 300, fallbackMode: "derived", ahtProxyMode: "none", minCalls: 0, fcrWindowDays: 7 };
     }
 }
 
@@ -336,6 +358,7 @@ function initBusinessSettings() {
     if (qs("#businessFallbackMode")) qs("#businessFallbackMode").value = businessSettings.fallbackMode;
     if (qs("#businessAhtProxyMode")) qs("#businessAhtProxyMode").value = businessSettings.ahtProxyMode;
     if (qs("#businessMinCalls")) qs("#businessMinCalls").value = businessSettings.minCalls;
+    if (qs("#businessFcrWindowDays")) qs("#businessFcrWindowDays").value = businessSettings.fcrWindowDays;
 }
 
 function saveBusinessSettings() {
@@ -344,6 +367,7 @@ function saveBusinessSettings() {
     businessSettings.fallbackMode = qs("#businessFallbackMode")?.value || businessSettings.fallbackMode || "derived";
     businessSettings.ahtProxyMode = qs("#businessAhtProxyMode")?.value || businessSettings.ahtProxyMode || "none";
     businessSettings.minCalls = Number(qs("#businessMinCalls")?.value || 0);
+    businessSettings.fcrWindowDays = Number(qs("#businessFcrWindowDays")?.value || 7);
     localStorage.setItem("pcceBusinessSettings", JSON.stringify(businessSettings));
 }
 
@@ -435,7 +459,8 @@ async function refresh() {
     }
     if (wantsBusiness) {
         coreLoads.push(
-                safeLoad("ivr", `/api/v1/metrics/ivr-containment?${params}`, []));
+                safeLoad("ivr", `/api/v1/metrics/ivr-containment?${params}`, []),
+                safeLoad("cvpIvrNodes", `/api/v1/metrics/cvp-ivr-nodes?${ivrNodeParams()}`, state.cvpIvrNodes, { timeoutMs: 12000 }));
     }
     if (wantsCalls) {
         coreLoads.push(safeLoad("callTypes", `/api/v1/metrics/call-types?${callTypeParams()}`, [], { timeoutMs: 15000 }));
@@ -573,7 +598,8 @@ async function refreshLiveData() {
             loads.push(
                     safeLoad("calls", `/api/v1/metrics/calls?${params}`, state.calls, { timeoutMs: 8000 }),
                     safeLoad("drops", `/api/v1/calls/dropped?${params}`, state.drops, { timeoutMs: 8000 }),
-                    safeLoad("ivr", `/api/v1/metrics/ivr-containment?${params}`, state.ivr, { timeoutMs: 8000 }));
+                    safeLoad("ivr", `/api/v1/metrics/ivr-containment?${params}`, state.ivr, { timeoutMs: 8000 }),
+                    safeLoad("cvpIvrNodes", `/api/v1/metrics/cvp-ivr-nodes?${ivrNodeParams()}`, state.cvpIvrNodes, { timeoutMs: 8000 }));
         }
         if (activeView === "calls") {
             loads.push(
@@ -2807,7 +2833,7 @@ function businessFcr(rows) {
     const handled = sum(rows, "calls_handled", "callsHandled");
     const abandoned = sum(rows, "calls_abandoned", "callsAbandoned");
     const proxy = offered ? Math.max(0, (handled - abandoned * 0.15) / offered * 100) : null;
-    return { value: proxy, source: "Derived proxy until CRM/repeat-call source is mapped", short: "proxy" };
+    return { value: proxy, source: `Derived proxy until ANI repeat-call source is mapped; target window ${businessSettings.fcrWindowDays || 7} days`, short: "proxy" };
 }
 
 function businessFcrForCounts(offered, handled, abandoned) {
@@ -2815,7 +2841,7 @@ function businessFcrForCounts(offered, handled, abandoned) {
 }
 
 function renderBusinessRules() {
-    qs("#businessCalcSummary").textContent = `SL target ${businessSettings.slTarget}% | AHT target ${businessSettings.ahtTarget}s | ${businessSettings.fallbackMode}`;
+    qs("#businessCalcSummary").textContent = `SL target ${businessSettings.slTarget}% | AHT target ${businessSettings.ahtTarget}s | FCR window ${businessSettings.fcrWindowDays || 7}d | ${businessSettings.fallbackMode}`;
     const sl = businessServiceLevel(state.calls);
     const aht = businessAht(state.calls);
     const asa = businessAsa(state.calls);
@@ -3125,7 +3151,10 @@ function drawChartLegend(ctx, labels, palette, width, height) {
 }
 
 function roundRect(ctx, x, y, width, height, radius) {
-    const r = Math.min(radius, width / 2, height / 2);
+    if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
+        return;
+    }
+    const r = Math.max(0, Math.min(radius, width / 2, height / 2));
     ctx.beginPath();
     ctx.moveTo(x + r, y);
     ctx.arcTo(x + width, y, x + width, y + height, r);
