@@ -169,6 +169,20 @@
             <div class="panel-head"><h2>Agent Action Center</h2><span>Approved API actions and required payloads</span></div>
             <div class="agent-action-grid" id="agentActionCenter"></div>
         </article>
+        <article class="panel full api-functions-panel">
+            <div class="panel-head"><h2>Agent Skill Assignment Manager</h2><span>App-controlled desired state before approved PCCE API execution</span></div>
+            <div class="admin-form plan-editor-form">
+                <label class="date-field"><span>Agent ID / Login</span><input id="assignmentAgentId" list="agentOptions" placeholder="cc.agent1 or SkillTargetID"></label>
+                <label class="date-field"><span>Agent Name</span><input id="assignmentAgentName" placeholder="Display name"></label>
+                <label class="date-field"><span>Team</span><input id="assignmentTeam" placeholder="Team name"></label>
+                <label class="date-field"><span>Skill Group</span><input id="assignmentSkill" list="skillOptions" placeholder="Skill group"></label>
+                <label class="date-field"><span>Proficiency</span><input id="assignmentProficiency" type="number" min="1" max="10" placeholder="1-10"></label>
+                <label class="date-field"><span>Enabled</span><select id="assignmentEnabled"><option value="true">Enabled</option><option value="false">Disabled</option></select></label>
+                <label class="date-field editor-wide"><span>Notes</span><input id="assignmentNotes" placeholder="Change ticket / reason"></label>
+                <button class="primary-btn" id="saveAgentSkillAssignmentBtn">Save Assignment</button>
+            </div>
+            <div class="table-wrap"><table><thead><tr><th>Agent</th><th>Team</th><th>Skill</th><th>Prof.</th><th>State</th><th>Source</th><th>Updated</th><th></th></tr></thead><tbody id="agentSkillAssignmentTable"></tbody></table></div>
+        </article>
         <div class="content-grid support-grid">
             <article class="panel wide">
                 <div class="panel-head"><h2>Finesse Live Agents</h2><span id="finesseAgentCount"></span></div>
@@ -295,6 +309,19 @@
             <textarea class="action-body" id="cvpActionBody" placeholder="Optional JSON body for enabled POST/PUT/PATCH actions"></textarea>
             <div class="table-wrap"><table><thead><tr><th>Category</th><th>Action</th><th>Method</th><th>Path</th><th>Status</th><th></th></tr></thead><tbody id="cvpActionTable"></tbody></table></div>
             <pre class="log-box action-result" id="cvpActionResult">No CVP API action executed yet.</pre>
+        </article>
+        <article class="panel full api-functions-panel">
+            <div class="panel-head"><h2>IVR Feature Controls</h2><span>Callback, survey, containment, and feature flags for CVP/IVR operations</span></div>
+            <div class="admin-form plan-editor-form">
+                <label class="date-field"><span>IVR App</span><input id="ivrFeatureApp" value="OneBank_Main_IVR"></label>
+                <label class="date-field"><span>Feature</span><select id="ivrFeatureKey"><option value="callback">Callback</option><option value="post_call_survey">Post Call Survey</option><option value="agent_routing">Agent Routing</option><option value="emergency_message">Emergency Message</option><option value="self_service_containment">Self Service Containment</option></select></label>
+                <label class="date-field"><span>Enabled</span><select id="ivrFeatureEnabled"><option value="true">Enabled</option><option value="false">Disabled</option></select></label>
+                <label class="date-field"><span>Severity</span><select id="ivrFeatureSeverity"><option>INFO</option><option selected>WARNING</option><option>CRITICAL</option></select></label>
+                <label class="date-field editor-wide"><span>Config Value</span><input id="ivrFeatureValue" placeholder="Business hours, DN, queue, prompt, threshold"></label>
+                <label class="date-field editor-wide"><span>Notes</span><input id="ivrFeatureNotes" placeholder="Change ticket / rollout comment"></label>
+                <button class="primary-btn" id="saveIvrFeatureBtn">Save IVR Feature</button>
+            </div>
+            <div class="table-wrap"><table><thead><tr><th>App</th><th>Feature</th><th>Enabled</th><th>Severity</th><th>Config</th><th>Notes</th><th>Updated</th><th></th></tr></thead><tbody id="ivrFeatureTable"></tbody></table></div>
         </article>
     </section>
 

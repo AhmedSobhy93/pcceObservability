@@ -2019,7 +2019,7 @@ public class PcceProperties {
         static final String IVR_CONTAINMENT = """
                 SELECT
                     EXTEND(c.startdatetime, YEAR TO DAY) AS call_date,
-                    CAST(TO_CHAR(c.startdatetime, '%H') AS INTEGER) AS call_hour,
+                    EXTEND(c.startdatetime, HOUR TO HOUR) AS call_hour,
                     CASE
                         WHEN COUNT(*) = 0 THEN 0
                         ELSE CAST(100.0 * SUM(CASE WHEN vs.causeid NOT IN (2, 18, 1001, 1044) THEN 1 ELSE 0 END) / COUNT(*) AS DECIMAL(9,2))
@@ -2030,7 +2030,7 @@ public class PcceProperties {
                  AND c.callstartdate = vs.callstartdate
                 WHERE c.startdatetime >= ?
                   AND c.startdatetime < ?
-                GROUP BY EXTEND(c.startdatetime, YEAR TO DAY), CAST(TO_CHAR(c.startdatetime, '%H') AS INTEGER)
+                GROUP BY EXTEND(c.startdatetime, YEAR TO DAY), EXTEND(c.startdatetime, HOUR TO HOUR)
                 ORDER BY call_date, call_hour
                 """;
 

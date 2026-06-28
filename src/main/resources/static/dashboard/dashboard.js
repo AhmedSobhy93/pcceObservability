@@ -49,6 +49,8 @@ const state = {
     adminComponents: [],
     adminConfigReadiness: [],
     notificationSettings: null,
+    agentSkillAssignments: [],
+    ivrFeatures: [],
     projectTasks: []
 };
 
@@ -135,6 +137,8 @@ document.addEventListener("DOMContentLoaded", () => {
     qs("#adminSaveRoleBtn")?.addEventListener("click", saveAdminRole);
     qs("#saveAlertConfigBtn")?.addEventListener("click", saveAlertConfig);
     qs("#loadInventoryBtn")?.addEventListener("click", loadMachineInventory);
+    qs("#saveAgentSkillAssignmentBtn")?.addEventListener("click", saveAgentSkillAssignment);
+    qs("#saveIvrFeatureBtn")?.addEventListener("click", saveIvrFeature);
     qs("#planAddTaskBtn")?.addEventListener("click", addPlanTask);
     qs("#planResetBtn")?.addEventListener("click", resetPlanTasks);
     qs("#planExportCsvBtn")?.addEventListener("click", () => window.open("/api/v1/project/tasks/export.csv", "_blank"));
@@ -402,7 +406,8 @@ async function refresh() {
     try {
         setStatus([{ text: "Refreshing live data...", level: "neutral" }]);
         const params = dateParams();
-        const wantsBusiness = ["overview", "business"].includes(activeView);
+        const wantsOverview = activeView === "overview";
+        const wantsBusiness = activeView === "business";
         const wantsAgents = activeView === "agents";
         const wantsCalls = activeView === "calls";
         const wantsSystem = activeView === "system";
@@ -423,12 +428,17 @@ async function refresh() {
     if (["overview", "system", "app", "spog"].includes(activeView)) {
         coreLoads.push(safeLoad("components", "/api/v1/components/status", state.components, { timeoutMs: 12000 }));
     }
-    if (wantsBusiness || wantsCalls) {
+    if (wantsOverview || wantsBusiness || wantsCalls) {
         coreLoads.push(
                 safeLoad("calls", `/api/v1/metrics/calls?${params}`, [], { timeoutMs: 15000 }),
-                safeLoad("callTypes", `/api/v1/metrics/call-types?${callTypeParams()}`, [], { timeoutMs: 15000 }),
-                safeLoad("drops", `/api/v1/calls/dropped?${params}`, []),
+                safeLoad("drops", `/api/v1/calls/dropped?${params}`, []));
+    }
+    if (wantsBusiness) {
+        coreLoads.push(
                 safeLoad("ivr", `/api/v1/metrics/ivr-containment?${params}`, []));
+    }
+    if (wantsCalls) {
+        coreLoads.push(safeLoad("callTypes", `/api/v1/metrics/call-types?${callTypeParams()}`, [], { timeoutMs: 15000 }));
     }
     if (wantsCalls) {
         coreLoads.push(
@@ -436,7 +446,9 @@ async function refresh() {
                 safeLoad("cvpIvrNodes", `/api/v1/metrics/cvp-ivr-nodes?${ivrNodeParams()}`, [], { timeoutMs: 12000 }));
     }
     if (wantsAgents) {
-        coreLoads.push(safeLoad("agents", `/api/v1/agents/stats?${agentParams()}`, [], { timeoutMs: 15000 }));
+        coreLoads.push(
+                safeLoad("agents", `/api/v1/agents/stats?${agentParams()}`, [], { timeoutMs: 15000 }),
+                safeLoad("agentSkillAssignments", "/api/v1/workforce-management/agent-skill-assignments", state.agentSkillAssignments, { timeoutMs: 8000 }));
     }
     if (wantsSystem) {
         coreLoads.push(safeLoad("serverMetrics", "/api/v1/components/server-metrics", [], { timeoutMs: 8000 }));
@@ -473,7 +485,8 @@ async function refresh() {
                 safeLoad("cvpApiStatus", "/api/v1/cvp-api/status", state.cvpApiStatus, { timeoutMs: 10000 }),
                 safeLoad("cvpCapabilities", "/api/v1/cvp-api/capabilities", state.cvpCapabilities),
                 safeLoad("cvpFunctions", "/api/v1/cvp-api/functions", state.cvpFunctions),
-                safeLoad("cvpActions", "/api/v1/cvp-api/actions", state.cvpActions));
+                safeLoad("cvpActions", "/api/v1/cvp-api/actions", state.cvpActions),
+                safeLoad("ivrFeatures", "/api/v1/workforce-management/ivr-features", state.ivrFeatures));
     }
     if (wantsAgents || wantsIntegration) {
         supportLoads.push(
@@ -551,11 +564,22 @@ async function refreshLiveData() {
     try {
         const params = dateParams();
         const loads = [];
-        if (["overview", "business", "calls"].includes(activeView)) {
+        if (activeView === "overview") {
+            loads.push(
+                    safeLoad("calls", `/api/v1/metrics/calls?${params}`, state.calls, { timeoutMs: 8000 }),
+                    safeLoad("drops", `/api/v1/calls/dropped?${params}`, state.drops, { timeoutMs: 8000 }));
+        }
+        if (activeView === "business") {
             loads.push(
                     safeLoad("calls", `/api/v1/metrics/calls?${params}`, state.calls, { timeoutMs: 8000 }),
                     safeLoad("drops", `/api/v1/calls/dropped?${params}`, state.drops, { timeoutMs: 8000 }),
                     safeLoad("ivr", `/api/v1/metrics/ivr-containment?${params}`, state.ivr, { timeoutMs: 8000 }));
+        }
+        if (activeView === "calls") {
+            loads.push(
+                    safeLoad("calls", `/api/v1/metrics/calls?${params}`, state.calls, { timeoutMs: 8000 }),
+                    safeLoad("drops", `/api/v1/calls/dropped?${params}`, state.drops, { timeoutMs: 8000 }),
+                    safeLoad("callTypes", `/api/v1/metrics/call-types?${callTypeParams()}`, state.callTypes, { timeoutMs: 8000 }));
         }
         if (activeView === "agents") {
             await safeLoad("agents", `/api/v1/agents/stats?${agentParams()}`, state.agents, { timeoutMs: 8000 });
@@ -601,6 +625,7 @@ function renderAll(errors) {
     safeRender("charts", renderCharts, errors);
     safeRender("business", renderBusiness, errors);
     safeRender("agents", renderAgents, errors);
+    safeRender("management", renderManagementControls, errors);
     safeRender("finesse", renderFinesse, errors);
     safeRender("drops", renderDrops, errors);
     safeRender("callTypes", renderCallTypes, errors);
@@ -2490,6 +2515,94 @@ function stackedProgress(tasks) {
 
 function taskChip(task) {
     return `<span class="work-chip ${priorityClass(task.priority)}">${escapeHtml(task.task)} <small>${escapeHtml(task.topic)}</small></span>`;
+}
+
+function renderManagementControls() {
+    renderAgentSkillAssignments();
+    renderIvrFeatures();
+}
+
+function renderAgentSkillAssignments() {
+    const table = qs("#agentSkillAssignmentTable");
+    if (!table) return;
+    table.innerHTML = (state.agentSkillAssignments || []).map(item => `
+        <tr>
+            <td><strong>${escapeHtml(pick(item, "agent_id", "agentId") || "")}</strong><span class="subline">${escapeHtml(pick(item, "agent_name", "agentName") || "")}</span></td>
+            <td>${escapeHtml(pick(item, "team_name", "teamName") || "")}</td>
+            <td>${escapeHtml(pick(item, "skill_group", "skillGroup") || "")}</td>
+            <td>${escapeHtml(String(pick(item, "proficiency") ?? ""))}</td>
+            <td><span class="badge ${pick(item, "enabled") ? "up" : "down"}">${pick(item, "enabled") ? "enabled" : "disabled"}</span></td>
+            <td>${escapeHtml(pick(item, "source") || "APP")}</td>
+            <td>${escapeHtml(formatDateTime(pick(item, "updated_at", "updatedAt")))}</td>
+            <td><button class="tiny-button danger" type="button" onclick="deleteAgentSkillAssignment(${Number(pick(item, "id"))})">Remove</button></td>
+        </tr>
+    `).join("") || `<tr><td colspan="8">No managed agent/skill assignments saved yet.</td></tr>`;
+}
+
+function renderIvrFeatures() {
+    const table = qs("#ivrFeatureTable");
+    if (!table) return;
+    table.innerHTML = (state.ivrFeatures || []).map(item => `
+        <tr>
+            <td>${escapeHtml(pick(item, "app_name", "appName") || "")}</td>
+            <td><strong>${escapeHtml(pick(item, "feature_key", "featureKey") || "")}</strong></td>
+            <td><span class="badge ${pick(item, "enabled") ? "up" : "down"}">${pick(item, "enabled") ? "enabled" : "disabled"}</span></td>
+            <td>${escapeHtml(pick(item, "min_severity", "minSeverity") || "")}</td>
+            <td>${escapeHtml(pick(item, "config_value", "configValue") || "")}</td>
+            <td>${escapeHtml(pick(item, "notes") || "")}</td>
+            <td>${escapeHtml(formatDateTime(pick(item, "updated_at", "updatedAt")))}</td>
+            <td><button class="tiny-button danger" type="button" onclick="deleteIvrFeature(${Number(pick(item, "id"))})">Remove</button></td>
+        </tr>
+    `).join("") || `<tr><td colspan="8">No IVR feature controls saved yet.</td></tr>`;
+}
+
+function formatDateTime(value) {
+    if (!value) return "";
+    return String(value).replace("T", " ").replace(/\.\d+$/, "");
+}
+
+async function saveAgentSkillAssignment() {
+    const body = {
+        agentId: qs("#assignmentAgentId")?.value,
+        agentName: qs("#assignmentAgentName")?.value,
+        teamName: qs("#assignmentTeam")?.value,
+        skillGroup: qs("#assignmentSkill")?.value,
+        proficiency: qs("#assignmentProficiency")?.value ? Number(qs("#assignmentProficiency").value) : null,
+        enabled: qs("#assignmentEnabled")?.value === "true",
+        source: "APP",
+        notes: qs("#assignmentNotes")?.value
+    };
+    await api("/api/v1/workforce-management/agent-skill-assignments", { method: "POST", body: JSON.stringify(body), timeoutMs: 8000 });
+    await safeLoad("agentSkillAssignments", "/api/v1/workforce-management/agent-skill-assignments", [], { timeoutMs: 8000 });
+    renderAgentSkillAssignments();
+}
+
+async function saveIvrFeature() {
+    const body = {
+        appName: qs("#ivrFeatureApp")?.value,
+        featureKey: qs("#ivrFeatureKey")?.value,
+        enabled: qs("#ivrFeatureEnabled")?.value === "true",
+        minSeverity: qs("#ivrFeatureSeverity")?.value,
+        configValue: qs("#ivrFeatureValue")?.value,
+        notes: qs("#ivrFeatureNotes")?.value
+    };
+    await api("/api/v1/workforce-management/ivr-features", { method: "POST", body: JSON.stringify(body), timeoutMs: 8000 });
+    await safeLoad("ivrFeatures", "/api/v1/workforce-management/ivr-features", [], { timeoutMs: 8000 });
+    renderIvrFeatures();
+}
+
+async function deleteAgentSkillAssignment(id) {
+    if (!id) return;
+    await api(`/api/v1/workforce-management/agent-skill-assignments/${id}`, { method: "DELETE", timeoutMs: 8000 });
+    await safeLoad("agentSkillAssignments", "/api/v1/workforce-management/agent-skill-assignments", [], { timeoutMs: 8000 });
+    renderAgentSkillAssignments();
+}
+
+async function deleteIvrFeature(id) {
+    if (!id) return;
+    await api(`/api/v1/workforce-management/ivr-features/${id}`, { method: "DELETE", timeoutMs: 8000 });
+    await safeLoad("ivrFeatures", "/api/v1/workforce-management/ivr-features", [], { timeoutMs: 8000 });
+    renderIvrFeatures();
 }
 
 function switchView(view) {

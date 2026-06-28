@@ -414,7 +414,21 @@ public class ReportingService {
         if (value instanceof Number number) {
             return number.intValue();
         }
+        if (value instanceof java.sql.Time time) {
+            return time.toLocalTime().getHour();
+        }
+        if (value instanceof java.sql.Timestamp timestamp) {
+            return timestamp.toLocalDateTime().getHour();
+        }
         String text = value.toString().trim();
+        java.util.regex.Matcher hourOnly = java.util.regex.Pattern.compile("^\\s*(\\d{1,2})\\s*$").matcher(text);
+        if (hourOnly.find()) {
+            return Integer.parseInt(hourOnly.group(1));
+        }
+        java.util.regex.Matcher timeMatcher = java.util.regex.Pattern.compile("\\b(\\d{1,2}):\\d{2}").matcher(text);
+        if (timeMatcher.find()) {
+            return Integer.parseInt(timeMatcher.group(1));
+        }
         java.util.regex.Matcher matcher = java.util.regex.Pattern.compile("(\\d{1,2})").matcher(text);
         return matcher.find() ? Integer.parseInt(matcher.group(1)) : null;
     }
