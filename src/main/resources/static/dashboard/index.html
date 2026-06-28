@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>PCCE 12.6.2 Dashboard</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%232dd4bf'/%3E%3Ctext x='32' y='40' text-anchor='middle' font-family='Arial' font-size='24' font-weight='700' fill='%230b1220'%3ECC%3C/text%3E%3C/svg%3E">
-    <link rel="stylesheet" href="/dashboard/styles.css">
+    <link rel="stylesheet" href="/dashboard/css/styles.css">
 </head>
 <body>
 <aside class="sidebar">
@@ -69,7 +69,8 @@
 
     <section class="view active" id="view-overview">
         <div class="filter-bar page-filter">
-            <label class="date-field"><span>Skill Group</span><input type="text" id="overviewSkillFilter" list="skillOptions" placeholder="All or comma-separated"></label>
+            <label class="date-field hidden-field"><span>Skill Group</span><input type="hidden" id="overviewSkillFilter"></label>
+            <div class="multi-field" data-target="overviewSkillFilter" data-source="skillGroups" data-label="Skill Groups"></div>
         </div>
         <div class="kpi-grid">
             <article class="kpi-card"><div class="kpi-top"><span>Calls Offered</span><b class="teal">CO</b></div><strong id="kpiOffered">--</strong><small id="trendOffered">Live HDS</small></article>
@@ -95,7 +96,8 @@
 
     <section class="view" id="view-business">
         <div class="filter-bar page-filter">
-            <label class="date-field"><span>Skill Group</span><input type="text" id="businessSkillFilter" list="skillOptions" placeholder="All or comma-separated"></label>
+            <label class="date-field hidden-field"><span>Skill Group</span><input type="hidden" id="businessSkillFilter"></label>
+            <div class="multi-field" data-target="businessSkillFilter" data-source="skillGroups" data-label="Skill Groups"></div>
             <label class="date-field"><span>IVR App</span><input type="text" id="ivrAppFilter" value="OneBank_Main_IVR"></label>
             <label class="date-field"><span>SL Target %</span><input type="number" id="businessSlTarget" min="0" max="100" step="1"></label>
             <label class="date-field"><span>AHT Target Sec</span><input type="number" id="businessAhtTarget" min="1" step="1"></label>
@@ -202,8 +204,10 @@
 
     <section class="view" id="view-calls">
         <div class="filter-bar page-filter">
-            <label class="date-field"><span>Skill Group</span><input type="text" id="callsSkillFilter" list="skillOptions" placeholder="All or comma-separated"></label>
-            <label class="date-field"><span>Call Type</span><input type="text" id="callsCallTypeFilter" list="callTypeOptions" placeholder="All or comma-separated"></label>
+            <label class="date-field hidden-field"><span>Skill Group</span><input type="hidden" id="callsSkillFilter"></label>
+            <div class="multi-field" data-target="callsSkillFilter" data-source="skillGroups" data-label="Skill Groups"></div>
+            <label class="date-field hidden-field"><span>Call Type</span><input type="hidden" id="callsCallTypeFilter"></label>
+            <div class="multi-field" data-target="callsCallTypeFilter" data-source="callTypes" data-label="Call Types"></div>
             <label class="date-field"><span>Call Key</span><input type="text" id="callKeyFilter" placeholder="Router/Peripheral/Recovery key"></label>
             <button class="primary-btn" id="callsFilterBtn">Apply</button>
         </div>
@@ -549,6 +553,6 @@
     </section>
 </main>
 
-<script src="/dashboard/dashboard.js"></script>
+    <script src="/dashboard/js/dashboard.js"></script>
 </body>
 </html>
