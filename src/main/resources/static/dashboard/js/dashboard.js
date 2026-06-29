@@ -106,8 +106,9 @@ let planTasks = [];
 
 document.addEventListener("DOMContentLoaded", () => {
     const today = new Date().toISOString().slice(0, 10);
-    qs("#fromDate").value = today;
+    qs("#fromDate").value = isoDaysAgo(6);
     qs("#toDate").value = today;
+    qs("#datePreset").value = "last7";
     initBusinessSettings();
     initMultiSelects();
     activeView = requestedView();
@@ -185,13 +186,17 @@ document.addEventListener("DOMContentLoaded", () => {
         refresh();
     }, 450);
     [
-        "#fromDate", "#toDate", "#overviewSkillFilter", "#businessSkillFilter", "#ivrAppFilter",
+        "#datePreset", "#fromDate", "#toDate", "#overviewSkillFilter", "#businessSkillFilter", "#ivrAppFilter",
         "#agentPageFilter", "#agentTeamInput", "#callsSkillFilter", "#callsCallTypeFilter", "#callKeyFilter"
     ].forEach(selector => {
         const element = qs(selector);
-        element?.addEventListener(element.type === "date" ? "change" : "input", debouncedRefresh);
+        element?.addEventListener("change", event => {
+            if (selector === "#datePreset") applyDatePreset(event.target.value);
+            debouncedRefresh();
+        });
+        element?.addEventListener("input", debouncedRefresh);
     });
-    ["#businessSlTarget", "#businessAhtTarget", "#businessFallbackMode", "#businessAhtProxyMode", "#businessMinCalls", "#businessFcrWindowDays"].forEach(selector => {
+    ["#businessSlTarget", "#businessAhtTarget", "#businessFallbackMode", "#businessAhtProxyMode", "#businessMinCalls", "#businessFcrWindowDays", "#businessViewMode"].forEach(selector => {
         qs(selector)?.addEventListener("change", () => {
             saveBusinessSettings();
             renderBusiness();
@@ -280,6 +285,45 @@ function seconds(value) {
 
 function metricSeconds(value) {
     return value === null || value === undefined ? "--" : `${seconds(value)} sec`;
+}
+
+function isoDaysAgo(days) {
+    const date = new Date();
+    date.setDate(date.getDate() - days);
+    return date.toISOString().slice(0, 10);
+}
+
+function applyDatePreset(preset) {
+    const today = new Date();
+    const setRange = (from, to) => {
+        qs("#fromDate").value = from.toISOString().slice(0, 10);
+        qs("#toDate").value = to.toISOString().slice(0, 10);
+    };
+    if (preset === "live") setRange(today, today);
+    if (preset === "yesterday") {
+        const yesterday = new Date(today);
+        yesterday.setDate(today.getDate() - 1);
+        setRange(yesterday, yesterday);
+    }
+    if (preset === "last7") {
+        const from = new Date(today);
+        from.setDate(today.getDate() - 6);
+        setRange(from, today);
+    }
+    if (preset === "last30") {
+        const from = new Date(today);
+        from.setDate(today.getDate() - 29);
+        setRange(from, today);
+    }
+    if (preset === "month") {
+        const from = new Date(today.getFullYear(), today.getMonth(), 1);
+        setRange(from, today);
+    }
+    if (preset === "lastMonth") {
+        const from = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+        const to = new Date(today.getFullYear(), today.getMonth(), 0);
+        setRange(from, to);
+    }
 }
 
 function dateParams() {
@@ -385,10 +429,11 @@ function loadBusinessSettings() {
             ahtProxyMode: "none",
             minCalls: 0,
             fcrWindowDays: 7,
+            viewMode: "daily",
             ...JSON.parse(localStorage.getItem("pcceBusinessSettings") || "{}")
         };
     } catch {
-        return { slTarget: 80, ahtTarget: 300, fallbackMode: "derived", ahtProxyMode: "none", minCalls: 0, fcrWindowDays: 7 };
+        return { slTarget: 80, ahtTarget: 300, fallbackMode: "derived", ahtProxyMode: "none", minCalls: 0, fcrWindowDays: 7, viewMode: "daily" };
     }
 }
 
@@ -399,6 +444,7 @@ function initBusinessSettings() {
     if (qs("#businessAhtProxyMode")) qs("#businessAhtProxyMode").value = businessSettings.ahtProxyMode;
     if (qs("#businessMinCalls")) qs("#businessMinCalls").value = businessSettings.minCalls;
     if (qs("#businessFcrWindowDays")) qs("#businessFcrWindowDays").value = businessSettings.fcrWindowDays;
+    if (qs("#businessViewMode")) qs("#businessViewMode").value = businessSettings.viewMode || "daily";
 }
 
 function saveBusinessSettings() {
@@ -408,6 +454,7 @@ function saveBusinessSettings() {
     businessSettings.ahtProxyMode = qs("#businessAhtProxyMode")?.value || businessSettings.ahtProxyMode || "none";
     businessSettings.minCalls = Number(qs("#businessMinCalls")?.value || 0);
     businessSettings.fcrWindowDays = Number(qs("#businessFcrWindowDays")?.value || 7);
+    businessSettings.viewMode = qs("#businessViewMode")?.value || "daily";
     localStorage.setItem("pcceBusinessSettings", JSON.stringify(businessSettings));
 }
 
@@ -734,6 +781,7 @@ function renderKpis() {
     const handled = sum(state.calls, "calls_handled", "callsHandled");
     const abandoned = sum(state.calls, "calls_abandoned", "callsAbandoned");
     const dropped = sum(state.drops, "dropped_calls", "droppedCalls");
+    const unhandled = Math.max(0, offered - handled);
     const service = businessServiceLevel(state.calls).value;
     const aht = businessAht(state.calls).value;
 
@@ -759,13 +807,18 @@ function renderKpis() {
 
 function renderCharts() {
     const hourly = groupByHour(state.calls);
+    if (!hourly.hasData) {
+        drawEmptyChart(qs("#volumeChart"), "No call volume rows for selected range");
+    } else {
     drawLineChart(qs("#volumeChart"), hourly.labels, [
         { label: "Offered", color: "#2ed3c2", values: hourly.offered },
         { label: "Handled", color: "#3d82f6", values: hourly.handled }
     ]);
+    }
 
     const skills = groupBySkill(state.calls, "calls_offered", "callsOffered");
-    drawDoughnut(qs("#skillChart"), skills.labels, skills.values, colors);
+    if (skills.labels.length) drawDoughnut(qs("#skillChart"), skills.labels, skills.values, colors);
+    else drawEmptyChart(qs("#skillChart"), "No skill group volume for selected range");
     qs("#skillLegend").innerHTML = skills.labels.map((label, index) =>
         `<span><i class="dot" style="background:${colors[index % colors.length]}"></i>${escapeHtml(label)} <b>${fmt(skills.values[index])}</b></span>`
     ).join("");
@@ -774,9 +827,15 @@ function renderCharts() {
         hour: pick(row, "hour"),
         value: pick(row, "ivr_containment_rate", "ivrContainmentRate")
     }));
-    drawLineChart(qs("#ivrChart"), ivr.map(row => `${row.hour}:00`), [
-        { label: "IVR", color: "#2ed3c2", values: ivr.map(row => num(row.value)) }
-    ], 100);
+    if (ivr.some(row => row.value !== null && row.value !== undefined)) {
+        drawLineChart(qs("#ivrChart"), ivr.map(row => `${row.hour}:00`), [
+            { label: "IVR", color: "#2ed3c2", values: ivr.map(row => num(row.value)) }
+        ], 100);
+    } else {
+        const derived = businessIvrContainment();
+        if (derived.value !== null) drawHorizontalBarChart(qs("#ivrChart"), ["IVR"], [derived.value], ["#2ed3c2"]);
+        else drawEmptyChart(qs("#ivrChart"), "IVR containment unavailable for selected range");
+    }
 }
 
 function renderBusiness() {
@@ -796,6 +855,7 @@ function renderBusiness() {
     const rows = [
         ["Calls Offered", fmt(offered)],
         ["Calls Handled", fmt(handled)],
+        ["Unhandled / Ringing", fmt(unhandled)],
         ["Calls Abandoned", fmt(abandoned)],
         ["Dropped Calls", fmt(dropped)],
         ["Answer Rate", pct(offered ? handled / offered * 100 : null)],
@@ -810,12 +870,16 @@ function renderBusiness() {
     qs("#businessMetrics").innerHTML = rows.map(([label, value]) => metricRow(label, value)).join("");
 
     const trend = serviceTrendByHour();
-    drawLineChart(qs("#serviceTrendChart"), trend.labels, trend.series, 100);
-    drawRadar(qs("#performanceRadar"), radarMetrics());
+    trend.hasData ? drawLineChart(qs("#serviceTrendChart"), trend.labels, trend.series, 100)
+        : drawEmptyChart(qs("#serviceTrendChart"), "Service level trend unavailable for selected range");
+    const radar = radarMetrics();
+    radar.length ? drawRadar(qs("#performanceRadar"), radar) : drawEmptyChart(qs("#performanceRadar"), "Performance radar needs call rows");
     const fcrBars = fcrBySkill();
-    drawHorizontalBarChart(qs("#fcrBySkillChart"), fcrBars.labels, fcrBars.values, colors);
+    fcrBars.labels.length ? drawHorizontalBarChart(qs("#fcrBySkillChart"), fcrBars.labels, fcrBars.values, colors)
+        : drawEmptyChart(qs("#fcrBySkillChart"), "FCR unavailable for selected range");
     const ivrBars = ivrByApp();
-    drawHorizontalBarChart(qs("#ivrBySkillChart"), ivrBars.labels, ivrBars.values, colors);
+    ivrBars.labels.length ? drawHorizontalBarChart(qs("#ivrBySkillChart"), ivrBars.labels, ivrBars.values, colors)
+        : drawEmptyChart(qs("#ivrBySkillChart"), "IVR containment unavailable from CVP journey");
 }
 
 function renderCvpIvrNodes() {
@@ -846,7 +910,7 @@ function renderCvpIvrNodes() {
         <td>${escapeHtml(pick(row, "app_name", "appName") || "")}</td>
         <td>${escapeHtml(pick(row, "duration") || "")}</td>
         <td>${escapeHtml(pick(row, "flag") || "")}</td>
-        <td><span class="badge ${ivrDispositionClass(pick(row, "call_disposition_id", "callDispositionId"))}">${escapeHtml(pick(row, "call_disposition_flag_desc", "callDispositionFlagDesc") || "")}</span></td>
+        <td><span class="badge ${ivrDispositionClass(pick(row, "call_disposition_id", "callDispositionId"))}">${escapeHtml(pick(row, "call_disposition_flag_desc", "callDispositionFlagDesc") || "")}</span><span class="subline">${escapeHtml(abandonPartyForNode(row))}</span></td>
         <td><button class="small-btn" data-trace-call="${escapeHtml(callId)}">Trace</button></td>
     </tr>`;
     }).join("") || `<tr><td colspan="8">No CVP IVR node rows for selected dates/app/filters.</td></tr>`;
@@ -884,6 +948,7 @@ function renderCvpJourney() {
             <span>${escapeHtml(journey.app || "Unknown app")}</span>
             <span>${escapeHtml(journey.start || "")}</span>
             <span>${escapeHtml(journey.duration || "")} sec</span>
+            <span>${escapeHtml(journey.abandonParty)}</span>
         </div>
         <div class="journey-path">
             ${journey.nodes.map((node, index) => `<span class="${/agent routing/i.test(node) ? "terminal" : ""}"><b>${index + 1}</b>${escapeHtml(node)}</span>`).join("<i>-&gt;</i>")}
@@ -904,6 +969,7 @@ function cvpJourneys() {
             duration: pick(row, "duration"),
             disposition: pick(row, "call_disposition_flag_desc", "callDispositionFlagDesc"),
             dispositionId: pick(row, "call_disposition_id", "callDispositionId"),
+            abandonParty: abandonPartyForNode(row),
             nodes: []
         };
         const flag = pick(row, "flag");
@@ -934,6 +1000,25 @@ function ivrDispositionClass(code) {
     if ([18, 1001, 1044].includes(value)) return "down";
     if (value === 2) return "warn";
     return "up";
+}
+
+function abandonPartyForNode(rowOrJourney) {
+    const code = Number(pick(rowOrJourney, "call_disposition_id", "callDispositionId", "dispositionId"));
+    const description = String(pick(rowOrJourney, "call_disposition_flag_desc", "callDispositionFlagDesc", "disposition") || "").toLowerCase();
+    const nodes = String(pick(rowOrJourney, "nodes") || "").toLowerCase();
+    if (code === 2 || code === 1001 || /abandon|hangup|hang up/.test(description)) {
+        return "Customer abandon / hangup";
+    }
+    if (code === 13 || /called party disconnected/.test(description)) {
+        return nodes.includes("agent routing") ? "Agent/called-party disconnect" : "Called-party disconnect";
+    }
+    if ([18, 1044].includes(code) || /error/.test(description)) {
+        return "System / IVR error";
+    }
+    if (code === 0 || code === 1 || /normal/.test(description)) {
+        return "Completed";
+    }
+    return code ? `Disposition ${code}` : "Not classified";
 }
 
 function renderAgents() {
@@ -3027,6 +3112,7 @@ function renderBusinessCards() {
             <span>SL%<strong class="teal">${pct(item.service)}</strong></span>
             <span>FCR<strong>${pct(item.fcr)}</strong></span>
             <span>Handled<strong>${fmt(item.handled)}</strong></span>
+            <span>Unhandled<strong class="amber">${fmt(Math.max(0, item.offered - item.handled))}</strong></span>
             <span>AHT<strong>${seconds(item.aht)}s</strong></span>
             <span>Abandoned<strong class="red">${fmt(item.abandoned)}</strong></span>
         </div>
@@ -3067,15 +3153,17 @@ function groupSkillMetrics() {
 
 function serviceTrendByHour() {
     const topSkills = groupSkillMetrics().slice(0, 3).map(item => item.skill);
-    const hours = unique(state.calls.map(row => num(pick(row, "hour")))).sort((a, b) => a - b);
+    const hours = Array.from({ length: 24 }, (_, hour) => hour);
     const labels = hours.map(hour => `${hour}:00`);
+    const series = topSkills.map((skill, index) => ({
+        label: skill,
+        color: colors[index % colors.length],
+        values: hours.map(hour => skillHourService(skill, hour))
+    }));
     return {
         labels,
-        series: topSkills.map((skill, index) => ({
-            label: skill,
-            color: colors[index % colors.length],
-            values: hours.map(hour => skillHourService(skill, hour))
-        })).concat([{ label: "Target", color: "#f4a51c", values: labels.map(() => businessSettings.slTarget) }])
+        series: series.concat([{ label: "Target", color: "#f4a51c", values: labels.map(() => businessSettings.slTarget) }]),
+        hasData: series.some(item => item.values.some(value => value > 0))
     };
 }
 
@@ -3321,6 +3409,9 @@ function average(rows, ...names) {
 
 function groupByHour(rows) {
     const map = new Map();
+    for (let hour = 0; hour < 24; hour += 1) {
+        map.set(hour, { offered: 0, handled: 0 });
+    }
     rows.forEach(row => {
         const hour = num(pick(row, "hour"));
         const existing = map.get(hour) || { offered: 0, handled: 0 };
@@ -3330,7 +3421,12 @@ function groupByHour(rows) {
     });
     const labels = [...map.keys()].sort((a, b) => a - b).map(hour => `${hour}:00`);
     const values = [...map.entries()].sort((a, b) => a[0] - b[0]).map(([, value]) => value);
-    return { labels, offered: values.map(v => v.offered), handled: values.map(v => v.handled) };
+    return {
+        labels,
+        offered: values.map(v => v.offered),
+        handled: values.map(v => v.handled),
+        hasData: values.some(v => v.offered > 0 || v.handled > 0)
+    };
 }
 
 function sum(rows, ...names) {

@@ -50,6 +50,18 @@
         <div class="toolbar">
             <button class="primary-btn admin-shortcut" id="adminQuickBtn">Admin Center</button>
             <label class="date-field">
+                <span>Range</span>
+                <select id="datePreset">
+                    <option value="custom">Custom</option>
+                    <option value="live">Live Today</option>
+                    <option value="yesterday">Yesterday</option>
+                    <option value="last7" selected>Last 7 Days</option>
+                    <option value="last30">Last 30 Days</option>
+                    <option value="month">This Month</option>
+                    <option value="lastMonth">Last Month</option>
+                </select>
+            </label>
+            <label class="date-field">
                 <span>From</span>
                 <input type="date" id="fromDate">
             </label>
@@ -106,6 +118,7 @@
             <label class="date-field"><span>AHT Proxy</span><select id="businessAhtProxyMode"><option value="none">Cisco only</option><option value="ivr_duration">Use IVR duration proxy</option></select></label>
             <label class="date-field"><span>Min Calls</span><input type="number" id="businessMinCalls" min="0" step="1"></label>
             <label class="date-field"><span>FCR Window Days</span><input type="number" id="businessFcrWindowDays" min="1" max="90" step="1"></label>
+            <label class="date-field"><span>Business View</span><select id="businessViewMode"><option value="daily">Daily</option><option value="hourly">Hourly</option><option value="live">Live</option></select></label>
         </div>
         <div class="business-card-grid" id="businessSkillCards"></div>
         <div class="content-grid">
