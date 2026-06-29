@@ -2270,14 +2270,14 @@ public class PcceProperties {
 
         public static final String CVP_IVR_NODES = """
                 SELECT FIRST 500
-                    c.callguid AS call_id,
-                    c.startdatetime AS call_start_time,
-                    c.enddatetime AS call_end_time,
-                    c.ani AS caller_number,
-                    vs.appname AS app_name,
-                    ((c.enddatetime - c.startdatetime)::interval second(6) to second) AS duration,
-                    vxmlelementflag.name AS flag,
-                    vs.causeid AS call_disposition_id,
+                    c.callguid as call_id,
+                    c.startdatetime as call_start_time,
+                    c.enddatetime as call_end_time,
+                    c.ani as caller_number,
+                    vs.appname as app_name,
+                    ((c.enddatetime - c.startdatetime)::interval second(6) to second) as duration,
+                    VXMLElementFlag.Name as flag,
+                    vs.causeid as call_disposition_id,
                     CASE vs.causeid
                         WHEN 0 THEN 'None'
                         WHEN 1 THEN 'Normal Completion'
@@ -2291,18 +2291,15 @@ public class PcceProperties {
                         WHEN 2 THEN 'Call Abandoned'
                         ELSE CAST(vs.causeid AS varchar(10))
                     END AS call_disposition_flag_desc
-                FROM call c
-                JOIN vxmlsession vs
-                  ON c.callguid = vs.callguid
-                 AND c.callstartdate = vs.callstartdate
-                JOIN vxmlelement
-                  ON vs.sessionid = vxmlelement.sessionid
-                JOIN vxmlelementflag
-                  ON vxmlelement.elementid = vxmlelementflag.elementid
+                FROM call c, vxmlsession vs, vxmlelement, vxmlelementflag
                 WHERE c.startdatetime >= ?
                   AND c.startdatetime < ?
+                  AND c.callguid = vs.callguid
+                  AND c.callstartdate = vs.callstartdate
+                  AND vs.SessionID = VXMLElement.SessionID
+                  AND VXMLElement.ElementID = VXMLElementFlag.ElementID
                   AND vxmlelement.elementtypeid = 9
-                  AND (? IS NULL OR UPPER(vs.appname) LIKE '%' || UPPER(?) || '%')
+                  AND (? IS NULL OR vs.appname = ?)
                 ORDER BY c.startdatetime DESC
                 """;
     }

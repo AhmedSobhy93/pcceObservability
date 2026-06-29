@@ -392,8 +392,49 @@ public class ReportingService {
                         exclusiveEnd(to)));
         } catch (DataAccessException ex) {
             log.warn("ivr_containment_unavailable error={}", ex.getMostSpecificCause().getMessage());
+            return deriveIvrContainmentFromNodes(from, to);
+        }
+    }
+
+    private List<IvrContainmentMetric> deriveIvrContainmentFromNodes(LocalDate from, LocalDate to) {
+        List<CvpIvrNodeMetric> nodes = cvpIvrNodes(from, to, null);
+        if (nodes.isEmpty()) {
             return List.of();
         }
+        Map<String, CvpIvrNodeMetric> calls = new LinkedHashMap<>();
+        for (CvpIvrNodeMetric node : nodes) {
+            if (node.callId() != null) {
+                calls.putIfAbsent(node.callId(), node);
+            }
+        }
+        Map<String, int[]> buckets = new LinkedHashMap<>();
+        for (CvpIvrNodeMetric call : calls.values()) {
+            if (call.callStartTime() == null) {
+                continue;
+            }
+            String key = call.callStartTime().toLocalDate() + "|" + call.callStartTime().getHour();
+            int[] counts = buckets.computeIfAbsent(key, ignored -> new int[2]);
+            counts[0] += 1;
+            if (!isIvrNonContained(call.callDispositionId())) {
+                counts[1] += 1;
+            }
+        }
+        List<IvrContainmentMetric> metrics = new ArrayList<>();
+        for (Map.Entry<String, int[]> entry : buckets.entrySet()) {
+            String[] parts = entry.getKey().split("\\|");
+            int total = entry.getValue()[0];
+            int contained = entry.getValue()[1];
+            BigDecimal rate = total == 0 ? BigDecimal.ZERO : BigDecimal.valueOf(contained * 100.0 / total);
+            metrics.add(new IvrContainmentMetric(LocalDate.parse(parts[0]), Integer.parseInt(parts[1]), rate));
+        }
+        return metrics;
+    }
+
+    private boolean isIvrNonContained(Integer causeId) {
+        if (causeId == null) {
+            return false;
+        }
+        return causeId == 2 || causeId == 18 || causeId == 1001 || causeId == 1044;
     }
 
     public ContactCenterSummary summary(LocalDate from, LocalDate to) {
