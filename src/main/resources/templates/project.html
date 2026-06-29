@@ -82,12 +82,12 @@
         .pill.hold { color:var(--warn); background:rgba(251,191,36,.14); }
         .pct { color:var(--primary); font-weight:900; }
         .table-wrap { overflow:auto; }
-        table { width:100%; min-width:1220px; border-collapse:collapse; }
-        th, td { border-top:1px solid var(--border); text-align:left; vertical-align:middle; padding:14px 30px; }
+        table { width:100%; min-width:1280px; border-collapse:collapse; }
+        th, td { border-top:1px solid var(--border); text-align:left; vertical-align:middle; padding:12px 22px; }
         th { color:var(--muted); font-size:12px; text-transform:uppercase; letter-spacing:.08em; font-weight:700; }
         tbody tr:hover td { background:rgba(45,212,191,.035); }
         .critical-row td:first-child { box-shadow:inset 3px 0 0 var(--danger); }
-        .task-name { font-size:18px; font-weight:900; color:#f8fafc; }
+        .task-name { font-size:16px; font-weight:900; color:#f8fafc; max-width:410px; }
         .sub { display:block; margin-top:6px; color:var(--muted); font-size:13px; line-height:1.35; }
         .badge {
             display:inline-flex; align-items:center; gap:8px; border-radius:9px; padding:7px 12px; font-size:13px; font-weight:900;
@@ -107,9 +107,11 @@
         }
         .inline-select.compact { min-width:120px; }
         .priority-cell, .status-cell { min-width:132px; }
-        .resource-cell { min-width:230px; }
-        .mini-grid { display:grid; gap:7px; }
-        .timeline { min-width:190px; color:var(--muted); font-size:14px; line-height:1.5; }
+        .resource-cell { min-width:190px; }
+        .mini-grid { display:flex; gap:7px; flex-wrap:wrap; align-items:center; }
+        .resource-cell .inline-select { min-width:170px; }
+        .timeline { min-width:250px; color:var(--muted); font-size:14px; line-height:1.5; }
+        .timeline .inline-input { width:76px; }
         .timeline b { color:var(--text); font-weight:700; }
         .timeline span { display:block; }
         .progress-cell { min-width:260px; }
@@ -154,10 +156,10 @@
     <header class="top">
         <div>
             <h1>PCCE Program Project Plan</h1>
-            <p class="subtitle">Editable delivery plan for stakeholder review, owners, resources, dependencies, and milestones.</p>
+            <p class="subtitle">Stakeholder-ready delivery plan. Colleagues can view the page; authenticated users can edit tasks, resources, status, and timelines inline.</p>
         </div>
         <div class="top-actions">
-            <button class="btn primary" type="button" id="addToggle">Add Task</button>
+            <button class="btn primary" type="button" id="addToggle" th:if="${canEdit}">Add Task</button>
             <a class="btn" href="/api/v1/project/tasks/export.csv">Export CSV</a>
             <button class="btn" type="button" onclick="navigator.clipboard.writeText(location.href)">Copy Link</button>
             <a class="btn" href="/dashboard/index.html">Operations</a>
@@ -187,18 +189,18 @@
             <button id="resourceMode" type="button">Resource View</button>
         </div>
         <div class="inline-actions">
-            <button class="icon-btn" type="button" title="Filters">⌯</button>
+            <button class="icon-btn" type="button" title="Filters">F</button>
             <select id="topicFilter"><option value="ALL">All Topics</option><option th:each="topic : ${topics}" th:value="${topic}" th:text="${topic}"></option></select>
             <select id="statusFilter"><option value="ALL">All Status</option><option>COMPLETED</option><option>IN_PROGRESS</option><option>ON_HOLD</option><option>PLANNED</option></select>
             <select id="priorityFilter"><option value="ALL">All Priorities</option><option>CRITICAL</option><option>HIGH</option><option>MEDIUM</option><option>LOW</option></select>
             <select id="resourceFilter"><option value="ALL">All Resources</option><option th:each="resource : ${resources}" th:value="${resource}" th:text="${resource}"></option></select>
-            <button class="btn" type="button" id="manageOptionsToggle">Manage Lists</button>
+            <button class="btn" type="button" id="manageOptionsToggle" th:if="${canEdit}">Manage Lists</button>
             <button class="btn" type="button" id="clearFilters">Clear</button>
             <strong class="count" id="taskCount" th:text="${totalTasks + ' tasks'}">0 tasks</strong>
         </div>
     </section>
 
-    <section class="panel add-panel" id="addPanel">
+    <section class="panel add-panel" id="addPanel" th:if="${canEdit}">
         <form class="add-grid" id="addTaskForm">
             <label>Topic<select name="topic" data-managed-list="topic"><option th:each="topic : ${topics}" th:value="${topic}" th:text="${topic}" th:selected="${topic == 'PCCE'}"></option></select></label>
             <label class="span2">Task<input name="task" required placeholder="Task name"></label>
@@ -220,7 +222,7 @@
         </form>
     </section>
 
-    <section class="panel manage-panel" id="manageOptionsPanel">
+    <section class="panel manage-panel" id="manageOptionsPanel" th:if="${canEdit}">
         <div class="manager-grid">
             <label>List
                 <select id="managedListType">
@@ -248,7 +250,7 @@
     <section class="task-list" id="taskListView">
         <article class="panel plan-group" th:each="entry : ${topicStats}">
             <button class="group-head" type="button" onclick="toggleGroup(this)">
-                <span class="group-title"><span class="chev">⌄</span><span th:text="${entry.key}">PCCE</span></span>
+                <span class="group-title"><span class="chev">v</span><span th:text="${entry.key}">PCCE</span></span>
                 <span class="count" th:text="${entry.value.total + ' tasks'}">0 tasks</span>
                 <span class="chips">
                     <span class="pill done" th:if="${entry.value.completed > 0}" th:text="${entry.value.completed}">0</span>
@@ -262,7 +264,7 @@
                 <table>
                     <thead>
                     <tr>
-                        <th>Task</th><th>Priority</th><th>Status</th><th>Resource</th><th>Timeline</th><th>Progress / Comments</th><th></th>
+                        <th>Task</th><th>Priority</th><th>Status</th><th>Resource</th><th>Timeline</th><th>Progress / Comments</th><th th:if="${canEdit}"></th>
                     </tr>
                     </thead>
                     <tbody>
@@ -275,9 +277,12 @@
                             <input type="hidden" data-field="blockedBy" th:value="${task.blockedBy}">
                             <input type="hidden" data-field="risk" th:value="${task.risk}">
                             <input type="hidden" data-field="deliverable" th:value="${task.deliverable}">
-                            <input type="hidden" data-field="shareWith" th:value="${task.shareWith}">
+                            <input type="hidden" data-field="shareWith" th:value="${task.shareWith ?: 'Stakeholders, delivery team, managers'}">
                             <input type="hidden" data-field="externalRef" th:value="${task.externalRef}">
-                            <div class="task-name" contenteditable="true" data-field="task" th:text="${task.task}">Task</div>
+                            <input type="hidden" data-field="owner" th:value="${task.owner}">
+                            <input type="hidden" data-field="team" th:value="${task.team}">
+                            <input type="hidden" data-field="milestone" th:value="${task.milestone}">
+                            <div class="task-name" th:attr="contenteditable=${canEdit}" data-field="task" th:text="${task.task}" title="Click to edit task name">Task</div>
                             <select class="inline-select compact" data-field="topic" data-managed-list="topic">
                                 <option th:value="${task.topic}" th:text="${task.topic}" selected></option>
                                 <option th:each="topic : ${topics}" th:value="${topic}" th:text="${topic}"></option>
@@ -310,25 +315,10 @@
                                     <option>Unassigned</option>
                                     <option th:each="resource : ${resources}" th:value="${resource}" th:text="${resource}"></option>
                                 </select>
-                                <select class="inline-select" data-field="owner" data-managed-list="owner">
-                                    <option th:value="${task.owner}" th:text="${task.owner ?: 'No owner'}" selected></option>
-                                    <option value="">No owner</option>
-                                    <option th:each="owner : ${owners}" th:value="${owner}" th:text="${owner}"></option>
-                                </select>
-                                <select class="inline-select" data-field="team" data-managed-list="team">
-                                    <option th:value="${task.team}" th:text="${task.team ?: 'No team'}" selected></option>
-                                    <option value="">No team</option>
-                                    <option th:each="team : ${teams}" th:value="${team}" th:text="${team}"></option>
-                                </select>
                             </div>
                         </td>
                         <td class="timeline">
                             <div class="mini-grid">
-                                <select class="inline-select" data-field="milestone" data-managed-list="milestone">
-                                    <option th:value="${task.milestone}" th:text="${task.milestone ?: 'No milestone'}" selected></option>
-                                    <option value="">No milestone</option>
-                                    <option th:each="milestone : ${milestones}" th:value="${milestone}" th:text="${milestone}"></option>
-                                </select>
                                 <input class="inline-input" data-field="start" th:value="${task.start}" placeholder="Start">
                                 <input class="inline-input" data-field="finish" th:value="${task.finish}" placeholder="Finish">
                                 <input class="inline-input" data-field="duration" type="number" min="0" th:value="${task.duration}" placeholder="Days">
@@ -341,7 +331,7 @@
                             </div>
                             <input class="comments" data-field="comments" th:value="${task.comments}" placeholder="Comments">
                         </td>
-                        <td>
+                        <td th:if="${canEdit}">
                             <div class="row-actions">
                                 <button class="btn save" type="button" onclick="saveRow(this)">Save</button>
                                 <button class="btn delete" type="button" onclick="deleteRow(this)">Delete</button>
@@ -388,9 +378,20 @@
 <script th:inline="javascript">
     let activeTopic = "";
     const originalTasks = /*[[${tasks}]]*/ [];
+    const canEdit = /*[[${canEdit}]]*/ false;
 
     document.querySelector('.icon-btn[title="Filters"]').textContent = "F";
     document.querySelectorAll(".chev").forEach(chevron => chevron.textContent = "v");
+    if (!canEdit) {
+        document.querySelectorAll("[data-field]").forEach(field => {
+            if (field.tagName === "SELECT" || field.tagName === "INPUT") {
+                field.disabled = true;
+            }
+            if (field.isContentEditable) {
+                field.contentEditable = "false";
+            }
+        });
+    }
 
     function csrfHeaders() {
         const token = document.cookie.split("; ").find(row => row.startsWith("XSRF-TOKEN="));
@@ -462,10 +463,10 @@
         });
     });
     ["topicFilter", "statusFilter", "priorityFilter", "resourceFilter"].forEach(id => document.getElementById(id).addEventListener("change", applyFilters));
-    document.getElementById("addToggle").addEventListener("click", () => document.getElementById("addPanel").classList.toggle("open"));
-    document.getElementById("manageOptionsToggle").addEventListener("click", () => document.getElementById("manageOptionsPanel").classList.toggle("open"));
+    document.getElementById("addToggle")?.addEventListener("click", () => document.getElementById("addPanel").classList.toggle("open"));
+    document.getElementById("manageOptionsToggle")?.addEventListener("click", () => document.getElementById("manageOptionsPanel").classList.toggle("open"));
     document.getElementById("clearFilters").addEventListener("click", clearFilters);
-    document.getElementById("addManagedOption").addEventListener("click", addManagedOption);
+    document.getElementById("addManagedOption")?.addEventListener("click", addManagedOption);
     document.getElementById("taskMode").addEventListener("click", () => setView("tasks"));
     document.getElementById("resourceMode").addEventListener("click", () => setView("resources"));
 
@@ -516,6 +517,7 @@
     }
 
     async function saveRow(button) {
+        if (!canEdit) return;
         const row = button.closest("tr");
         const index = Number(row.dataset.index);
         const body = { ...originalTasks[index] };
@@ -528,6 +530,7 @@
     }
 
     async function deleteRow(button) {
+        if (!canEdit) return;
         const row = button.closest("tr");
         if (!row.dataset.id || !confirm("Delete this task?")) return;
         button.disabled = true;
@@ -535,7 +538,7 @@
         location.reload();
     }
 
-    document.getElementById("addTaskForm").addEventListener("submit", async event => {
+    document.getElementById("addTaskForm")?.addEventListener("submit", async event => {
         event.preventDefault();
         const body = Object.fromEntries(new FormData(event.currentTarget).entries());
         body.priorityNum = null;

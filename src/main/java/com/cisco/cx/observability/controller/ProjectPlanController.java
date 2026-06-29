@@ -6,6 +6,7 @@ import com.cisco.cx.observability.model.ProjectTaskUpdateRequest;
 import com.cisco.cx.observability.service.ProjectPlanService;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.security.Principal;
 import java.util.Set;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -33,8 +34,9 @@ public class ProjectPlanController {
     }
 
     @GetMapping("/project")
-    public String project(Model model) {
+    public String project(Model model, Principal principal) {
         populate(model);
+        model.addAttribute("canEdit", principal != null);
         return "project";
     }
 

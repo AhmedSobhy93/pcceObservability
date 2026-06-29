@@ -26,13 +26,21 @@ public class ProjectPlanService {
 
     @PostConstruct
     void seedDefaults() {
-        if (projectTaskRepository.count() > 0) {
+        if (projectTaskRepository.count() > 0 && !containsLegacySamplePlan()) {
             return;
         }
-        List<ProjectTaskDto> defaults = defaultTasks();
+        if (projectTaskRepository.count() > 0) {
+            projectTaskRepository.deleteAll();
+        }
+        List<ProjectTaskDto> defaults = currentProgramTasks();
         for (int index = 0; index < defaults.size(); index++) {
             projectTaskRepository.save(toEntity(defaults.get(index), index + 1));
         }
+    }
+
+    private boolean containsLegacySamplePlan() {
+        return entities().stream()
+                .anyMatch(task -> "Upgrade PCCE from 12.5 to 12.6.2".equalsIgnoreCase(task.getTask()));
     }
 
     public List<ProjectTaskDto> tasks() {
@@ -360,54 +368,92 @@ public class ProjectPlanService {
         return task + " completed, documented and accepted by owner.";
     }
 
-    private static List<ProjectTaskDto> defaultTasks() {
+    private static List<ProjectTaskDto> currentProgramTasks() {
         return List.of(
-                new ProjectTaskDto("PCCE", "Upgrade PCCE from 12.5 to 12.6.2", "CRITICAL", 1, "IN_PROGRESS", "Ahmed", "1-Feb-26", "30-Apr-26", 88, 60, "Underway - lab done, prod scheduled"),
-                new ProjectTaskDto("PCCE", "CVP upgrade & IVR script migration", "CRITICAL", 2, "IN_PROGRESS", "Ahmed / Khalid", "1-Mar-26", "31-May-26", 91, 40, "Dependent on PCCE upgrade"),
-                new ProjectTaskDto("PCCE", "Finesse desktop customisation", "HIGH", 3, "PLANNED", "Khalid", "1-Apr-26", "30-Jun-26", 91, 0, "Awaiting CVP sign-off"),
-                new ProjectTaskDto("PCCE", "CUIC report migration", "HIGH", 4, "IN_PROGRESS", "Sara", "1-Feb-26", "31-Mar-26", 59, 70, "Legacy reports mapped"),
-                new ProjectTaskDto("PCCE", "Agent PG failover testing", "CRITICAL", 5, "ON_HOLD", "Ahmed", "1-Apr-26", "30-Apr-26", 30, 0, "Blocked - network team"),
-                new ProjectTaskDto("PCCE", "Rogger/Logger redundancy validation", "HIGH", 6, "PLANNED", "Ahmed", "1-May-26", "31-May-26", 31, 0, "Post upgrade"),
-                new ProjectTaskDto("PCCE", "SIP trunk cut-over", "CRITICAL", 7, "ON_HOLD", "Khalid / Telecom", "1-Apr-26", "30-Apr-26", 30, 0, "Carrier config pending"),
-                new ProjectTaskDto("PCCE", "CCE Admin security hardening", "MEDIUM", 8, "PLANNED", "Sara", "1-May-26", "30-Jun-26", 61, 0, null),
-                new ProjectTaskDto("PCCE", "DR site replication setup", "HIGH", 9, "PLANNED", "Ahmed", "1-Jun-26", "31-Jul-26", 61, 0, null),
-                new ProjectTaskDto("PCCE", "Post-upgrade health dashboard", "MEDIUM", 10, "IN_PROGRESS", "Sara", "1-Mar-26", "30-Apr-26", 61, 50, "Base44 dashboard wired"),
-                new ProjectTaskDto("Eleveo", "Deploy Eleveo WFM 6.x", "CRITICAL", 1, "IN_PROGRESS", "Noura", "1-Jan-26", "31-Mar-26", 89, 75, "Server provisioned"),
-                new ProjectTaskDto("Eleveo", "Integrate Eleveo with PCCE ACD", "CRITICAL", 2, "IN_PROGRESS", "Noura / Ahmed", "1-Feb-26", "30-Apr-26", 88, 50, "API mapping in progress"),
-                new ProjectTaskDto("Eleveo", "Agent scheduling go-live", "HIGH", 3, "PLANNED", "Noura", "1-May-26", "31-May-26", 31, 0, "Depends on integration"),
-                new ProjectTaskDto("Eleveo", "Adherence real-time feed", "HIGH", 4, "PLANNED", "Noura", "1-May-26", "30-Jun-26", 61, 0, null),
-                new ProjectTaskDto("Eleveo", "Forecasting model setup", "MEDIUM", 5, "PLANNED", "Noura", "1-Jun-26", "31-Jul-26", 61, 0, null),
-                new ProjectTaskDto("Eleveo", "Recording compliance config", "HIGH", 6, "IN_PROGRESS", "Khalid", "1-Feb-26", "31-Mar-26", 59, 60, "PCI rules applied"),
-                new ProjectTaskDto("Eleveo", "QM evaluation forms", "MEDIUM", 7, "PLANNED", "Sara", "1-Apr-26", "30-Jun-26", 91, 0, null),
-                new ProjectTaskDto("Eleveo", "UAT & training", "HIGH", 8, "PLANNED", "Noura / Sara", "1-Jun-26", "31-Jul-26", 61, 0, null),
-                new ProjectTaskDto("Dtech", "Dtech CTI middleware upgrade", "CRITICAL", 1, "IN_PROGRESS", "Rami", "1-Jan-26", "28-Feb-26", 59, 80, "UAT phase"),
-                new ProjectTaskDto("Dtech", "Screen-pop integration with Finesse", "HIGH", 2, "IN_PROGRESS", "Rami", "1-Feb-26", "31-Mar-26", 58, 60, "JS gadget built"),
-                new ProjectTaskDto("Dtech", "CRM data connector", "HIGH", 3, "PLANNED", "Rami / Sara", "1-Mar-26", "30-Apr-26", 61, 0, "CRM creds awaited"),
-                new ProjectTaskDto("Dtech", "Reporting API for Dtech", "MEDIUM", 4, "PLANNED", "Sara", "1-Apr-26", "31-May-26", 61, 0, null),
-                new ProjectTaskDto("Dtech", "Dtech load testing", "HIGH", 5, "PLANNED", "Rami", "1-May-26", "31-May-26", 31, 0, null),
-                new ProjectTaskDto("Dtech", "Production cutover", "CRITICAL", 6, "PLANNED", "Rami / Ahmed", "1-Jun-26", "15-Jun-26", 15, 0, "Go/no-go gate"),
-                new ProjectTaskDto("Cisco Portal", "Self-service portal deployment", "HIGH", 1, "IN_PROGRESS", "Lina", "1-Feb-26", "30-Apr-26", 88, 55, "UX review done"),
-                new ProjectTaskDto("Cisco Portal", "SSO / AD integration", "CRITICAL", 2, "IN_PROGRESS", "Lina / Ahmed", "1-Feb-26", "31-Mar-26", 58, 70, "SAML config in test"),
-                new ProjectTaskDto("Cisco Portal", "Knowledge base migration", "MEDIUM", 3, "IN_PROGRESS", "Lina", "1-Mar-26", "30-Apr-26", 61, 40, "Content imported"),
-                new ProjectTaskDto("Cisco Portal", "Ticket routing rules", "HIGH", 4, "PLANNED", "Lina", "1-Apr-26", "31-May-26", 61, 0, null),
-                new ProjectTaskDto("Cisco Portal", "Portal UAT", "HIGH", 5, "PLANNED", "Lina / Sara", "1-May-26", "31-May-26", 31, 0, null),
-                new ProjectTaskDto("Cisco Portal", "Go-live & hypercare", "HIGH", 6, "PLANNED", "Lina", "1-Jun-26", "15-Jun-26", 15, 0, null),
-                new ProjectTaskDto("Survey", "Post-call IVR survey design", "HIGH", 1, "COMPLETED", "Sara", "1-Jan-26", "28-Feb-26", 59, 100, "Live"),
-                new ProjectTaskDto("Survey", "SMS survey integration", "HIGH", 2, "IN_PROGRESS", "Sara / Khalid", "1-Feb-26", "31-Mar-26", 58, 65, "API connected"),
-                new ProjectTaskDto("Survey", "CSAT dashboard", "MEDIUM", 3, "IN_PROGRESS", "Sara", "1-Mar-26", "30-Apr-26", 61, 50, "Charts built"),
-                new ProjectTaskDto("Survey", "NPS reporting", "MEDIUM", 4, "PLANNED", "Sara", "1-Apr-26", "31-May-26", 61, 0, null),
-                new ProjectTaskDto("Survey", "Survey A/B testing", "LOW", 5, "PLANNED", "Sara", "1-May-26", "30-Jun-26", 61, 0, null),
-                new ProjectTaskDto("Chat", "Cisco ECE chat channel setup", "CRITICAL", 1, "IN_PROGRESS", "Khalid", "1-Jan-26", "31-Mar-26", 89, 70, "Routing rules done"),
-                new ProjectTaskDto("Chat", "Chatbot NLU training", "HIGH", 2, "IN_PROGRESS", "Khalid / Noura", "1-Feb-26", "30-Apr-26", 88, 45, "Intents mapped"),
-                new ProjectTaskDto("Chat", "Chat-to-voice escalation", "HIGH", 3, "PLANNED", "Khalid", "1-Apr-26", "31-May-26", 61, 0, null),
-                new ProjectTaskDto("Chat", "Agent chat UI customisation", "MEDIUM", 4, "PLANNED", "Khalid", "1-Apr-26", "30-Jun-26", 91, 0, null),
-                new ProjectTaskDto("Chat", "Chat reporting in CUIC", "MEDIUM", 5, "PLANNED", "Sara", "1-May-26", "30-Jun-26", 61, 0, null),
-                new ProjectTaskDto("Chat", "Load & failover testing", "HIGH", 6, "PLANNED", "Khalid / Ahmed", "1-Jun-26", "30-Jun-26", 30, 0, null),
-                new ProjectTaskDto("One Content", "Content platform assessment", "HIGH", 1, "COMPLETED", "Lina", "1-Jan-26", "31-Jan-26", 31, 100, "Done"),
-                new ProjectTaskDto("One Content", "Knowledge article migration", "HIGH", 2, "IN_PROGRESS", "Lina", "1-Feb-26", "31-Mar-26", 58, 70, "800/1200 articles done"),
-                new ProjectTaskDto("One Content", "Search & tagging taxonomy", "MEDIUM", 3, "IN_PROGRESS", "Lina", "1-Mar-26", "30-Apr-26", 61, 40, null),
-                new ProjectTaskDto("One Content", "Agent-facing KB widget", "HIGH", 4, "PLANNED", "Lina / Rami", "1-Apr-26", "31-May-26", 61, 0, "Finesse gadget spec ready"),
-                new ProjectTaskDto("One Content", "Content approval workflow", "MEDIUM", 5, "PLANNED", "Lina", "1-May-26", "30-Jun-26", 61, 0, null),
-                new ProjectTaskDto("One Content", "Go-live & training", "HIGH", 6, "PLANNED", "Lina / Sara", "1-Jun-26", "30-Jun-26", 30, 0, null));
+                task("PCCE", "PCCE SSO", "MEDIUM", 6, "IN_PROGRESS", "Ayman", "4-Feb-26", "30-Jun-26", 30, null),
+                task("PCCE", "Monitoring: Splunk reports, SCOM, AppDynamics, network and RTMT", "MEDIUM", 4, "IN_PROGRESS", "Ayman & Fawzi", "27-Jan-26", "2-Feb-26", 7, "Support Team complete SMTP prerequisites"),
+                task("PCCE", "Finesse, CUIC Pen Testing + VAPT", "HIGH", 12, "IN_PROGRESS", "Ayman & InfoSec", "19-Jan-26", "30-Jun-26", 4, "Pending InfoSec to rescan"),
+                task("PCCE", "Migration Planning and sizing", "MEDIUM", 7, "IN_PROGRESS", "Ayman", "5-Feb-26", "24-Feb-26", 20, null),
+                task("PCCE", "Fraud Outbound Announcement (Dialer)", "CRITICAL", 11, "IN_PROGRESS", "Ayman", "4-Feb-26", "30-Apr-26", 10, "Done SIT, expected to be deployed UAT 21-Jun. Manual Outbound not working now"),
+                task("PCCE", "Management Dashboard", "LOW", null, "IN_PROGRESS", "Sobhy", null, null, null, null),
+                task("PCCE", "CCB SIT/UAT issue", "LOW", null, "IN_PROGRESS", "Ayman", null, null, null, null),
+                task("Eleveo", "Sentiment analysis installation", "CRITICAL", null, "IN_PROGRESS", "Ayman, Sobhy", null, null, 7, null),
+                task("Eleveo", "Check Eleveo new features", "MEDIUM", 9, "ON_HOLD", "Ayman", "3-Feb-26", "11-Feb-26", 7, null),
+                task("Eleveo", "Check Eleveo APIs", "LOW", null, "ON_HOLD", "Fawzi", null, null, 5, null),
+                task("Eleveo", "Support Team Admin Account Usage", "LOW", null, "ON_HOLD", "Ayman", null, null, null, null),
+                task("Eleveo", "Datalake integration", "HIGH", 10, "COMPLETED", "Ayman & Data Team", "25-Jan-26", "25-Jan-26", 5, "Configuration done from my side, pending Data Team"),
+                task("Dtech", "WE SMS GW Configs", "MEDIUM", 4, "COMPLETED", "Fawzi", "15-Feb-26", "23-Feb-26", 7, null),
+                task("Dtech", "Email GW and SMTP Integration", "MEDIUM", 5, "IN_PROGRESS", "Fawzi", "15-Feb-26", "25-Feb-26", 10, "Pending design"),
+                task("Dtech", "New features including opened points, topics, and Huawei", "MEDIUM", 7, "IN_PROGRESS", "Fawzi", "8-Feb-26", "5-Mar-26", 30, "Huawei pending installation"),
+                task("Dtech", "Versioning and deployments", "MEDIUM", 6, "COMPLETED", "Fawzi", "8-Feb-26", "19-Feb-26", 10, "Pending preparation"),
+                task("Dtech", "Content Changes Best Way: Portal and ETCS", "CRITICAL", 3, "COMPLETED", "Fawzi", "25-Jan-26", "26-Feb-26", 30, "Pending Testing Team"),
+                task("Dtech", "New portal and close old one", "MEDIUM", 8, "COMPLETED", "Fawzi & Ayman", "15-Feb-26", null, 10, null),
+                task("Dtech", "Docs", "LOW", 9, "IN_PROGRESS", "Fawzi", "15-Feb-26", null, 10, null),
+                task("Dtech", "Certs and health check", "LOW", null, "IN_PROGRESS", "Fawzi", null, null, 5, "Pending SIT, UAT is done"),
+                task("Dtech", "Dtech DevOps pipeline creation", "LOW", null, "PLANNED", "Fawzi", null, null, null, null),
+                task("Dtech", "Audit enhancements: admin user, report cleanup, split password, subscriber update dimmed", "LOW", null, "IN_PROGRESS", "Fawzi", null, null, null, null),
+                task("Dtech", "Prod cleansing", "CRITICAL", 3, "COMPLETED", "Fawzi", null, null, null, "Pending Support team"),
+                task("Dtech", "Dtech PenTesting", "MEDIUM", null, "PLANNED", "Fawzi", null, null, null, null),
+                task("Dtech", "LDAP integration", "LOW", null, "IN_PROGRESS", "Fawzi", null, null, null, null),
+                task("Dtech", "Customer preferences fatigue", "HIGH", null, "PLANNED", "Fawzi", null, null, null, null),
+                task("Cisco Portal", "Maker and checker", "MEDIUM", null, "ON_HOLD", "Fawzi", null, null, 4, null),
+                task("Cisco Portal", "Agent Auto Creation", "HIGH", null, "ON_HOLD", "Fawzi", null, null, null, null),
+                task("Cisco Portal", "Monitoring", "MEDIUM", null, "ON_HOLD", "Fawzi", null, null, 5, null),
+                task("Cisco Portal", "Audit", "MEDIUM", null, "ON_HOLD", "Fawzi", null, null, 5, null),
+                task("Cisco Portal", "Deployments", "MEDIUM", null, "COMPLETED", "Fawzi", null, null, null, "Fawzi to follow up with Heba on Jenkins Prod looping Kadry"),
+                task("Cisco Portal", "Agent Scheduling", "MEDIUM", null, "ON_HOLD", "Fawzi", null, null, null, null),
+                task("Cisco Portal", "Managing IVR products and offers prompts from customer portal", "LOW", null, "ON_HOLD", "Fawzi", null, null, null, null),
+                task("Cisco Portal", "Security Scanning", "LOW", null, "ON_HOLD", "Fawzi", null, null, 10, null),
+                task("Survey", "Phase 2 Development", "HIGH", null, "ON_HOLD", "Fawzi", null, null, 60, null),
+                task("Survey", "UI Enhancements", "MEDIUM", 10, "COMPLETED", "Fawzi", "8-Feb-26", null, 15, null),
+                task("Survey", "OpenShift SIT/UAT/Prod/DR Deployment", "HIGH", 11, "IN_PROGRESS", "Fawzi", "8-Feb-26", null, 15, "SIT Done, UAT Done, Prod-DR in progress"),
+                task("Survey", "DevOps", "HIGH", null, "COMPLETED", "Fawzi", null, null, 4, "SIT Done, UAT in progress, Prod-DR planning"),
+                task("Survey", "Monitoring", "MEDIUM", null, "ON_HOLD", "Fawzi", null, null, 10, "Pending meeting with Kadry/Support team"),
+                task("Survey", "Performance Test", "HIGH", 12, "IN_PROGRESS", "Fawzi", "5-Feb-26", null, 10, "SIT done, UAT expected to be better with Redis caching"),
+                task("Survey", "Datalake sync", "MEDIUM", 13, "IN_PROGRESS", "Fawzi", null, null, 7, "Pending Data Team"),
+                task("Survey", "New APIs for getting surveys by user and action IDs", "HIGH", 14, "COMPLETED", "Fawzi", "4-Feb-26", "5-Feb-26", 1, null),
+                task("Survey", "API customization for Mobile Journey", "LOW", 1, "COMPLETED", "Fawzi", null, null, null, null),
+                task("Survey", "Security Scanning", "HIGH", null, "ON_HOLD", "Fawzi", null, null, 10, null),
+                task("Chat", "Deployments SIT/UAT/Prod/DR", "CRITICAL", 1, "COMPLETED", "Fawzi", "Dec-25", "28-May-26", null, "SIT/UAT done - Prod/DR sanity"),
+                task("Chat", "SIT Cycle", "HIGH", 2, "COMPLETED", "Fawzi", "26-Jan", "26-Feb", null, null),
+                task("Chat", "UAT/Prod/DR Sanity", "HIGH", 2, "COMPLETED", "Fawzi", null, null, null, "UAT done"),
+                task("Chat", "PenTesting fixes and VAPT on the new version", "MEDIUM", 3, "IN_PROGRESS", "Vendor", null, null, null, "Pending Aya Wanis to share new findings"),
+                task("Chat", "New PenTesting Cycle", "HIGH", 2, "COMPLETED", "Security, Vendor", null, null, null, null),
+                task("Chat", "Infrastructure and logging enhancement", "MEDIUM", 3, "ON_HOLD", "Vendor", null, null, null, null),
+                task("Chat", "Opened Bugs: EE-1848", "CRITICAL", 3, "IN_PROGRESS", "Vendor", null, null, null, null),
+                task("Chat", "Confirmation on APIs Checklist", "LOW", 4, "COMPLETED", "Vendor", null, null, null, null),
+                task("Chat", "Performance Test", "HIGH", 2, "IN_PROGRESS", "Testing team, Fawzi", null, null, null, "Pending Testing Team"),
+                task("Chat", "Chat Encryption/Decryption", "CRITICAL", null, "IN_PROGRESS", "Unassigned", null, null, null, null),
+                task("Chat", "Agent Availability", "LOW", null, "ON_HOLD", "Unassigned", null, null, null, "Pending deployment"),
+                task("Chat", "Data Cleansing", "CRITICAL", 3, "IN_PROGRESS", "Unassigned", null, null, null, null),
+                task("Chat", "Vendor handover and docs", "CRITICAL", null, "ON_HOLD", "Vendor", null, null, null, null),
+                task("Chat", "User Management/Sync LDAP integration", "HIGH", null, "ON_HOLD", "Unassigned", null, null, null, null),
+                task("Chat", "Pipeline", "MEDIUM", 3, "PLANNED", "Fawzi, DevOps", null, null, null, null),
+                task("One Content", "Deployment SIT/UAT/Prod/DR Deployment", "HIGH", 11, "IN_PROGRESS", "Fawzi", "8-Feb-26", null, 15, "SIT Done, UAT Done, Prod-DR in progress"),
+                task("One Content", "DevOps", "HIGH", null, "COMPLETED", "Fawzi", null, null, 4, "SIT Done, UAT in progress, Prod-DR planning"),
+                task("One Content", "Monitoring", "MEDIUM", null, "ON_HOLD", "Fawzi", null, null, 10, "Pending meeting with Kadry/Support team"),
+                task("One Content", "Performance Test", "HIGH", 12, "IN_PROGRESS", "Fawzi", "5-Feb-26", null, 10, "SIT done, UAT expected to be better with Redis caching"),
+                task("One Content", "Datalake sync", "MEDIUM", 13, "IN_PROGRESS", "Fawzi", null, null, 7, null));
+    }
+
+    private static ProjectTaskDto task(String topic, String task, String priority, Integer priorityNum, String status,
+                                       String resource, String start, String finish, Integer duration, String comments) {
+        int pct = switch (status) {
+            case "COMPLETED" -> 100;
+            case "IN_PROGRESS" -> 50;
+            default -> 0;
+        };
+        String owner = firstResource(resource);
+        return new ProjectTaskDto(null, topic, task, priority, priorityNum, status, resource,
+                owner, topic, status, start, finish, duration, pct, null, null,
+                "CRITICAL".equals(priority) ? "HIGH" : "MEDIUM",
+                null, "Stakeholders, delivery team, managers", null, comments);
+    }
+
+    private static String firstResource(String resource) {
+        if (!StringUtils.hasText(resource) || "Unassigned".equalsIgnoreCase(resource)) {
+            return null;
+        }
+        return resource.split(",|/|&")[0].trim();
     }
 }
