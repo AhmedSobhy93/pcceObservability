@@ -308,27 +308,50 @@ public class ReportingService {
     public List<CvpIvrNodeMetric> cvpIvrNodes(LocalDate from, LocalDate to, String appName) {
         validateDateRange(from, to);
         String normalizedAppName = blankToNull(appName);
+        Object[] args = cvpArgs(from, to, normalizedAppName);
+        String nodeSql = normalizedAppName == null
+                ? PcceProperties.DefaultSql.CVP_IVR_NODES
+                : PcceProperties.DefaultSql.CVP_IVR_NODES_BY_APP;
         try {
             return timedQuery("cvp.ivrNodes", () -> cvpReportingJdbcTemplate.query(
-                    PcceProperties.DefaultSql.CVP_IVR_NODES,
-                    (rs, rowNum) -> new CvpIvrNodeMetric(
-                            rs.getString("call_id"),
-                            toLocalDateTime(rs, "call_start_time"),
-                            toLocalDateTime(rs, "call_end_time"),
-                            rs.getString("caller_number"),
-                            rs.getString("app_name"),
-                            rs.getString("duration"),
-                            rs.getString("flag"),
-                            rs.getObject("call_disposition_id") == null ? null : rs.getInt("call_disposition_id"),
-                            rs.getString("call_disposition_flag_desc")),
-                    start(from),
-                    exclusiveEnd(to),
-                    normalizedAppName,
-                    normalizedAppName));
+                    nodeSql,
+                    this::mapCvpIvrNode,
+                    args));
         } catch (DataAccessException ex) {
-            log.warn("cvp_ivr_nodes_unavailable error={}", ex.getMostSpecificCause().getMessage());
-            return List.of();
+            log.warn("cvp_ivr_nodes_unavailable using_session_fallback=true error={}", ex.getMostSpecificCause().getMessage());
+            String sessionSql = normalizedAppName == null
+                    ? PcceProperties.DefaultSql.CVP_IVR_SESSIONS
+                    : PcceProperties.DefaultSql.CVP_IVR_SESSIONS_BY_APP;
+            try {
+                return timedQuery("cvp.ivrSessionsFallback", () -> cvpReportingJdbcTemplate.query(
+                        sessionSql,
+                        this::mapCvpIvrNode,
+                        args));
+            } catch (DataAccessException fallbackEx) {
+                log.warn("cvp_ivr_sessions_unavailable error={}", fallbackEx.getMostSpecificCause().getMessage());
+                return List.of();
+            }
         }
+    }
+
+    private Object[] cvpArgs(LocalDate from, LocalDate to, String appName) {
+        if (appName == null) {
+            return new Object[] { start(from), exclusiveEnd(to) };
+        }
+        return new Object[] { start(from), exclusiveEnd(to), appName };
+    }
+
+    private CvpIvrNodeMetric mapCvpIvrNode(ResultSet rs, int rowNum) throws SQLException {
+        return new CvpIvrNodeMetric(
+                rs.getString("call_id"),
+                toLocalDateTime(rs, "call_start_time"),
+                toLocalDateTime(rs, "call_end_time"),
+                rs.getString("caller_number"),
+                rs.getString("app_name"),
+                rs.getString("duration"),
+                rs.getString("flag"),
+                rs.getObject("call_disposition_id") == null ? null : rs.getInt("call_disposition_id"),
+                rs.getString("call_disposition_flag_desc"));
     }
 
     public List<DroppedCallMetric> droppedCalls(LocalDate from, LocalDate to, String skillGroup) {
@@ -520,6 +543,10 @@ public class ReportingService {
         java.util.regex.Matcher timeMatcher = java.util.regex.Pattern.compile("\\b(\\d{1,2}):\\d{2}").matcher(text);
         if (timeMatcher.find()) {
             return Integer.parseInt(timeMatcher.group(1));
+        }
+        java.util.regex.Matcher trailingHour = java.util.regex.Pattern.compile("(\\d{1,2})\\s*$").matcher(text);
+        if (trailingHour.find()) {
+            return Integer.parseInt(trailingHour.group(1));
         }
         java.util.regex.Matcher matcher = java.util.regex.Pattern.compile("(\\d{1,2})").matcher(text);
         return matcher.find() ? Integer.parseInt(matcher.group(1)) : null;

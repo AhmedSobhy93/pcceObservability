@@ -2253,7 +2253,7 @@ public class PcceProperties {
         static final String IVR_CONTAINMENT = """
                 SELECT
                     DATE(c.startdatetime) AS call_date,
-                    CAST(TO_CHAR(c.startdatetime, '%H') AS INTEGER) AS call_hour,
+                    EXTEND(c.startdatetime, HOUR TO HOUR) AS call_hour,
                     CASE
                         WHEN COUNT(*) = 0 THEN 0
                         ELSE CAST(100.0 * SUM(CASE WHEN vs.causeid NOT IN (2, 18, 1001, 1044) THEN 1 ELSE 0 END) / COUNT(*) AS DECIMAL(9,2))
@@ -2264,7 +2264,7 @@ public class PcceProperties {
                  AND c.callstartdate = vs.callstartdate
                 WHERE c.startdatetime >= ?
                   AND c.startdatetime < ?
-                GROUP BY DATE(c.startdatetime), CAST(TO_CHAR(c.startdatetime, '%H') AS INTEGER)
+                GROUP BY DATE(c.startdatetime), EXTEND(c.startdatetime, HOUR TO HOUR)
                 ORDER BY call_date, call_hour
                 """;
 
@@ -2275,7 +2275,7 @@ public class PcceProperties {
                     c.enddatetime as call_end_time,
                     c.ani as caller_number,
                     vs.appname as app_name,
-                    ((c.enddatetime - c.startdatetime)::interval second(6) to second) as duration,
+                    CAST(((c.enddatetime - c.startdatetime)::interval second(6) to second) AS varchar(32)) as duration,
                     VXMLElementFlag.Name as flag,
                     vs.causeid as call_disposition_id,
                     CASE vs.causeid
@@ -2299,7 +2299,104 @@ public class PcceProperties {
                   AND vs.SessionID = VXMLElement.SessionID
                   AND VXMLElement.ElementID = VXMLElementFlag.ElementID
                   AND vxmlelement.elementtypeid = 9
-                  AND (? IS NULL OR vs.appname = ?)
+                ORDER BY c.startdatetime DESC
+                """;
+
+        public static final String CVP_IVR_NODES_BY_APP = """
+                SELECT FIRST 500
+                    c.callguid as call_id,
+                    c.startdatetime as call_start_time,
+                    c.enddatetime as call_end_time,
+                    c.ani as caller_number,
+                    vs.appname as app_name,
+                    CAST(((c.enddatetime - c.startdatetime)::interval second(6) to second) AS varchar(32)) as duration,
+                    VXMLElementFlag.Name as flag,
+                    vs.causeid as call_disposition_id,
+                    CASE vs.causeid
+                        WHEN 0 THEN 'None'
+                        WHEN 1 THEN 'Normal Completion'
+                        WHEN 13 THEN 'Called Party Disconnected'
+                        WHEN 18 THEN 'Error'
+                        WHEN 1001 THEN 'HangUp'
+                        WHEN 20 THEN 'Post Call Answer'
+                        WHEN 29 THEN 'Whisper Start'
+                        WHEN 30 THEN 'Whisper Done'
+                        WHEN 1044 THEN 'Error CVP No Session Error'
+                        WHEN 2 THEN 'Call Abandoned'
+                        ELSE CAST(vs.causeid AS varchar(10))
+                    END AS call_disposition_flag_desc
+                FROM call c, vxmlsession vs, vxmlelement, vxmlelementflag
+                WHERE c.startdatetime >= ?
+                  AND c.startdatetime < ?
+                  AND c.callguid = vs.callguid
+                  AND c.callstartdate = vs.callstartdate
+                  AND vs.SessionID = VXMLElement.SessionID
+                  AND VXMLElement.ElementID = VXMLElementFlag.ElementID
+                  AND vxmlelement.elementtypeid = 9
+                  AND vs.appname = ?
+                ORDER BY c.startdatetime DESC
+                """;
+
+        public static final String CVP_IVR_SESSIONS = """
+                SELECT FIRST 500
+                    c.callguid as call_id,
+                    c.startdatetime as call_start_time,
+                    c.enddatetime as call_end_time,
+                    c.ani as caller_number,
+                    vs.appname as app_name,
+                    '' as duration,
+                    'Session' as flag,
+                    vs.causeid as call_disposition_id,
+                    CASE vs.causeid
+                        WHEN 0 THEN 'None'
+                        WHEN 1 THEN 'Normal Completion'
+                        WHEN 13 THEN 'Called Party Disconnected'
+                        WHEN 18 THEN 'Error'
+                        WHEN 1001 THEN 'HangUp'
+                        WHEN 20 THEN 'Post Call Answer'
+                        WHEN 29 THEN 'Whisper Start'
+                        WHEN 30 THEN 'Whisper Done'
+                        WHEN 1044 THEN 'Error CVP No Session Error'
+                        WHEN 2 THEN 'Call Abandoned'
+                        ELSE CAST(vs.causeid AS varchar(10))
+                    END AS call_disposition_flag_desc
+                FROM call c, vxmlsession vs
+                WHERE c.startdatetime >= ?
+                  AND c.startdatetime < ?
+                  AND c.callguid = vs.callguid
+                  AND c.callstartdate = vs.callstartdate
+                ORDER BY c.startdatetime DESC
+                """;
+
+        public static final String CVP_IVR_SESSIONS_BY_APP = """
+                SELECT FIRST 500
+                    c.callguid as call_id,
+                    c.startdatetime as call_start_time,
+                    c.enddatetime as call_end_time,
+                    c.ani as caller_number,
+                    vs.appname as app_name,
+                    '' as duration,
+                    'Session' as flag,
+                    vs.causeid as call_disposition_id,
+                    CASE vs.causeid
+                        WHEN 0 THEN 'None'
+                        WHEN 1 THEN 'Normal Completion'
+                        WHEN 13 THEN 'Called Party Disconnected'
+                        WHEN 18 THEN 'Error'
+                        WHEN 1001 THEN 'HangUp'
+                        WHEN 20 THEN 'Post Call Answer'
+                        WHEN 29 THEN 'Whisper Start'
+                        WHEN 30 THEN 'Whisper Done'
+                        WHEN 1044 THEN 'Error CVP No Session Error'
+                        WHEN 2 THEN 'Call Abandoned'
+                        ELSE CAST(vs.causeid AS varchar(10))
+                    END AS call_disposition_flag_desc
+                FROM call c, vxmlsession vs
+                WHERE c.startdatetime >= ?
+                  AND c.startdatetime < ?
+                  AND c.callguid = vs.callguid
+                  AND c.callstartdate = vs.callstartdate
+                  AND vs.appname = ?
                 ORDER BY c.startdatetime DESC
                 """;
     }
