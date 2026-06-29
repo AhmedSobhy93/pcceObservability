@@ -75,7 +75,18 @@ const pages = {
 };
 
 const colors = ["#2ed3c2", "#3d82f6", "#f4a51c", "#8d6cf7", "#24e0a4", "#ff626c"];
-const uiState = { ivrNodePage: 0, ivrNodePageSize: 50, agentPage: 0, agentPageSize: 10, journeyPage: 0, journeyPageSize: 12, callTypePage: 0, callTypePageSize: 50 };
+const uiState = {
+    ivrNodePage: 0,
+    ivrNodePageSize: 50,
+    agentPage: 0,
+    agentCardPage: 0,
+    agentPageSize: 10,
+    agentCardPageSize: 10,
+    journeyPage: 0,
+    journeyPageSize: 12,
+    callTypePage: 0,
+    callTypePageSize: 50
+};
 const businessSettings = loadBusinessSettings();
 const planState = { view: "tasks", topic: "ALL", collapsed: new Set() };
 let activeView = "overview";
@@ -121,11 +132,11 @@ document.addEventListener("DOMContentLoaded", () => {
         renderAgents();
     });
     qs("#agentCardPrevPage")?.addEventListener("click", () => {
-        uiState.agentPage = Math.max(0, uiState.agentPage - 1);
+        uiState.agentCardPage = Math.max(0, uiState.agentCardPage - 1);
         renderAgents();
     });
     qs("#agentCardNextPage")?.addEventListener("click", () => {
-        uiState.agentPage += 1;
+        uiState.agentCardPage += 1;
         renderAgents();
     });
     qs("#journeyPrevPage")?.addEventListener("click", () => {
@@ -149,8 +160,6 @@ document.addEventListener("DOMContentLoaded", () => {
     qs("#adminSaveRoleBtn")?.addEventListener("click", saveAdminRole);
     qs("#saveAlertConfigBtn")?.addEventListener("click", saveAlertConfig);
     qs("#loadInventoryBtn")?.addEventListener("click", loadMachineInventory);
-    qs("#saveAgentSkillAssignmentBtn")?.addEventListener("click", saveAgentSkillAssignment);
-    qs("#buildProvisioningPlanBtn")?.addEventListener("click", renderAgentProvisioningPreview);
     qs("#loadAgentSkillCatalogBtn")?.addEventListener("click", loadAgentSkillCatalog);
     qs("#asmBuildPlanBtn")?.addEventListener("click", () => submitAgentSkillPlan("plan"));
     qs("#asmDryRunBtn")?.addEventListener("click", () => submitAgentSkillPlan("dryRun"));
@@ -189,13 +198,15 @@ document.addEventListener("DOMContentLoaded", () => {
             renderKpis();
         });
     });
-    ["#agentStatusFilter", "#agentSearchFilter"].forEach(selector => {
+    ["#agentPageFilter", "#agentTeamInput", "#agentStatusFilter", "#agentSearchFilter"].forEach(selector => {
         qs(selector)?.addEventListener("input", debounce(() => {
             uiState.agentPage = 0;
+            uiState.agentCardPage = 0;
             renderAgents();
         }, 250));
         qs(selector)?.addEventListener("change", () => {
             uiState.agentPage = 0;
+            uiState.agentCardPage = 0;
             renderAgents();
         });
     });
@@ -920,13 +931,19 @@ function ivrDispositionClass(code) {
 function renderAgents() {
     renderAgentFilters();
     const agents = filteredAgents();
-    const totalPages = Math.max(1, Math.ceil(agents.length / uiState.agentPageSize));
-    uiState.agentPage = Math.min(uiState.agentPage, totalPages - 1);
-    const start = uiState.agentPage * uiState.agentPageSize;
-    const pageRows = agents.slice(start, start + uiState.agentPageSize);
-    renderAgentVisuals(agents, pageRows);
-    updateAgentPagers(agents.length, totalPages);
-    qs("#agentsTable").innerHTML = pageRows.map(agent => {
+    const tablePages = Math.max(1, Math.ceil(agents.length / uiState.agentPageSize));
+    const cardPages = Math.max(1, Math.ceil(agents.length / uiState.agentCardPageSize));
+    uiState.agentPage = Math.min(uiState.agentPage, tablePages - 1);
+    uiState.agentCardPage = Math.min(uiState.agentCardPage, cardPages - 1);
+    const tableStart = uiState.agentPage * uiState.agentPageSize;
+    const cardStart = uiState.agentCardPage * uiState.agentCardPageSize;
+    const pageRows = agents.slice(tableStart, tableStart + uiState.agentPageSize);
+    const cardRows = agents.slice(cardStart, cardStart + uiState.agentCardPageSize);
+    renderAgentVisuals(agents, cardRows);
+    updateAgentPagers(agents.length, tablePages, cardPages);
+    const table = qs("#agentsTable");
+    if (!table) return;
+    table.innerHTML = pageRows.map(agent => {
         const status = effectiveAgentStatus(agent);
         const occupancy = pick(agent, "occupancy_pct", "occupancyPct");
         const adherence = pick(agent, "adherence_pct", "adherencePct");
@@ -947,29 +964,39 @@ function renderAgents() {
     }).join("") || `<tr><td colspan="10">No agents match current filters.</td></tr>`;
 }
 
-function updateAgentPagers(totalRows, totalPages) {
-    qs("#agentCount").textContent = `${totalRows} agents | 10 per page`;
-    const label = `Page ${uiState.agentPage + 1}/${totalPages}`;
-    ["#agentPageInfo", "#agentCardPageInfo"].forEach(selector => {
-        const element = qs(selector);
-        if (element) element.textContent = label;
-    });
-    ["#agentPrevPage", "#agentCardPrevPage"].forEach(selector => {
-        const button = qs(selector);
-        if (button) button.disabled = uiState.agentPage === 0;
-    });
-    ["#agentNextPage", "#agentCardNextPage"].forEach(selector => {
-        const button = qs(selector);
-        if (button) button.disabled = uiState.agentPage >= totalPages - 1;
-    });
+function updateAgentPagers(totalRows, tablePages, cardPages) {
+    const count = qs("#agentCount");
+    if (count) count.textContent = `${totalRows} agents | ${uiState.agentPageSize} per page`;
+    const tableInfo = qs("#agentPageInfo");
+    if (tableInfo) tableInfo.textContent = `Table page ${uiState.agentPage + 1}/${tablePages}`;
+    const cardInfo = qs("#agentCardPageInfo");
+    if (cardInfo) cardInfo.textContent = `Cards page ${uiState.agentCardPage + 1}/${cardPages}`;
+    const tablePrev = qs("#agentPrevPage");
+    const tableNext = qs("#agentNextPage");
+    const cardPrev = qs("#agentCardPrevPage");
+    const cardNext = qs("#agentCardNextPage");
+    if (tablePrev) tablePrev.disabled = uiState.agentPage === 0;
+    if (tableNext) tableNext.disabled = uiState.agentPage >= tablePages - 1;
+    if (cardPrev) cardPrev.disabled = uiState.agentCardPage === 0;
+    if (cardNext) cardNext.disabled = uiState.agentCardPage >= cardPages - 1;
 }
 
 function filteredAgents() {
     const selectedTeams = splitCsv(firstFilterValue("#agentTeamInput"));
+    const availableTeams = new Set(state.agents.map(agent => pick(agent, "team") || "UNKNOWN"));
+    const effectiveTeams = selectedTeams.filter(team => availableTeams.has(team));
+    const agentFilter = firstFilterValue("#agentPageFilter").toLowerCase();
     const statusFilter = firstFilterValue("#agentStatusFilter").toLowerCase();
     const search = firstFilterValue("#agentSearchFilter").toLowerCase();
     return state.agents
-        .filter(agent => selectedTeams.length === 0 || selectedTeams.includes(pick(agent, "team") || "UNKNOWN"))
+        .filter(agent => effectiveTeams.length === 0 || effectiveTeams.includes(pick(agent, "team") || "UNKNOWN"))
+        .filter(agent => {
+            if (!agentFilter) return true;
+            return [
+                pick(agent, "agent_name", "agentName"),
+                pick(agent, "agent_id", "agentId")
+            ].join(" ").toLowerCase().includes(agentFilter);
+        })
         .filter(agent => !statusFilter || effectiveAgentStatus(agent) === statusFilter)
         .filter(agent => {
             if (!search) return true;
@@ -999,7 +1026,9 @@ function renderAgentKpis(agents) {
     const finesseUsers = finesseDirectoryCount();
     const liveStates = parsedFinesseUsers();
     const activeDialogs = parsedFinesseDialogs().filter(dialog => dialog.state && !/ended|dropped|failed/i.test(dialog.state)).length;
-    qs("#agentKpis").innerHTML = [
+    const container = qs("#agentKpis");
+    if (!container) return;
+    container.innerHTML = [
         agentKpi("Agents", total, `${teams} teams`),
         agentKpi("Active", active, "live calls / on call"),
         agentKpi("Handled", fmt(handled), "selected interval"),
@@ -1022,7 +1051,9 @@ function agentMetricSeconds(agent, ...fields) {
 }
 
 function renderAgentCards(agents) {
-    qs("#agentVisualCards").innerHTML = agents.map(agent => {
+    const container = qs("#agentVisualCards");
+    if (!container) return;
+    container.innerHTML = agents.map(agent => {
         const status = effectiveAgentStatus(agent);
         const calls = num(pick(agent, "calls_handled", "callsHandled"));
         const occupancy = pick(agent, "occupancy_pct", "occupancyPct");
@@ -1052,6 +1083,7 @@ function renderAgentCards(agents) {
 }
 
 function renderAgentCharts(agents) {
+    if (!qs("#agentAhtChart") || !qs("#agentOccupancyChart")) return;
     const top = agents;
     const labels = top.map(shortAgentName);
     const ahtSeries = [
@@ -2765,9 +2797,7 @@ function agentSkillManagementRequest() {
 }
 
 function renderManagementControls() {
-    renderAgentSkillAssignments();
     renderIvrFeatures();
-    renderAgentProvisioningGuide();
 }
 
 function renderAgentProvisioningGuide() {

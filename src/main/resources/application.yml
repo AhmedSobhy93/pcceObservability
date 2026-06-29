@@ -222,6 +222,68 @@ pcce:
         admin-only: false
         method: GET
         path: /unifiedconfig/config/skillgroup
+      - id: skill.create
+        category: Skill Group Management
+        name: Create skill group
+        enabled: ${PCCE_API_WRITE_ACTIONS_ENABLED:false}
+        admin-only: true
+        method: POST
+        path: /unifiedconfig/config/skillgroup
+        content-type: application/xml
+      - id: skill.update
+        category: Skill Group Management
+        name: Update skill group
+        enabled: ${PCCE_API_WRITE_ACTIONS_ENABLED:false}
+        admin-only: true
+        method: PUT
+        path: /unifiedconfig/config/skillgroup/{id}
+        content-type: application/xml
+      - id: agents.list
+        category: Agents, Skills, Attributes, and Teams
+        name: List agents
+        enabled: true
+        admin-only: false
+        method: GET
+        path: /unifiedconfig/config/agent
+      - id: agent.create
+        category: Agents, Skills, Attributes, and Teams
+        name: Create agent
+        enabled: ${PCCE_API_WRITE_ACTIONS_ENABLED:false}
+        admin-only: true
+        method: POST
+        path: /unifiedconfig/config/agent
+        content-type: application/xml
+      - id: agent.update
+        category: Agents, Skills, Attributes, and Teams
+        name: Update agent
+        enabled: ${PCCE_API_WRITE_ACTIONS_ENABLED:false}
+        admin-only: true
+        method: PUT
+        path: /unifiedconfig/config/agent/{id}
+        content-type: application/xml
+      - id: supervisor.create
+        category: Agents, Skills, Attributes, and Teams
+        name: Create supervisor
+        enabled: ${PCCE_API_WRITE_ACTIONS_ENABLED:false}
+        admin-only: true
+        method: POST
+        path: /unifiedconfig/config/supervisor
+        content-type: application/xml
+      - id: supervisor.update
+        category: Agents, Skills, Attributes, and Teams
+        name: Update supervisor
+        enabled: ${PCCE_API_WRITE_ACTIONS_ENABLED:false}
+        admin-only: true
+        method: PUT
+        path: /unifiedconfig/config/supervisor/{id}
+        content-type: application/xml
+      - id: deskSettings.list
+        category: Agents, Skills, Attributes, and Teams
+        name: List agent desk settings
+        enabled: true
+        admin-only: false
+        method: GET
+        path: /unifiedconfig/config/agentdesksettings
       - id: dialedNumbers.list
         category: Call Configuration and Management
         name: List dialed numbers

@@ -171,33 +171,6 @@
             <div class="panel-head"><h2>Running Agent Calls</h2><span id="runningCallCount">Finesse dialog detail</span></div>
             <div class="running-call-grid" id="runningCallGrid"></div>
         </article>
-        <article class="panel full api-functions-panel">
-            <div class="panel-head"><h2>Agent Provisioning and Skill Assignment</h2><span>CUCM AXL + PCCE Unified Config preparation</span></div>
-            <div class="admin-form plan-editor-form">
-                <label class="date-field"><span>Agent ID / Login</span><input id="assignmentAgentId" list="agentOptions" placeholder="cc.agent1 or SkillTargetID"></label>
-                <label class="date-field"><span>Base Username</span><input id="assignmentBaseUsername" placeholder="Ahmed.Saeed"></label>
-                <label class="date-field"><span>Agent Name</span><input id="assignmentAgentName" placeholder="Display name"></label>
-                <label class="date-field"><span>First Name</span><input id="assignmentFirstName" placeholder="Ahmed"></label>
-                <label class="date-field"><span>Last Name</span><input id="assignmentLastName" placeholder="Saeed"></label>
-                <label class="date-field"><span>Mail</span><input id="assignmentMail" placeholder="Ahmed.Saeed@dev.mdi"></label>
-                <label class="date-field"><span>DN</span><input id="assignmentDn" placeholder="Auto / 50xxx"></label>
-                <label class="date-field"><span>Team</span><input id="assignmentTeam" placeholder="Team name"></label>
-                <label class="date-field"><span>Skill Group</span><input id="assignmentSkill" list="skillOptions" placeholder="Skill group"></label>
-                <label class="date-field"><span>Supervised Teams</span><input id="assignmentSupervisedTeams" placeholder="For supervisors"></label>
-                <label class="date-field"><span>Desk Settings</span><input id="assignmentDeskSettings" value="Default_Agent_Desk_Settings"></label>
-                <label class="date-field"><span>Proficiency</span><input id="assignmentProficiency" type="number" min="1" max="10" placeholder="1-10"></label>
-                <label class="date-field"><span>Agent Type</span><select id="assignmentAgentType"><option value="agent">Agent</option><option value="supervisor">Supervisor</option></select></label>
-                <label class="date-field"><span>User Mode</span><select id="assignmentUserMode"><option value="existing">Existing LDAP/CUCM user</option><option value="new">New CUCM user</option></select></label>
-                <label class="date-field"><span>Auto Rollback</span><select id="assignmentRollback"><option value="false">Manual rollback</option><option value="true">Auto rollback on error</option></select></label>
-                <label class="date-field"><span>Enabled</span><select id="assignmentEnabled"><option value="true">Enabled</option><option value="false">Disabled</option></select></label>
-                <label class="date-field editor-wide"><span>Notes</span><input id="assignmentNotes" placeholder="Change ticket / reason"></label>
-                <button class="primary-btn" id="saveAgentSkillAssignmentBtn">Save Assignment</button>
-                <button class="primary-btn" id="buildProvisioningPlanBtn" type="button">Build Provisioning Plan</button>
-            </div>
-            <div class="metric-list" id="agentProvisioningGuide"></div>
-            <pre class="log-box action-result" id="agentProvisioningPreview">Fill the form, then build the CUCM AXL + PCCE provisioning plan.</pre>
-            <div class="table-wrap"><table><thead><tr><th>Agent</th><th>Team</th><th>Skill</th><th>Prof.</th><th>State</th><th>Source</th><th>Updated</th><th></th></tr></thead><tbody id="agentSkillAssignmentTable"></tbody></table></div>
-        </article>
         <div class="content-grid support-grid">
             <article class="panel wide"><h2>Finesse Teams / Queues</h2><div class="metric-list" id="finesseTeamQueueList"></div></article>
             <article class="panel"><h2>Agent Discovery Notes</h2><div class="metric-list" id="finesseDiscoveryList"></div></article>
