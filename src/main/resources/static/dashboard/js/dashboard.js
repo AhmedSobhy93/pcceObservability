@@ -117,6 +117,14 @@ document.addEventListener("DOMContentLoaded", () => {
         uiState.agentPage += 1;
         renderAgents();
     });
+    qs("#agentCardPrevPage")?.addEventListener("click", () => {
+        uiState.agentPage = Math.max(0, uiState.agentPage - 1);
+        renderAgents();
+    });
+    qs("#agentCardNextPage")?.addEventListener("click", () => {
+        uiState.agentPage += 1;
+        renderAgents();
+    });
     qs("#journeyPrevPage")?.addEventListener("click", () => {
         uiState.journeyPage = Math.max(0, uiState.journeyPage - 1);
         renderCvpJourney();
@@ -139,6 +147,7 @@ document.addEventListener("DOMContentLoaded", () => {
     qs("#saveAlertConfigBtn")?.addEventListener("click", saveAlertConfig);
     qs("#loadInventoryBtn")?.addEventListener("click", loadMachineInventory);
     qs("#saveAgentSkillAssignmentBtn")?.addEventListener("click", saveAgentSkillAssignment);
+    qs("#buildProvisioningPlanBtn")?.addEventListener("click", renderAgentProvisioningPreview);
     qs("#saveIvrFeatureBtn")?.addEventListener("click", saveIvrFeature);
     qs("#planAddTaskBtn")?.addEventListener("click", addPlanTask);
     qs("#planResetBtn")?.addEventListener("click", resetPlanTasks);
@@ -896,15 +905,12 @@ function ivrDispositionClass(code) {
 function renderAgents() {
     renderAgentFilters();
     const agents = filteredAgents();
-    renderAgentVisuals(agents);
     const totalPages = Math.max(1, Math.ceil(agents.length / uiState.agentPageSize));
     uiState.agentPage = Math.min(uiState.agentPage, totalPages - 1);
     const start = uiState.agentPage * uiState.agentPageSize;
     const pageRows = agents.slice(start, start + uiState.agentPageSize);
-    qs("#agentCount").textContent = `${agents.length} rows`;
-    qs("#agentPageInfo").textContent = `Page ${uiState.agentPage + 1}/${totalPages}`;
-    qs("#agentPrevPage").disabled = uiState.agentPage === 0;
-    qs("#agentNextPage").disabled = uiState.agentPage >= totalPages - 1;
+    renderAgentVisuals(agents, pageRows);
+    updateAgentPagers(agents.length, totalPages);
     qs("#agentsTable").innerHTML = pageRows.map(agent => {
         const status = effectiveAgentStatus(agent);
         const occupancy = pick(agent, "occupancy_pct", "occupancyPct");
@@ -926,6 +932,23 @@ function renderAgents() {
     }).join("") || `<tr><td colspan="10">No agents match current filters.</td></tr>`;
 }
 
+function updateAgentPagers(totalRows, totalPages) {
+    qs("#agentCount").textContent = `${totalRows} agents | 10 per page`;
+    const label = `Page ${uiState.agentPage + 1}/${totalPages}`;
+    ["#agentPageInfo", "#agentCardPageInfo"].forEach(selector => {
+        const element = qs(selector);
+        if (element) element.textContent = label;
+    });
+    ["#agentPrevPage", "#agentCardPrevPage"].forEach(selector => {
+        const button = qs(selector);
+        if (button) button.disabled = uiState.agentPage === 0;
+    });
+    ["#agentNextPage", "#agentCardNextPage"].forEach(selector => {
+        const button = qs(selector);
+        if (button) button.disabled = uiState.agentPage >= totalPages - 1;
+    });
+}
+
 function filteredAgents() {
     const selectedTeams = splitCsv(firstFilterValue("#agentTeamInput"));
     const statusFilter = firstFilterValue("#agentStatusFilter").toLowerCase();
@@ -944,12 +967,8 @@ function filteredAgents() {
         });
 }
 
-function renderAgentVisuals(agents) {
+function renderAgentVisuals(agents, pageRows) {
     renderAgentKpis(agents);
-    const totalPages = Math.max(1, Math.ceil(agents.length / uiState.agentPageSize));
-    uiState.agentPage = Math.min(uiState.agentPage, totalPages - 1);
-    const start = uiState.agentPage * uiState.agentPageSize;
-    const pageRows = agents.slice(start, start + uiState.agentPageSize);
     renderAgentCards(pageRows);
     renderAgentCharts(pageRows);
     renderAgentApiWorkspace();
@@ -1020,12 +1039,23 @@ function renderAgentCards(agents) {
 function renderAgentCharts(agents) {
     const top = agents;
     const labels = top.map(shortAgentName);
-    drawStackedBarChart(qs("#agentAhtChart"), labels, [
+    const ahtSeries = [
         { label: "Talk", color: "#2ed3c2", values: top.map(agent => num(pick(agent, "avg_talk_time", "avgTalkTime")) || num(pick(agent, "avg_handle_time", "avgHandleTime"))) },
         { label: "Hold", color: "#f4a51c", values: top.map(agent => num(pick(agent, "avg_hold_time", "avgHoldTime"))) },
         { label: "Wrap", color: "#3d82f6", values: top.map(agent => num(pick(agent, "avg_wrap_time", "avgWrapTime"))) }
-    ]);
-    drawHorizontalBarChart(qs("#agentOccupancyChart"), labels, top.map(agent => pick(agent, "occupancy_pct", "occupancyPct") ?? derivedAgentOccupancy(agent)), colors);
+    ];
+    const ahtHasData = ahtSeries.some(series => series.values.some(value => num(value) > 0));
+    if (ahtHasData) {
+        drawStackedBarChart(qs("#agentAhtChart"), labels, ahtSeries);
+    } else {
+        drawEmptyChart(qs("#agentAhtChart"), "AHT data was not returned for the selected period");
+    }
+    const occupancyValues = top.map(agent => effectiveOccupancy(agent));
+    if (occupancyValues.some(value => value !== null && value > 0)) {
+        drawHorizontalBarChart(qs("#agentOccupancyChart"), labels, occupancyValues.map(value => value ?? 0), colors);
+    } else {
+        drawEmptyChart(qs("#agentOccupancyChart"), "Occupancy was not returned by HDS/Finesse for this view");
+    }
 }
 
 function renderAgentApiWorkspace() {
@@ -1058,7 +1088,18 @@ function renderRunningAgentCalls() {
             ${call.participants.map(participant => `<span>${escapeHtml(participant)}</span>`).join("") || "<span>No participant detail</span>"}
         </div>
         <details><summary>Raw Finesse Dialog</summary><pre class="mini-json">${escapeHtml(call.raw || "")}</pre></details>
-    </article>`).join("") || `<div class="empty-state"><strong>No running calls found</strong><span>Finesse Dialogs returned no active dialog details for discovered users.</span></div>`;
+    </article>`).join("") || `<div class="empty-state"><strong>No running calls found</strong><span>${escapeHtml(finesseDialogEmptyReason())}</span></div>`;
+}
+
+function finesseDialogEmptyReason() {
+    if (!state.finesseDialogs.length) return "No Finesse dialog probes returned. Check Finesse credentials and discovered users.";
+    const ok = state.finesseDialogs.filter(item => num(pick(item, "status_code", "statusCode")) >= 200 && num(pick(item, "status_code", "statusCode")) < 300).length;
+    const samples = state.finesseDialogs.slice(0, 3)
+        .map(item => `${pick(item, "name")}: HTTP ${pick(item, "status_code", "statusCode") || 0} ${snippet(pick(item, "body"), 80)}`)
+        .join(" | ");
+    return ok
+        ? `Dialog probes returned but no <Dialog> blocks parsed. Samples: ${samples}`
+        : `Dialog probes did not return successful dialog XML. Samples: ${samples}`;
 }
 
 function apiWorkspaceCard(title, value, method, detail) {
@@ -1096,25 +1137,25 @@ function parsedFinesseDialogs() {
         const userId = String(pick(item, "name") || "").replace(/^Dialogs\s+/i, "");
         const body = String(pick(item, "body") || "");
         splitXmlBlocks(body, "Dialog").forEach(block => {
-            const media = firstXmlBlock(block, "mediaProperties") || block;
-            const participants = splitXmlBlocks(block, "Participant").map(participant =>
+            const media = firstXmlBlock(block, "mediaProperties") || firstXmlBlock(block, "MediaProperties") || block;
+            const participants = [...splitXmlBlocks(block, "Participant"), ...splitXmlBlocks(block, "participant")].map(participant =>
                 [
-                    xmlTag(participant, "mediaAddress"),
+                    xmlAnyTag(participant, "mediaAddress", "mediaAddressDisplayName", "address", "fromAddress"),
                     xmlTag(participant, "state"),
                     xmlTag(participant, "stateCause")
                 ].filter(Boolean).join(" - "));
             dialogs.push({
                 userId,
                 agentId: userId,
-                dialogId: xmlTag(block, "id"),
-                state: xmlTag(block, "state"),
-                mediaType: xmlTag(block, "mediaType"),
-                fromAddress: xmlTag(media, "fromAddress") || xmlTag(media, "fromAddressDisplayName"),
-                toAddress: xmlTag(media, "toAddress") || xmlTag(media, "DNIS"),
-                ani: xmlTag(media, "ANI"),
-                dnis: xmlTag(media, "DNIS"),
-                callType: xmlTag(media, "callTypeName") || xmlTag(media, "callTypeId"),
-                callKey: xmlTag(media, "callKeyCallId") || xmlTag(media, "callKeyPrefix"),
+                dialogId: xmlAnyTag(block, "id", "dialogId"),
+                state: xmlAnyTag(block, "state", "stateName"),
+                mediaType: xmlAnyTag(block, "mediaType", "mediaTypeName"),
+                fromAddress: xmlAnyTag(media, "fromAddress", "fromAddressDisplayName", "ANI", "ani"),
+                toAddress: xmlAnyTag(media, "toAddress", "toAddressDisplayName", "DNIS", "dnis"),
+                ani: xmlAnyTag(media, "ANI", "ani", "fromAddress"),
+                dnis: xmlAnyTag(media, "DNIS", "dnis", "toAddress"),
+                callType: xmlAnyTag(media, "callTypeName", "callTypeId", "callVariable1"),
+                callKey: xmlAnyTag(media, "callKeyCallId", "callKeyPrefix", "callGUID", "callGuid"),
                 participants,
                 raw: block
             });
@@ -1158,6 +1199,14 @@ function xmlTags(xml, tagName) {
     return values;
 }
 
+function xmlAnyTag(xml, ...tagNames) {
+    for (const tagName of tagNames) {
+        const value = xmlTag(xml, tagName);
+        if (value) return value;
+    }
+    return "";
+}
+
 function stripXml(value) {
     return String(value || "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
 }
@@ -1185,8 +1234,16 @@ function miniBar(value) {
 }
 
 function derivedAgentOccupancy(agent) {
-    const calls = num(pick(agent, "calls_handled", "callsHandled"));
-    return Math.min(100, calls * 5);
+    const status = effectiveAgentStatus(agent);
+    if (status === "on_call") return 100;
+    if (activeDialogsForAgent(agent).length > 0) return 100;
+    return null;
+}
+
+function effectiveOccupancy(agent) {
+    const value = pick(agent, "occupancy_pct", "occupancyPct");
+    if (value !== null && value !== undefined && num(value) > 0) return num(value);
+    return derivedAgentOccupancy(agent);
 }
 
 function effectiveAgentStatus(agent) {
@@ -2564,6 +2621,63 @@ function renderAgentProvisioningGuide() {
     ].join("");
 }
 
+function renderAgentProvisioningPreview() {
+    const baseUsername = firstFilterValue("#assignmentBaseUsername") || firstFilterValue("#assignmentAgentId");
+    const domain = "dev.mdi";
+    const pcceUserName = baseUsername && baseUsername.includes("@") ? baseUsername : `${baseUsername || "{baseUsername}"}@${domain}`;
+    const cucmUserId = (baseUsername || "{baseUsername}").replace(/@.*/, "");
+    const firstName = firstFilterValue("#assignmentFirstName");
+    const lastName = firstFilterValue("#assignmentLastName");
+    const fullName = [firstName, lastName].filter(Boolean).join(" ") || firstFilterValue("#assignmentAgentName") || "{fullName}";
+    const dn = firstFilterValue("#assignmentDn") || "auto 50000-50999";
+    const deviceName = dn.startsWith("auto") ? "CSF{allocatedDn}" : `CSF${dn}`;
+    const plan = {
+        identity: {
+            cucmUserId,
+            pcceUserName,
+            fullName,
+            mail: firstFilterValue("#assignmentMail") || pcceUserName,
+            dn,
+            deviceName
+        },
+        control: {
+            userMode: firstFilterValue("#assignmentUserMode"),
+            agentType: firstFilterValue("#assignmentAgentType"),
+            autoRollbackOnError: firstFilterValue("#assignmentRollback") === "true"
+        },
+        cucmAxlSequence: [
+            "getCCMVersion auth test",
+            "Find next free DN in 50000-50999 when DN is auto",
+            "addUser only when userMode=new",
+            "addLine with route partition and line CSS",
+            "addPhone CSF/Jabber with line appearance",
+            "updateUser with primary extension, device association, service profile"
+        ],
+        pcceSequence: [
+            "Fetch all teams, skills, desk settings and agents with resultsPerPage=200 pagination",
+            "Find existing agent by pcceUserName",
+            "If existing: PUT current agent with changeStamp, team, skills and desk settings",
+            "If new agent: POST agent or supervisor",
+            "If supervisor: attach supervisedTeamNames",
+            "Verify final PCCE agent and Finesse visibility"
+        ],
+        assignments: {
+            teamName: firstFilterValue("#assignmentTeam") || "{teamName}",
+            skillGroupNames: splitCsv(firstFilterValue("#assignmentSkill")),
+            supervisedTeamNames: splitCsv(firstFilterValue("#assignmentSupervisedTeams")),
+            deskSettingsName: firstFilterValue("#assignmentDeskSettings") || "Default_Agent_Desk_Settings",
+            proficiency: firstFilterValue("#assignmentProficiency") || null
+        },
+        rollback: [
+            "Delete PCCE agent/supervisor when created in this run",
+            "Remove CSF phone when created",
+            "Remove line when created",
+            "Remove CUCM user only for new non-LDAP users"
+        ]
+    };
+    qs("#agentProvisioningPreview").textContent = JSON.stringify(plan, null, 2);
+}
+
 function renderAgentSkillAssignments() {
     const table = qs("#agentSkillAssignmentTable");
     if (!table) return;
@@ -2604,6 +2718,11 @@ function formatDateTime(value) {
 }
 
 async function saveAgentSkillAssignment() {
+    renderAgentProvisioningPreview();
+    const provisioningContext = qs("#agentProvisioningPreview")?.textContent || "";
+    const notes = [qs("#assignmentNotes")?.value, provisioningContext && `Provisioning plan: ${provisioningContext}`]
+        .filter(Boolean)
+        .join("\n\n");
     const body = {
         agentId: qs("#assignmentAgentId")?.value,
         agentName: qs("#assignmentAgentName")?.value,
@@ -2612,7 +2731,7 @@ async function saveAgentSkillAssignment() {
         proficiency: qs("#assignmentProficiency")?.value ? Number(qs("#assignmentProficiency").value) : null,
         enabled: qs("#assignmentEnabled")?.value === "true",
         source: "APP",
-        notes: qs("#assignmentNotes")?.value
+        notes
     };
     await api("/api/v1/workforce-management/agent-skill-assignments", { method: "POST", body: JSON.stringify(body), timeoutMs: 8000 });
     await safeLoad("agentSkillAssignments", "/api/v1/workforce-management/agent-skill-assignments", [], { timeoutMs: 8000 });
@@ -3232,6 +3351,18 @@ function drawHorizontalBarChart(canvas, labels, values, palette) {
         const x = pad.left + mark / 100 * (width - pad.left - pad.right);
         ctx.fillText(String(mark), x - 5, height - 10);
     });
+}
+
+function drawEmptyChart(canvas, message) {
+    if (!canvas) return;
+    const ctx = setupCanvas(canvas);
+    const { width, height } = canvas.getBoundingClientRect();
+    ctx.clearRect(0, 0, width, height);
+    ctx.fillStyle = "#87a1c2";
+    ctx.font = "16px Segoe UI";
+    ctx.textAlign = "center";
+    ctx.fillText(message, width / 2, height / 2);
+    ctx.textAlign = "left";
 }
 
 function drawStackedBarChart(canvas, labels, series) {
