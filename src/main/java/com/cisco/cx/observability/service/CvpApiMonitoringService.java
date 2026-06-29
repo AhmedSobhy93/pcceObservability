@@ -18,6 +18,7 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Base64;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import javax.net.ssl.HostnameVerifier;
@@ -69,7 +70,7 @@ public class CvpApiMonitoringService {
         if (api == null || api.getActions() == null) {
             return List.of();
         }
-        return api.getActions().stream().map(this::toView).toList();
+        return mergedActions(api).stream().map(this::toView).toList();
     }
 
     public List<ApiMonitorStatus> status() {
@@ -82,7 +83,7 @@ public class CvpApiMonitoringService {
 
     public ApiActionResult execute(String id, String body, Map<String, String> pathParams, Map<String, String> queryParams) {
         PcceProperties.CvpApi api = pcceProperties.getCvpApi();
-        ApiAction action = api.getActions().stream()
+        ApiAction action = mergedActions(api).stream()
                 .filter(candidate -> id.equalsIgnoreCase(candidate.getId()))
                 .findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("Unknown CVP API action: " + id));
@@ -93,7 +94,7 @@ public class CvpApiMonitoringService {
         long start = System.nanoTime();
         try {
             boolean requestHasBody = hasBody(action.getMethod()) && body != null && !body.isBlank();
-            HttpURLConnection connection = open(api, action.getMethod(), target, requestHasBody ? action.getContentType() : null);
+            HttpURLConnection connection = open(api, action.getMethod(), target, action.getContentType());
             if (requestHasBody) {
                 connection.setDoOutput(true);
                 try (OutputStream outputStream = connection.getOutputStream()) {
@@ -104,7 +105,10 @@ public class CvpApiMonitoringService {
             String responseBody = readBody(connection, statusCode);
             return new ApiActionResult(id, action.getMethod(), target, statusCode, elapsedMs(start), responseBody, Instant.now());
         } catch (IOException ex) {
-            throw new IllegalStateException("CVP API action failed: " + ex.getMessage(), ex);
+            return new ApiActionResult(id, action.getMethod(), target, 0, elapsedMs(start),
+                    "CVP API action failed before HTTP response: " + ex.getMessage()
+                            + ". Check CVP API base URL, CVP API enablement, credentials, certificates, and endpoint exposure.",
+                    Instant.now());
         }
     }
 
@@ -185,9 +189,17 @@ public class CvpApiMonitoringService {
         String resolved = path.startsWith("http://") || path.startsWith("https://")
                 ? path
                 : StringUtils.hasText(api.getBaseUrl())
-                        ? URI.create(api.getBaseUrl().replaceAll("/+$", "") + "/" + path.replaceAll("^/+", "")).toString()
+                        ? URI.create(normalizeBaseUrl(api.getBaseUrl()).replaceAll("/+$", "") + "/" + path.replaceAll("^/+", "")).toString()
                         : path;
         return appendQuery(resolved, queryParams);
+    }
+
+    private String normalizeBaseUrl(String baseUrl) {
+        String value = baseUrl == null ? "" : baseUrl.trim();
+        if (!StringUtils.hasText(value) || value.startsWith("http://") || value.startsWith("https://")) {
+            return value;
+        }
+        return "https://" + value;
     }
 
     private String applyPathParams(String path, Map<String, String> pathParams) {
@@ -198,7 +210,42 @@ public class CvpApiMonitoringService {
         for (Map.Entry<String, String> entry : pathParams.entrySet()) {
             resolved = resolved.replace("{" + entry.getKey() + "}", encode(entry.getValue()));
         }
+        if (resolved.matches(".*\\{[^/]+}.*")) {
+            throw new IllegalArgumentException("Missing path params for API path: " + resolved);
+        }
         return resolved;
+    }
+
+    private List<ApiAction> mergedActions(PcceProperties.CvpApi api) {
+        Map<String, ApiAction> actions = new LinkedHashMap<>();
+        if (api.getActions() != null) {
+            api.getActions().forEach(action -> actions.put(action.getId().toLowerCase(), action));
+        }
+        defaultReadActions().forEach(action -> actions.put(action.getId().toLowerCase(), action));
+        return List.copyOf(actions.values());
+    }
+
+    private List<ApiAction> defaultReadActions() {
+        return List.of(
+                action("cvp.diagnostics.get", "Diagnostics and Health", "Get CVP diagnostics", "GET", "/cvp/diag"),
+                action("cvp.apps.list", "VXML Application Management", "List VXML applications", "GET", "/cvp/api/applications"),
+                action("cvp.media.list", "Media File Management", "List media files", "GET", "/cvp/api/media"),
+                action("cvp.syslog.get", "Operations Configuration", "Get Syslog configuration", "GET", "/cvp/api/syslog"),
+                action("cvp.snmp.get", "Operations Configuration", "Get SNMP configuration", "GET", "/cvp/api/snmp"),
+                action("cvp.vvb.list", "VVB and Voice Browser", "List VVB services", "GET", "/cvp/api/vvb"));
+    }
+
+    private ApiAction action(String id, String category, String name, String method, String path) {
+        ApiAction action = new ApiAction();
+        action.setId(id);
+        action.setCategory(category);
+        action.setName(name);
+        action.setMethod(method);
+        action.setPath(path);
+        action.setAdminOnly(false);
+        action.setEnabled(true);
+        action.setContentType("application/xml");
+        return action;
     }
 
     private String appendQuery(String target, Map<String, String> queryParams) {

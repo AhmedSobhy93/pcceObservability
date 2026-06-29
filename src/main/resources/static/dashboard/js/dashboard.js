@@ -2131,6 +2131,7 @@ function renderIntegrationCards(items, emptyTitle) {
 }
 
 async function executePcceAction(id) {
+    prepareApiActionForm("pcce", id);
     qs("#pcceActionResult").textContent = `Running ${id}...`;
     try {
         const bodyText = qs("#pcceActionBody").value.trim();
@@ -2140,7 +2141,7 @@ async function executePcceAction(id) {
             method: "POST",
             body: JSON.stringify({ body: bodyText || null, pathParams, queryParams })
         });
-        qs("#pcceActionResult").textContent = JSON.stringify(result, null, 2);
+        qs("#pcceActionResult").textContent = formatApiActionResult(result);
         if (id === "machineInventory.list") {
             state.machineInventory = parseMachineInventory(pick(result, "body") || "");
             renderMachineInventory();
@@ -2152,6 +2153,7 @@ async function executePcceAction(id) {
 }
 
 async function executeCvpAction(id) {
+    prepareApiActionForm("cvp", id);
     qs("#cvpActionResult").textContent = `Running ${id}...`;
     try {
         const bodyText = qs("#cvpActionBody").value.trim();
@@ -2161,10 +2163,80 @@ async function executeCvpAction(id) {
             method: "POST",
             body: JSON.stringify({ body: bodyText || null, pathParams, queryParams })
         });
-        qs("#cvpActionResult").textContent = JSON.stringify(result, null, 2);
+        qs("#cvpActionResult").textContent = formatApiActionResult(result);
     } catch (error) {
         qs("#cvpActionResult").textContent = error.message;
     }
+}
+
+function prepareApiActionForm(scope, id) {
+    const actions = scope === "pcce" ? state.pcceActions : state.cvpActions;
+    const action = actions.find(item => String(pick(item, "id")).toLowerCase() === String(id).toLowerCase());
+    if (!action) return;
+    const path = pick(action, "path") || "";
+    const pathTemplate = Object.fromEntries([...path.matchAll(/\{([^}]+)}/g)].map(match => [match[1], ""]));
+    const queryTemplate = defaultQueryParamsForAction(scope, id);
+    const pathBox = qs(`#${scope}PathParams`);
+    const queryBox = qs(`#${scope}QueryParams`);
+    const bodyBox = qs(`#${scope}ActionBody`);
+    if (pathBox) {
+        pathBox.placeholder = `Path params for ${path}: ${JSON.stringify(pathTemplate)}`;
+        if (!pathBox.value.trim()) pathBox.value = JSON.stringify(pathTemplate, null, 2);
+    }
+    if (queryBox) {
+        queryBox.placeholder = `Query params for ${id}: ${JSON.stringify(queryTemplate)}`;
+        if (!queryBox.value.trim()) queryBox.value = JSON.stringify(queryTemplate, null, 2);
+    }
+    if (bodyBox) {
+        const method = String(pick(action, "method") || "GET").toUpperCase();
+        bodyBox.placeholder = ["POST", "PUT", "PATCH"].includes(method)
+            ? `Payload for ${method} ${path}`
+            : "No body needed for GET/DELETE actions";
+    }
+}
+
+function defaultQueryParamsForAction(scope, id) {
+    if (scope === "pcce") {
+        if (id === "machineInventory.list") return { resultsPerPage: "100", time: String(Date.now()) };
+        if (id.endsWith(".list") || id === "users.list") return { resultsPerPage: "100" };
+    }
+    return {};
+}
+
+function formatApiActionResult(result) {
+    const status = pick(result, "status_code", "statusCode");
+    const body = String(pick(result, "body") || "");
+    const lines = [
+        `Action: ${pick(result, "id")}`,
+        `Method: ${pick(result, "method")}`,
+        `Status: ${status || 0}`,
+        `Latency: ${pick(result, "latency_ms", "latencyMs") || 0} ms`,
+        `Target: ${pick(result, "target")}`,
+        `Executed: ${pick(result, "executed_at", "executedAt")}`,
+        "",
+        "Body:",
+        prettyBody(body)
+    ];
+    return lines.join("\n");
+}
+
+function prettyBody(body) {
+    const text = String(body || "").trim();
+    if (!text) return "(empty)";
+    if (text.startsWith("{") || text.startsWith("[")) {
+        try {
+            return JSON.stringify(JSON.parse(text), null, 2);
+        } catch {
+            return text;
+        }
+    }
+    if (text.startsWith("<")) {
+        return text
+            .replace(/></g, ">\n<")
+            .replace(/\n\s*\n/g, "\n")
+            .slice(0, 12000);
+    }
+    return text.slice(0, 12000);
 }
 
 async function loadMachineInventory() {
