@@ -149,6 +149,7 @@ pcce:
     api-key: ${PCCE_API_KEY:}
     timeout: 10s
     trust-all-certificates: ${PCCE_API_TRUST_ALL_CERTIFICATES:false}
+
     monitors:
       - name: Users
         category: User Configuration and Management
@@ -299,6 +300,32 @@ pcce:
         admin-only: true
         method: PUT
         path: /unifiedconfig/config/businesshour/{id}
+
+  cucm-axl:
+    enabled: ${CUCM_AXL_ENABLED:false}
+    host: ${CUCM_AXL_HOST:vssitcucm01.dev.mdi}
+    username: ${CUCM_AXL_USERNAME:}
+    password: ${CUCM_AXL_PASSWORD:}
+    version: ${CUCM_AXL_VERSION:15.0}
+    timeout: ${CUCM_AXL_TIMEOUT:15s}
+    trust-all-certificates: ${CUCM_AXL_TRUST_ALL_CERTIFICATES:false}
+    dn-start: ${CUCM_AXL_DN_START:50000}
+    dn-end: ${CUCM_AXL_DN_END:50999}
+    device-pool: ${CUCM_AXL_DEVICE_POOL:}
+    phone-template: ${CUCM_AXL_PHONE_TEMPLATE:}
+    common-phone-profile: ${CUCM_AXL_COMMON_PHONE_PROFILE:}
+    location: ${CUCM_AXL_LOCATION:Hub_None}
+    security-profile: ${CUCM_AXL_SECURITY_PROFILE:}
+    sip-profile: ${CUCM_AXL_SIP_PROFILE:}
+    route-partition: ${CUCM_AXL_ROUTE_PARTITION:}
+    line-css: ${CUCM_AXL_LINE_CSS:}
+    service-profile: ${CUCM_AXL_SERVICE_PROFILE:}
+
+  agent-provisioning:
+    execution-enabled: ${AGENT_PROVISIONING_EXECUTION_ENABLED:false}
+    identity-domain: ${AGENT_PROVISIONING_DOMAIN:dev.mdi}
+    results-per-page: ${AGENT_PROVISIONING_RESULTS_PER_PAGE:200}
+    default-dry-run: ${AGENT_PROVISIONING_DEFAULT_DRY_RUN:true}
 
   cvp-api:
     enabled: ${CVP_API_ENABLED:false}

@@ -50,6 +50,8 @@ const state = {
     adminConfigReadiness: [],
     notificationSettings: null,
     agentSkillAssignments: [],
+    provisioningCatalog: null,
+    provisioningPlan: null,
     ivrFeatures: [],
     projectTasks: []
 };
@@ -58,6 +60,7 @@ const pages = {
     overview: ["Dashboard Overview", "Cisco PCCE 12.6.2 - Real-time Contact Center Analytics"],
     business: ["Business Metrics", "Service level, handle time, IVR containment, and contact center KPIs"],
     agents: ["Agent Performance", "Workforce team and agent productivity view"],
+    agentSkills: ["Agent & Skills Management", "CUCM AXL and PCCE API provisioning, teams, skills, and SSO/local agents"],
     calls: ["Call Analytics", "Dropped calls, queue behavior, and skill group distribution"],
     system: ["System Health", "PCCE, CVP, CUIC, Finesse, PG, CTI, and gateway status"],
     eleveo: ["Eleveo QM & Recording", "Grafana monitoring for quality management and recording platforms"],
@@ -148,6 +151,11 @@ document.addEventListener("DOMContentLoaded", () => {
     qs("#loadInventoryBtn")?.addEventListener("click", loadMachineInventory);
     qs("#saveAgentSkillAssignmentBtn")?.addEventListener("click", saveAgentSkillAssignment);
     qs("#buildProvisioningPlanBtn")?.addEventListener("click", renderAgentProvisioningPreview);
+    qs("#loadAgentSkillCatalogBtn")?.addEventListener("click", loadAgentSkillCatalog);
+    qs("#asmBuildPlanBtn")?.addEventListener("click", () => submitAgentSkillPlan("plan"));
+    qs("#asmDryRunBtn")?.addEventListener("click", () => submitAgentSkillPlan("dryRun"));
+    qs("#asmSaveLocalBtn")?.addEventListener("click", saveAgentSkillDesiredState);
+    qs("#asmExecuteBtn")?.addEventListener("click", () => submitAgentSkillPlan("execute"));
     qs("#saveIvrFeatureBtn")?.addEventListener("click", saveIvrFeature);
     qs("#planAddTaskBtn")?.addEventListener("click", addPlanTask);
     qs("#planResetBtn")?.addEventListener("click", resetPlanTasks);
@@ -446,6 +454,7 @@ async function refresh() {
         const wantsOverview = activeView === "overview";
         const wantsBusiness = activeView === "business";
         const wantsAgents = activeView === "agents";
+        const wantsAgentSkills = activeView === "agentSkills";
         const wantsCalls = activeView === "calls";
         const wantsSystem = activeView === "system";
         const wantsIntegration = activeView === "integration";
@@ -488,6 +497,11 @@ async function refresh() {
                 safeLoad("agents", `/api/v1/agents/stats?${agentParams()}`, [], { timeoutMs: 15000 }),
                 safeLoad("agentSkillAssignments", "/api/v1/workforce-management/agent-skill-assignments", state.agentSkillAssignments, { timeoutMs: 8000 }));
     }
+    if (wantsAgentSkills) {
+        coreLoads.push(
+                safeLoad("provisioningCatalog", "/api/v1/agent-skill-management/catalog", state.provisioningCatalog, { timeoutMs: 15000 }),
+                safeLoad("agentSkillAssignments", "/api/v1/workforce-management/agent-skill-assignments", state.agentSkillAssignments, { timeoutMs: 8000 }));
+    }
     if (wantsSystem) {
         coreLoads.push(safeLoad("serverMetrics", "/api/v1/components/server-metrics", [], { timeoutMs: 8000 }));
     }
@@ -526,7 +540,7 @@ async function refresh() {
                 safeLoad("cvpActions", "/api/v1/cvp-api/actions", state.cvpActions),
                 safeLoad("ivrFeatures", "/api/v1/workforce-management/ivr-features", state.ivrFeatures));
     }
-    if (wantsAgents || wantsIntegration || wantsSystem) {
+    if (wantsAgents || wantsAgentSkills || wantsIntegration || wantsSystem) {
         supportLoads.push(
                 safeLoad("finesseCapabilities", "/api/v1/finesse/capabilities", state.finesseCapabilities),
                 safeLoad("finesseSystem", "/api/v1/finesse/system", state.finesseSystem, { timeoutMs: 12000 }),
@@ -664,6 +678,7 @@ function renderAll(errors) {
     safeRender("charts", renderCharts, errors);
     safeRender("business", renderBusiness, errors);
     safeRender("agents", renderAgents, errors);
+    safeRender("agentSkills", renderAgentSkillManagement, errors);
     safeRender("management", renderManagementControls, errors);
     safeRender("finesse", renderFinesse, errors);
     safeRender("drops", renderDrops, errors);
@@ -2603,6 +2618,152 @@ function taskChip(task) {
     return `<span class="work-chip ${priorityClass(task.priority)}">${escapeHtml(task.task)} <small>${escapeHtml(task.topic)}</small></span>`;
 }
 
+function renderAgentSkillManagement() {
+    const catalog = state.provisioningCatalog || {};
+    const agents = pick(catalog, "agents") || [];
+    const teams = pick(catalog, "teams") || [];
+    const skills = pick(catalog, "skill_groups", "skillGroups") || [];
+    const deskSettings = pick(catalog, "desk_settings", "deskSettings") || [];
+    const executionEnabled = Boolean(pick(catalog, "execution_enabled", "executionEnabled"));
+    const warnings = pick(catalog, "warnings") || [];
+    const kpis = [
+        agentKpi("PCCE Agents", agents.length, "catalog"),
+        agentKpi("Teams", teams.length, "agent teams"),
+        agentKpi("Skill Groups", skills.length, "routing skills"),
+        agentKpi("Desk Settings", deskSettings.length, "agent desktop"),
+        agentKpi("CUCM AXL", pick(catalog, "cucm_axl_enabled", "cucmAxlEnabled") ? "Enabled" : "Disabled", "user, DN, CSF phone"),
+        agentKpi("Execution", executionEnabled ? "Live" : "Dry Run", executionEnabled ? "write actions enabled" : "protected")
+    ];
+    qs("#agentSkillCatalogKpis").innerHTML = kpis.join("");
+    qs("#agentSkillExecutionMode").textContent = executionEnabled
+            ? "Live execution enabled - use approved change window"
+            : "Dry-run protected - set AGENT_PROVISIONING_EXECUTION_ENABLED=true for writes";
+    qs("#asmExecuteBtn").disabled = !executionEnabled;
+    fillSelect("#asmTeam", teams, "Select team");
+    fillSelect("#asmDeskSettings", deskSettings, "Select desk settings");
+    renderAgentSkillPlan(state.provisioningPlan, warnings);
+    renderAsmAssignments();
+    refreshMultiSelects();
+}
+
+function fillSelect(selector, rows, emptyLabel) {
+    const select = qs(selector);
+    if (!select) return;
+    const current = select.value;
+    const options = [`<option value="">${escapeHtml(emptyLabel)}</option>`].concat((rows || []).map(row => {
+        const value = pick(row, "name", "id") || "";
+        const label = [pick(row, "name"), pick(row, "id")].filter(Boolean).join(" - ");
+        return `<option value="${escapeHtml(value)}">${escapeHtml(label || value)}</option>`;
+    }));
+    select.innerHTML = options.join("");
+    if (current && Array.from(select.options).some(option => option.value === current)) {
+        select.value = current;
+    }
+}
+
+function renderAgentSkillPlan(plan, catalogWarnings = []) {
+    const steps = pick(plan, "steps") || [];
+    const warnings = [...catalogWarnings, ...(pick(plan, "warnings") || [])].filter(Boolean);
+    qs("#asmPlanSummary").textContent = plan
+            ? `${escapeHtml(pick(plan, "pcce_user_name", "pcceUserName") || "")} | ${steps.length} steps | ${pick(plan, "dry_run", "dryRun") ? "dry run" : "live"}`
+            : warnings.length ? warnings.join(" | ") : "No plan built";
+    qs("#asmPlanTable").innerHTML = steps.map(step => {
+        const status = String(pick(step, "status") || "SKIPPED").toLowerCase();
+        return `<tr>
+            <td>${fmt(pick(step, "order"))}</td>
+            <td>${escapeHtml(pick(step, "system") || "")}</td>
+            <td><strong>${escapeHtml(pick(step, "action") || "")}</strong><span class="subline">${escapeHtml(pick(step, "target") || "")}</span></td>
+            <td>${escapeHtml(pick(step, "method") || "")}</td>
+            <td><span class="badge ${status === "ok" ? "up" : status === "failed" ? "down" : "warn"}">${escapeHtml(pick(step, "status") || "")}</span></td>
+            <td>${escapeHtml(pick(step, "detail") || "")}</td>
+        </tr>`;
+    }).join("") || `<tr><td colspan="6">No provisioning plan yet.</td></tr>`;
+    const preview = steps
+            .filter(step => pick(step, "payload_preview", "payloadPreview"))
+            .map(step => `# ${pick(step, "system")} - ${pick(step, "action")}\n${pick(step, "payload_preview", "payloadPreview")}`)
+            .join("\n\n");
+    qs("#asmPayloadPreview").textContent = preview || (warnings.join("\n") || "Load catalog and build a plan.");
+}
+
+function renderAsmAssignments() {
+    const table = qs("#asmAssignmentTable");
+    if (!table) return;
+    table.innerHTML = (state.agentSkillAssignments || []).map(item => `
+        <tr>
+            <td><strong>${escapeHtml(pick(item, "agent_id", "agentId") || "")}</strong><span class="subline">${escapeHtml(pick(item, "agent_name", "agentName") || "")}</span></td>
+            <td>${escapeHtml(pick(item, "team_name", "teamName") || "")}</td>
+            <td>${escapeHtml(pick(item, "skill_group", "skillGroup") || "")}</td>
+            <td>${escapeHtml(String(pick(item, "proficiency") ?? ""))}</td>
+            <td><span class="badge ${pick(item, "enabled") ? "up" : "down"}">${pick(item, "enabled") ? "enabled" : "disabled"}</span></td>
+            <td>${escapeHtml(pick(item, "source") || "APP")}</td>
+            <td>${escapeHtml(formatDateTime(pick(item, "updated_at", "updatedAt")))}</td>
+            <td><button class="tiny-button danger" type="button" onclick="deleteAgentSkillAssignment(${Number(pick(item, "id"))})">Remove</button></td>
+        </tr>
+    `).join("") || `<tr><td colspan="8">No local desired-state assignments saved yet.</td></tr>`;
+}
+
+async function loadAgentSkillCatalog() {
+    const error = await safeLoad("provisioningCatalog", "/api/v1/agent-skill-management/catalog", state.provisioningCatalog, { timeoutMs: 15000 });
+    if (error) {
+        setStatus([{ text: error, level: "warn" }]);
+    }
+    renderAgentSkillManagement();
+}
+
+async function submitAgentSkillPlan(mode) {
+    const body = agentSkillManagementRequest();
+    const endpoint = mode === "plan"
+            ? "/api/v1/agent-skill-management/plan"
+            : `/api/v1/agent-skill-management/execute?dryRun=${mode !== "execute"}`;
+    state.provisioningPlan = await api(endpoint, { method: "POST", body: JSON.stringify(body), timeoutMs: mode === "execute" ? 30000 : 15000 });
+    renderAgentSkillManagement();
+}
+
+async function saveAgentSkillDesiredState() {
+    const request = agentSkillManagementRequest();
+    const skills = request.skillGroupNames.length ? request.skillGroupNames : [""];
+    for (const skill of skills) {
+        await api("/api/v1/workforce-management/agent-skill-assignments", {
+            method: "POST",
+            body: JSON.stringify({
+                agentId: request.agentId || request.baseUsername,
+                agentName: request.displayName || [request.firstName, request.lastName].filter(Boolean).join(" "),
+                teamName: request.teamName,
+                skillGroup: skill,
+                proficiency: request.proficiency,
+                enabled: true,
+                source: request.localUser ? "LOCAL_CUCM" : "LDAP_SSO",
+                notes: request.notes
+            }),
+            timeoutMs: 8000
+        });
+    }
+    await safeLoad("agentSkillAssignments", "/api/v1/workforce-management/agent-skill-assignments", [], { timeoutMs: 8000 });
+    renderAgentSkillManagement();
+}
+
+function agentSkillManagementRequest() {
+    return {
+        baseUsername: qs("#asmBaseUsername")?.value,
+        firstName: qs("#asmFirstName")?.value,
+        lastName: qs("#asmLastName")?.value,
+        displayName: qs("#asmDisplayName")?.value,
+        mail: qs("#asmMail")?.value,
+        agentId: qs("#asmAgentId")?.value,
+        dn: qs("#asmDn")?.value,
+        teamName: qs("#asmTeam")?.value,
+        skillGroupNames: splitCsv(qs("#asmSkillGroups")?.value),
+        supervisedTeamNames: splitCsv(qs("#asmSupervisedTeams")?.value),
+        deskSettingsName: qs("#asmDeskSettings")?.value,
+        proficiency: qs("#asmProficiency")?.value ? Number(qs("#asmProficiency").value) : null,
+        userMode: qs("#asmUserMode")?.value,
+        agentType: qs("#asmAgentType")?.value,
+        autoRollbackOnError: qs("#asmRollback")?.value === "true",
+        localUser: qs("#asmUserMode")?.value === "new",
+        notes: qs("#asmNotes")?.value
+    };
+}
+
 function renderManagementControls() {
     renderAgentSkillAssignments();
     renderIvrFeatures();
@@ -2866,8 +3027,11 @@ function refreshMultiSelects() {
 }
 
 function multiSourceValues(source) {
+    const catalog = state.provisioningCatalog || {};
     const rows = source === "callTypes" ? state.callTypeOptions
         : source === "teams" ? state.agents.map(agent => pick(agent, "team") || "UNKNOWN")
+        : source === "provisioningSkills" ? (pick(catalog, "skill_groups", "skillGroups") || [])
+        : source === "provisioningTeams" ? (pick(catalog, "teams") || [])
         : state.skillGroups;
     return Array.from(new Set((rows || [])
         .map(row => String(pick(row, "value", "label", "name", "enterpriseName", "callType", "id") || row || "").trim())

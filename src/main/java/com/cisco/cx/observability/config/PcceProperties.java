@@ -39,6 +39,12 @@ public class PcceProperties {
     private CvpApi cvpApi = new CvpApi();
 
     @Valid
+    private CucmAxl cucmAxl = new CucmAxl();
+
+    @Valid
+    private AgentProvisioning agentProvisioning = new AgentProvisioning();
+
+    @Valid
     private Notifications notifications = new Notifications();
 
     @Valid
@@ -126,6 +132,22 @@ public class PcceProperties {
 
     public void setCvpApi(CvpApi cvpApi) {
         this.cvpApi = cvpApi;
+    }
+
+    public CucmAxl getCucmAxl() {
+        return cucmAxl;
+    }
+
+    public void setCucmAxl(CucmAxl cucmAxl) {
+        this.cucmAxl = cucmAxl;
+    }
+
+    public AgentProvisioning getAgentProvisioning() {
+        return agentProvisioning;
+    }
+
+    public void setAgentProvisioning(AgentProvisioning agentProvisioning) {
+        this.agentProvisioning = agentProvisioning;
     }
 
     public Notifications getNotifications() {
@@ -772,6 +794,210 @@ public class PcceProperties {
         BASIC,
         BEARER,
         API_KEY
+    }
+
+    public static class CucmAxl {
+        private boolean enabled;
+        private String host;
+        private String username;
+        private String password;
+        private String version = "15.0";
+        private Duration timeout = Duration.ofSeconds(15);
+        private boolean trustAllCertificates;
+        private int dnStart = 50000;
+        private int dnEnd = 50999;
+        private String devicePool;
+        private String phoneTemplate;
+        private String commonPhoneProfile;
+        private String location = "Hub_None";
+        private String securityProfile;
+        private String sipProfile;
+        private String routePartition;
+        private String lineCss;
+        private String serviceProfile;
+
+        public boolean isEnabled() {
+            return enabled;
+        }
+
+        public void setEnabled(boolean enabled) {
+            this.enabled = enabled;
+        }
+
+        public String getHost() {
+            return host;
+        }
+
+        public void setHost(String host) {
+            this.host = host;
+        }
+
+        public String getUsername() {
+            return username;
+        }
+
+        public void setUsername(String username) {
+            this.username = username;
+        }
+
+        public String getPassword() {
+            return password;
+        }
+
+        public void setPassword(String password) {
+            this.password = password;
+        }
+
+        public String getVersion() {
+            return version;
+        }
+
+        public void setVersion(String version) {
+            this.version = version;
+        }
+
+        public Duration getTimeout() {
+            return timeout;
+        }
+
+        public void setTimeout(Duration timeout) {
+            this.timeout = timeout;
+        }
+
+        public boolean isTrustAllCertificates() {
+            return trustAllCertificates;
+        }
+
+        public void setTrustAllCertificates(boolean trustAllCertificates) {
+            this.trustAllCertificates = trustAllCertificates;
+        }
+
+        public int getDnStart() {
+            return dnStart;
+        }
+
+        public void setDnStart(int dnStart) {
+            this.dnStart = dnStart;
+        }
+
+        public int getDnEnd() {
+            return dnEnd;
+        }
+
+        public void setDnEnd(int dnEnd) {
+            this.dnEnd = dnEnd;
+        }
+
+        public String getDevicePool() {
+            return devicePool;
+        }
+
+        public void setDevicePool(String devicePool) {
+            this.devicePool = devicePool;
+        }
+
+        public String getPhoneTemplate() {
+            return phoneTemplate;
+        }
+
+        public void setPhoneTemplate(String phoneTemplate) {
+            this.phoneTemplate = phoneTemplate;
+        }
+
+        public String getCommonPhoneProfile() {
+            return commonPhoneProfile;
+        }
+
+        public void setCommonPhoneProfile(String commonPhoneProfile) {
+            this.commonPhoneProfile = commonPhoneProfile;
+        }
+
+        public String getLocation() {
+            return location;
+        }
+
+        public void setLocation(String location) {
+            this.location = location;
+        }
+
+        public String getSecurityProfile() {
+            return securityProfile;
+        }
+
+        public void setSecurityProfile(String securityProfile) {
+            this.securityProfile = securityProfile;
+        }
+
+        public String getSipProfile() {
+            return sipProfile;
+        }
+
+        public void setSipProfile(String sipProfile) {
+            this.sipProfile = sipProfile;
+        }
+
+        public String getRoutePartition() {
+            return routePartition;
+        }
+
+        public void setRoutePartition(String routePartition) {
+            this.routePartition = routePartition;
+        }
+
+        public String getLineCss() {
+            return lineCss;
+        }
+
+        public void setLineCss(String lineCss) {
+            this.lineCss = lineCss;
+        }
+
+        public String getServiceProfile() {
+            return serviceProfile;
+        }
+
+        public void setServiceProfile(String serviceProfile) {
+            this.serviceProfile = serviceProfile;
+        }
+    }
+
+    public static class AgentProvisioning {
+        private boolean executionEnabled;
+        private String identityDomain = "dev.mdi";
+        private int resultsPerPage = 200;
+        private boolean defaultDryRun = true;
+
+        public boolean isExecutionEnabled() {
+            return executionEnabled;
+        }
+
+        public void setExecutionEnabled(boolean executionEnabled) {
+            this.executionEnabled = executionEnabled;
+        }
+
+        public String getIdentityDomain() {
+            return identityDomain;
+        }
+
+        public void setIdentityDomain(String identityDomain) {
+            this.identityDomain = identityDomain;
+        }
+
+        public int getResultsPerPage() {
+            return resultsPerPage;
+        }
+
+        public void setResultsPerPage(int resultsPerPage) {
+            this.resultsPerPage = resultsPerPage;
+        }
+
+        public boolean isDefaultDryRun() {
+            return defaultDryRun;
+        }
+
+        public void setDefaultDryRun(boolean defaultDryRun) {
+            this.defaultDryRun = defaultDryRun;
+        }
     }
 
     public static class ApiMonitor {

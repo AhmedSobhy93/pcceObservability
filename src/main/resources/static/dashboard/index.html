@@ -21,6 +21,7 @@
         <button class="nav-item active" data-view="overview"><span class="icon icon-overview"></span>Overview</button>
         <button class="nav-item" data-view="business"><span class="icon icon-business"></span>Business Metrics</button>
         <button class="nav-item" data-view="agents"><span class="icon icon-agents"></span>Agent Performance</button>
+        <button class="nav-item" data-view="agentSkills"><span class="icon icon-agents"></span>Agent & Skills</button>
         <button class="nav-item" data-view="calls"><span class="icon icon-calls"></span>Call Analytics</button>
         <button class="nav-item" data-view="system"><span class="icon icon-system"></span>System Health</button>
         <button class="nav-item" data-view="eleveo"><span class="icon icon-eleveo"></span>Eleveo QM</button>
@@ -201,6 +202,59 @@
             <article class="panel wide"><h2>Finesse Teams / Queues</h2><div class="metric-list" id="finesseTeamQueueList"></div></article>
             <article class="panel"><h2>Agent Discovery Notes</h2><div class="metric-list" id="finesseDiscoveryList"></div></article>
         </div>
+    </section>
+
+    <section class="view" id="view-agentSkills">
+        <div class="system-kpi-grid" id="agentSkillCatalogKpis"></div>
+        <div class="filter-bar page-filter">
+            <button class="primary-btn" id="loadAgentSkillCatalogBtn">Load PCCE Catalog</button>
+            <button class="primary-btn" id="asmBuildPlanBtn">Build Plan</button>
+            <button class="primary-btn" id="asmDryRunBtn">Dry Run</button>
+            <button class="primary-btn" id="asmSaveLocalBtn">Save Local Desired State</button>
+            <button class="primary-btn danger-btn" id="asmExecuteBtn">Execute Changes</button>
+        </div>
+        <article class="panel full api-functions-panel">
+            <div class="panel-head">
+                <h2>Agent Lifecycle and Skill Assignment Manager</h2>
+                <span id="agentSkillExecutionMode">Dry-run protected</span>
+            </div>
+            <div class="admin-form plan-editor-form">
+                <label class="date-field"><span>User Mode</span><select id="asmUserMode"><option value="existing">Existing LDAP/SSO user</option><option value="new">Create local CUCM user</option></select></label>
+                <label class="date-field"><span>Agent Type</span><select id="asmAgentType"><option value="agent">Agent</option><option value="supervisor">Supervisor</option></select></label>
+                <label class="date-field"><span>Base Username</span><input id="asmBaseUsername" placeholder="cc.agent1"></label>
+                <label class="date-field"><span>Agent ID</span><input id="asmAgentId" placeholder="15028 / peripheral number"></label>
+                <label class="date-field"><span>First Name</span><input id="asmFirstName" placeholder="First name"></label>
+                <label class="date-field"><span>Last Name</span><input id="asmLastName" placeholder="Last name"></label>
+                <label class="date-field"><span>Display Name</span><input id="asmDisplayName" placeholder="Shown in CUCM/PCCE"></label>
+                <label class="date-field"><span>Email</span><input id="asmMail" placeholder="user@domain"></label>
+                <label class="date-field"><span>DN</span><input id="asmDn" placeholder="AUTO or 50xxx"></label>
+                <label class="date-field"><span>Team</span><select id="asmTeam"></select></label>
+                <label class="date-field hidden-field"><span>Skill Groups</span><input type="hidden" id="asmSkillGroups"></label>
+                <div class="multi-field" data-target="asmSkillGroups" data-source="provisioningSkills" data-label="Skill Groups"></div>
+                <label class="date-field hidden-field"><span>Supervisor Teams</span><input type="hidden" id="asmSupervisedTeams"></label>
+                <div class="multi-field" data-target="asmSupervisedTeams" data-source="provisioningTeams" data-label="Supervisor Teams"></div>
+                <label class="date-field"><span>Desk Settings</span><select id="asmDeskSettings"></select></label>
+                <label class="date-field"><span>Proficiency</span><input id="asmProficiency" type="number" min="1" max="10" value="5"></label>
+                <label class="date-field"><span>Rollback</span><select id="asmRollback"><option value="true">Auto rollback on error</option><option value="false">Manual rollback</option></select></label>
+                <label class="date-field editor-wide"><span>Change Notes</span><input id="asmNotes" placeholder="Change ticket, approval, reason"></label>
+            </div>
+        </article>
+
+        <div class="content-grid support-grid">
+            <article class="panel wide">
+                <div class="panel-head"><h2>Provisioning Plan</h2><span id="asmPlanSummary">No plan built</span></div>
+                <div class="table-wrap"><table><thead><tr><th>#</th><th>System</th><th>Action</th><th>Method</th><th>Status</th><th>Detail</th></tr></thead><tbody id="asmPlanTable"></tbody></table></div>
+            </article>
+            <article class="panel">
+                <div class="panel-head"><h2>Payload Preview</h2><span>AXL/PCCE</span></div>
+                <pre class="log-box action-result" id="asmPayloadPreview">Load catalog and build a plan.</pre>
+            </article>
+        </div>
+
+        <article class="panel full api-functions-panel">
+            <div class="panel-head"><h2>Saved Local Assignments</h2><span>Desired state and audit notes stored in app DB</span></div>
+            <div class="table-wrap"><table><thead><tr><th>Agent</th><th>Team</th><th>Skill</th><th>Prof.</th><th>State</th><th>Source</th><th>Updated</th><th></th></tr></thead><tbody id="asmAssignmentTable"></tbody></table></div>
+        </article>
     </section>
 
     <section class="view" id="view-calls">
