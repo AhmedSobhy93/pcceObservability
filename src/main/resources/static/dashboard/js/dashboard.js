@@ -60,7 +60,7 @@ const pages = {
     overview: ["Dashboard Overview", "Cisco PCCE 12.6.2 - Real-time Contact Center Analytics"],
     business: ["Business Metrics", "Service level, handle time, IVR containment, and contact center KPIs"],
     agents: ["Agent Performance", "Workforce team and agent productivity view"],
-    agentSkills: ["Agent & Skills Management", "CUCM AXL and PCCE API provisioning, teams, skills, and SSO/local agents"],
+    "agent-skills": ["Agent & Skills Management", "CUCM AXL and PCCE API provisioning, teams, skills, and SSO/local agents"],
     calls: ["Call Analytics", "Dropped calls, queue behavior, and skill group distribution"],
     system: ["System Health", "PCCE, CVP, CUIC, Finesse, PG, CTI, and gateway status"],
     eleveo: ["Eleveo QM & Recording", "Grafana monitoring for quality management and recording platforms"],
@@ -236,8 +236,16 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 function requestedView() {
-    const view = new URLSearchParams(window.location.search).get("view") || "overview";
+    const view = normalizeView(new URLSearchParams(window.location.search).get("view") || "overview");
     return pages[view] ? view : "overview";
+}
+
+function normalizeView(view) {
+    const value = String(view || "").trim();
+    if (value === "agentSkills" || value.toLowerCase() === "agentskills") {
+        return "agent-skills";
+    }
+    return value;
 }
 
 function qs(selector) {
@@ -465,7 +473,7 @@ async function refresh() {
         const wantsOverview = activeView === "overview";
         const wantsBusiness = activeView === "business";
         const wantsAgents = activeView === "agents";
-        const wantsAgentSkills = activeView === "agentSkills";
+        const wantsAgentSkills = activeView === "agent-skills";
         const wantsCalls = activeView === "calls";
         const wantsSystem = activeView === "system";
         const wantsIntegration = activeView === "integration";
@@ -2800,92 +2808,6 @@ function renderManagementControls() {
     renderIvrFeatures();
 }
 
-function renderAgentProvisioningGuide() {
-    const guide = qs("#agentProvisioningGuide");
-    if (!guide) return;
-    guide.innerHTML = [
-        metricRow("Identity rule", "CUCM uses bare username; PCCE uses username@domain."),
-        metricRow("Provisioning path", "CUCM AXL user/line/CSF phone first, then PCCE agent or supervisor upsert."),
-        metricRow("PCCE upsert", "Search all agents with pagination, update existing changeStamp or create new agent/supervisor."),
-        metricRow("Skill assignment", "Resolve team, skill group, desk settings and supervised teams before executing PCCE config changes."),
-        metricRow("Safety", "Rollback is a controlled admin action; this page stores desired state and audit notes.")
-    ].join("");
-}
-
-function renderAgentProvisioningPreview() {
-    const baseUsername = firstFilterValue("#assignmentBaseUsername") || firstFilterValue("#assignmentAgentId");
-    const domain = "dev.mdi";
-    const pcceUserName = baseUsername && baseUsername.includes("@") ? baseUsername : `${baseUsername || "{baseUsername}"}@${domain}`;
-    const cucmUserId = (baseUsername || "{baseUsername}").replace(/@.*/, "");
-    const firstName = firstFilterValue("#assignmentFirstName");
-    const lastName = firstFilterValue("#assignmentLastName");
-    const fullName = [firstName, lastName].filter(Boolean).join(" ") || firstFilterValue("#assignmentAgentName") || "{fullName}";
-    const dn = firstFilterValue("#assignmentDn") || "auto 50000-50999";
-    const deviceName = dn.startsWith("auto") ? "CSF{allocatedDn}" : `CSF${dn}`;
-    const plan = {
-        identity: {
-            cucmUserId,
-            pcceUserName,
-            fullName,
-            mail: firstFilterValue("#assignmentMail") || pcceUserName,
-            dn,
-            deviceName
-        },
-        control: {
-            userMode: firstFilterValue("#assignmentUserMode"),
-            agentType: firstFilterValue("#assignmentAgentType"),
-            autoRollbackOnError: firstFilterValue("#assignmentRollback") === "true"
-        },
-        cucmAxlSequence: [
-            "getCCMVersion auth test",
-            "Find next free DN in 50000-50999 when DN is auto",
-            "addUser only when userMode=new",
-            "addLine with route partition and line CSS",
-            "addPhone CSF/Jabber with line appearance",
-            "updateUser with primary extension, device association, service profile"
-        ],
-        pcceSequence: [
-            "Fetch all teams, skills, desk settings and agents with resultsPerPage=200 pagination",
-            "Find existing agent by pcceUserName",
-            "If existing: PUT current agent with changeStamp, team, skills and desk settings",
-            "If new agent: POST agent or supervisor",
-            "If supervisor: attach supervisedTeamNames",
-            "Verify final PCCE agent and Finesse visibility"
-        ],
-        assignments: {
-            teamName: firstFilterValue("#assignmentTeam") || "{teamName}",
-            skillGroupNames: splitCsv(firstFilterValue("#assignmentSkill")),
-            supervisedTeamNames: splitCsv(firstFilterValue("#assignmentSupervisedTeams")),
-            deskSettingsName: firstFilterValue("#assignmentDeskSettings") || "Default_Agent_Desk_Settings",
-            proficiency: firstFilterValue("#assignmentProficiency") || null
-        },
-        rollback: [
-            "Delete PCCE agent/supervisor when created in this run",
-            "Remove CSF phone when created",
-            "Remove line when created",
-            "Remove CUCM user only for new non-LDAP users"
-        ]
-    };
-    qs("#agentProvisioningPreview").textContent = JSON.stringify(plan, null, 2);
-}
-
-function renderAgentSkillAssignments() {
-    const table = qs("#agentSkillAssignmentTable");
-    if (!table) return;
-    table.innerHTML = (state.agentSkillAssignments || []).map(item => `
-        <tr>
-            <td><strong>${escapeHtml(pick(item, "agent_id", "agentId") || "")}</strong><span class="subline">${escapeHtml(pick(item, "agent_name", "agentName") || "")}</span></td>
-            <td>${escapeHtml(pick(item, "team_name", "teamName") || "")}</td>
-            <td>${escapeHtml(pick(item, "skill_group", "skillGroup") || "")}</td>
-            <td>${escapeHtml(String(pick(item, "proficiency") ?? ""))}</td>
-            <td><span class="badge ${pick(item, "enabled") ? "up" : "down"}">${pick(item, "enabled") ? "enabled" : "disabled"}</span></td>
-            <td>${escapeHtml(pick(item, "source") || "APP")}</td>
-            <td>${escapeHtml(formatDateTime(pick(item, "updated_at", "updatedAt")))}</td>
-            <td><button class="tiny-button danger" type="button" onclick="deleteAgentSkillAssignment(${Number(pick(item, "id"))})">Remove</button></td>
-        </tr>
-    `).join("") || `<tr><td colspan="8">No managed agent/skill assignments saved yet.</td></tr>`;
-}
-
 function renderIvrFeatures() {
     const table = qs("#ivrFeatureTable");
     if (!table) return;
@@ -2908,27 +2830,6 @@ function formatDateTime(value) {
     return String(value).replace("T", " ").replace(/\.\d+$/, "");
 }
 
-async function saveAgentSkillAssignment() {
-    renderAgentProvisioningPreview();
-    const provisioningContext = qs("#agentProvisioningPreview")?.textContent || "";
-    const notes = [qs("#assignmentNotes")?.value, provisioningContext && `Provisioning plan: ${provisioningContext}`]
-        .filter(Boolean)
-        .join("\n\n");
-    const body = {
-        agentId: qs("#assignmentAgentId")?.value,
-        agentName: qs("#assignmentAgentName")?.value,
-        teamName: qs("#assignmentTeam")?.value,
-        skillGroup: qs("#assignmentSkill")?.value,
-        proficiency: qs("#assignmentProficiency")?.value ? Number(qs("#assignmentProficiency").value) : null,
-        enabled: qs("#assignmentEnabled")?.value === "true",
-        source: "APP",
-        notes
-    };
-    await api("/api/v1/workforce-management/agent-skill-assignments", { method: "POST", body: JSON.stringify(body), timeoutMs: 8000 });
-    await safeLoad("agentSkillAssignments", "/api/v1/workforce-management/agent-skill-assignments", [], { timeoutMs: 8000 });
-    renderAgentSkillAssignments();
-}
-
 async function saveIvrFeature() {
     const body = {
         appName: qs("#ivrFeatureApp")?.value,
@@ -2947,7 +2848,7 @@ async function deleteAgentSkillAssignment(id) {
     if (!id) return;
     await api(`/api/v1/workforce-management/agent-skill-assignments/${id}`, { method: "DELETE", timeoutMs: 8000 });
     await safeLoad("agentSkillAssignments", "/api/v1/workforce-management/agent-skill-assignments", [], { timeoutMs: 8000 });
-    renderAgentSkillAssignments();
+    renderAsmAssignments();
 }
 
 async function deleteIvrFeature(id) {
@@ -2958,6 +2859,7 @@ async function deleteIvrFeature(id) {
 }
 
 function switchView(view) {
+    view = normalizeView(view);
     if (!pages[view]) {
         view = "overview";
     }
