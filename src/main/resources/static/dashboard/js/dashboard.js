@@ -377,9 +377,9 @@ function agentParams() {
         from: dates.from,
         to: dates.to
     });
-    const agent = firstFilterValue("#agentPageFilter");
+    const agents = splitCsv(firstFilterValue("#agentPageFilter"));
     const team = firstFilterValue("#agentTeamInput");
-    if (agent) params.set("agentId", agent);
+    if (agents.length === 1) params.set("agentId", agents[0]);
     if (team && !team.includes(",")) params.set("team", team);
     return params.toString();
 }
@@ -887,6 +887,7 @@ function renderBusiness() {
     const offered = sum(rowsSource, "calls_offered", "callsOffered");
     const handled = sum(rowsSource, "calls_handled", "callsHandled");
     const abandoned = sum(rowsSource, "calls_abandoned", "callsAbandoned");
+    const unhandled = Math.max(0, offered - handled);
     const dropped = sum(state.drops, "dropped_calls", "droppedCalls");
     const service = businessServiceLevel(rowsSource);
     const aht = businessAht(rowsSource);
@@ -1125,17 +1126,18 @@ function filteredAgents() {
     const selectedTeams = splitCsv(firstFilterValue("#agentTeamInput"));
     const availableTeams = new Set(state.agents.map(agent => pick(agent, "team") || "UNKNOWN"));
     const effectiveTeams = selectedTeams.filter(team => availableTeams.has(team));
-    const agentFilter = firstFilterValue("#agentPageFilter").toLowerCase();
+    const selectedAgents = splitCsv(firstFilterValue("#agentPageFilter")).map(value => value.toLowerCase());
     const statusFilter = firstFilterValue("#agentStatusFilter").toLowerCase();
     const search = firstFilterValue("#agentSearchFilter").toLowerCase();
     return state.agents
         .filter(agent => effectiveTeams.length === 0 || effectiveTeams.includes(pick(agent, "team") || "UNKNOWN"))
         .filter(agent => {
-            if (!agentFilter) return true;
-            return [
+            if (!selectedAgents.length) return true;
+            const text = [
                 pick(agent, "agent_name", "agentName"),
                 pick(agent, "agent_id", "agentId")
-            ].join(" ").toLowerCase().includes(agentFilter);
+            ].join(" ").toLowerCase();
+            return selectedAgents.some(agentFilter => text.includes(agentFilter));
         })
         .filter(agent => !statusFilter || effectiveAgentStatus(agent) === statusFilter)
         .filter(agent => {
@@ -3078,10 +3080,11 @@ function refreshMultiSelects() {
     document.querySelectorAll(".multi-field").forEach(field => {
         const selected = selectedMultiValues(field);
         const options = field.querySelector(".multi-options");
-        options.innerHTML = multiSourceValues(field.dataset.source).map(value => `
-            <label class="multi-option" data-text="${escapeHtml(value.toLowerCase())}">
-                <input type="checkbox" value="${escapeHtml(value)}" ${selected.includes(value) ? "checked" : ""}>
-                <span>${escapeHtml(value)}</span>
+        options.innerHTML = multiSourceOptions(field.dataset.source).map(option => `
+            <label class="multi-option" data-text="${escapeHtml(option.search)}">
+                <input type="checkbox" value="${escapeHtml(option.value)}" ${selected.includes(option.value) ? "checked" : ""}>
+                <span>${escapeHtml(option.label)}</span>
+                ${option.detail ? `<small>${escapeHtml(option.detail)}</small>` : ""}
             </label>`).join("") || `<div class="multi-empty">No values loaded</div>`;
         options.querySelectorAll("input[type='checkbox']").forEach(input => {
             input.addEventListener("change", () => {
@@ -3096,17 +3099,35 @@ function refreshMultiSelects() {
 }
 
 function multiSourceValues(source) {
+    return multiSourceOptions(source).map(option => option.value);
+}
+
+function multiSourceOptions(source) {
     const catalog = state.provisioningCatalog || {};
     const rows = source === "callTypes" ? state.callTypeOptions
+        : source === "agents" ? state.agentOptions
         : source === "teams" ? state.agents.map(agent => pick(agent, "team") || "UNKNOWN")
         : source === "provisioningSkills" ? (pick(catalog, "skill_groups", "skillGroups") || [])
         : source === "provisioningTeams" ? (pick(catalog, "teams") || [])
         : source === "cvpApps" ? state.cvpIvrNodes.map(row => pick(row, "app_name", "appName") || "UNKNOWN")
         : state.skillGroups;
-    return Array.from(new Set((rows || [])
-        .map(row => String(pick(row, "value", "label", "name", "enterpriseName", "callType", "id") || row || "").trim())
-        .filter(Boolean)))
-        .sort((a, b) => a.localeCompare(b));
+    const seen = new Map();
+    (rows || []).forEach(row => {
+        const value = String(pick(row, "value", "id", "agent_id", "agentId", "name", "enterpriseName", "callType", "label") || row || "").trim();
+        if (!value) return;
+        const label = String(pick(row, "label", "name", "enterpriseName", "agent_name", "agentName", "callType", "value") || value).trim();
+        const detail = String(pick(row, "detail", "team", "skill_group", "skillGroup", "id") || "").trim();
+        const key = value.toLowerCase();
+        if (!seen.has(key)) {
+            seen.set(key, {
+                value,
+                label: label === value && detail ? `${label}` : label,
+                detail,
+                search: `${value} ${label} ${detail}`.toLowerCase()
+            });
+        }
+    });
+    return [...seen.values()].sort((a, b) => a.label.localeCompare(b.label));
 }
 
 function selectedMultiValues(field) {
@@ -3119,6 +3140,7 @@ function setMultiValue(field, value) {
     target.value = value;
     updateMultiSummary(field);
     target.dispatchEvent(new Event("input", { bubbles: true }));
+    target.dispatchEvent(new Event("change", { bubbles: true }));
 }
 
 function updateMultiSummary(field) {
@@ -3135,7 +3157,7 @@ function updateMultiSummary(field) {
 function filterMultiOptions(field) {
     const query = field.querySelector(".multi-search input")?.value?.trim().toLowerCase() || "";
     field.querySelectorAll(".multi-option").forEach(option => {
-        const text = String(option.textContent || option.dataset.text || "").toLowerCase();
+        const text = String(option.dataset.text || option.textContent || "").toLowerCase();
         option.hidden = Boolean(query) && !text.includes(query);
     });
 }
@@ -3228,7 +3250,7 @@ function serviceTrendByHour() {
     return {
         labels,
         series: series.concat([{ label: "Target", color: "#f4a51c", values: labels.map(() => businessSettings.slTarget) }]),
-        hasData: series.some(item => item.values.some(value => value > 0))
+        hasData: topSkills.length > 0
     };
 }
 
@@ -3387,7 +3409,7 @@ function renderCallFunnel() {
     const handled = source.handled;
     const abandoned = source.abandoned;
     const hasAbandonSource = source.hasAbandonSource;
-    const ivr = average(state.ivr, "ivr_containment_rate", "ivrContainmentRate");
+    const ivr = businessIvrContainment().value;
     const routed = Math.max(0, offered - (ivr === null ? 0 : offered * ivr / 100));
     const hasIvr = ivr !== null;
     const queued = hasIvr ? routed : Math.max(0, offered);
@@ -3427,12 +3449,13 @@ function funnelSource() {
             note: "Funnel uses HDS call-type rows for the selected call type and period."
         };
     }
+    const rows = activeView === "calls" ? filteredCallRows("calls") : state.calls;
     return {
-        offered: sum(state.calls, "calls_offered", "callsOffered"),
-        handled: sum(state.calls, "calls_handled", "callsHandled"),
-        abandoned: sum(state.calls, "calls_abandoned", "callsAbandoned"),
-        hasAbandonSource: state.calls.some(row => pick(row, "calls_abandoned", "callsAbandoned") !== null && pick(row, "calls_abandoned", "callsAbandoned") !== undefined),
-        unknownMapping: state.calls.some(row => isUnknownLabel(pick(row, "skill_group", "skillGroup"))),
+        offered: sum(rows, "calls_offered", "callsOffered"),
+        handled: sum(rows, "calls_handled", "callsHandled"),
+        abandoned: sum(rows, "calls_abandoned", "callsAbandoned"),
+        hasAbandonSource: rows.some(row => pick(row, "calls_abandoned", "callsAbandoned") !== null && pick(row, "calls_abandoned", "callsAbandoned") !== undefined),
+        unknownMapping: rows.some(row => isUnknownLabel(pick(row, "skill_group", "skillGroup"))),
         note: "Funnel uses live HDS/CVP fields available for the selected filters."
     };
 }

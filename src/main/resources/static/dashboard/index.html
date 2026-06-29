@@ -159,7 +159,8 @@
 
     <section class="view" id="view-agents">
         <div class="filter-bar page-filter">
-            <label class="date-field"><span>Agent</span><input type="text" id="agentPageFilter" list="agentOptions" placeholder="All"></label>
+            <label class="date-field hidden-field"><span>Agent</span><input type="hidden" id="agentPageFilter"></label>
+            <div class="multi-field" data-target="agentPageFilter" data-source="agents" data-label="Agents"></div>
             <label class="date-field hidden-field"><span>Team</span><input type="hidden" id="agentTeamInput"></label>
             <div class="multi-field" data-target="agentTeamInput" data-source="teams" data-label="Teams"></div>
             <label class="date-field"><span>Status</span><select id="agentStatusFilter"><option value="">All</option><option value="available">Available</option><option value="on_call">On call</option><option value="wrap_up">Wrap up</option><option value="not_ready">Not ready</option><option value="offline">Offline</option></select></label>
@@ -601,6 +602,6 @@
     </section>
 </main>
 
-    <script src="/dashboard/js/dashboard.js?v=20260629-agent-skills"></script>
+    <script src="/dashboard/js/dashboard.js?v=20260629-grafana-csp-business-fix"></script>
 </body>
 </html>

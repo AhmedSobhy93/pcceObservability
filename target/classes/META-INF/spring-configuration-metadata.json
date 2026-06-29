@@ -2,19 +2,49 @@
   "groups": [
     {
       "name": "pcce",
-      "type": "com.example.pcceobservability.config.PcceProperties",
-      "sourceType": "com.example.pcceobservability.config.PcceProperties"
+      "type": "com.cisco.cx.observability.config.PcceProperties",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties"
+    },
+    {
+      "name": "pcce.agent-provisioning",
+      "type": "com.cisco.cx.observability.config.PcceProperties$AgentProvisioning",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties",
+      "sourceMethod": "getAgentProvisioning()"
+    },
+    {
+      "name": "pcce.app-dynamics",
+      "type": "com.cisco.cx.observability.config.PcceProperties$AppDynamics",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties",
+      "sourceMethod": "getAppDynamics()"
+    },
+    {
+      "name": "pcce.audit",
+      "type": "com.cisco.cx.observability.config.PcceProperties$Audit",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties",
+      "sourceMethod": "getAudit()"
+    },
+    {
+      "name": "pcce.cucm-axl",
+      "type": "com.cisco.cx.observability.config.PcceProperties$CucmAxl",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties",
+      "sourceMethod": "getCucmAxl()"
+    },
+    {
+      "name": "pcce.cvp-api",
+      "type": "com.cisco.cx.observability.config.PcceProperties$CvpApi",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties",
+      "sourceMethod": "getCvpApi()"
     },
     {
       "name": "pcce.datasources.aw",
       "type": "org.springframework.boot.autoconfigure.jdbc.DataSourceProperties",
-      "sourceType": "com.example.pcceobservability.config.DataSourceConfig",
+      "sourceType": "com.cisco.cx.observability.config.DataSourceConfig",
       "sourceMethod": "awDataSourceProperties()"
     },
     {
       "name": "pcce.datasources.aw.hikari",
       "type": "javax.sql.DataSource",
-      "sourceType": "com.example.pcceobservability.config.DataSourceConfig",
+      "sourceType": "com.cisco.cx.observability.config.DataSourceConfig",
       "sourceMethod": "awDataSource()"
     },
     {
@@ -26,13 +56,13 @@
     {
       "name": "pcce.datasources.cvp-reporting",
       "type": "org.springframework.boot.autoconfigure.jdbc.DataSourceProperties",
-      "sourceType": "com.example.pcceobservability.config.DataSourceConfig",
+      "sourceType": "com.cisco.cx.observability.config.DataSourceConfig",
       "sourceMethod": "cvpReportingDataSourceProperties()"
     },
     {
       "name": "pcce.datasources.cvp-reporting.hikari",
       "type": "javax.sql.DataSource",
-      "sourceType": "com.example.pcceobservability.config.DataSourceConfig",
+      "sourceType": "com.cisco.cx.observability.config.DataSourceConfig",
       "sourceMethod": "cvpReportingDataSource()"
     },
     {
@@ -44,13 +74,13 @@
     {
       "name": "pcce.datasources.hds",
       "type": "org.springframework.boot.autoconfigure.jdbc.DataSourceProperties",
-      "sourceType": "com.example.pcceobservability.config.DataSourceConfig",
+      "sourceType": "com.cisco.cx.observability.config.DataSourceConfig",
       "sourceMethod": "hdsDataSourceProperties()"
     },
     {
       "name": "pcce.datasources.hds.hikari",
       "type": "javax.sql.DataSource",
-      "sourceType": "com.example.pcceobservability.config.DataSourceConfig",
+      "sourceType": "com.cisco.cx.observability.config.DataSourceConfig",
       "sourceMethod": "hdsDataSource()"
     },
     {
@@ -61,68 +91,92 @@
     },
     {
       "name": "pcce.finesse",
-      "type": "com.example.pcceobservability.config.PcceProperties$Finesse",
-      "sourceType": "com.example.pcceobservability.config.PcceProperties",
+      "type": "com.cisco.cx.observability.config.PcceProperties$Finesse",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties",
       "sourceMethod": "getFinesse()"
     },
     {
       "name": "pcce.grafana",
-      "type": "com.example.pcceobservability.config.PcceProperties$Grafana",
-      "sourceType": "com.example.pcceobservability.config.PcceProperties",
+      "type": "com.cisco.cx.observability.config.PcceProperties$Grafana",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties",
       "sourceMethod": "getGrafana()"
     },
     {
+      "name": "pcce.jmx",
+      "type": "com.cisco.cx.observability.config.PcceProperties$Jmx",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties",
+      "sourceMethod": "getJmx()"
+    },
+    {
+      "name": "pcce.live-data",
+      "type": "com.cisco.cx.observability.config.PcceProperties$LiveData",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties",
+      "sourceMethod": "getLiveData()"
+    },
+    {
       "name": "pcce.notifications",
-      "type": "com.example.pcceobservability.config.PcceProperties$Notifications",
-      "sourceType": "com.example.pcceobservability.config.PcceProperties",
+      "type": "com.cisco.cx.observability.config.PcceProperties$Notifications",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties",
       "sourceMethod": "getNotifications()"
     },
     {
       "name": "pcce.operations",
-      "type": "com.example.pcceobservability.config.PcceProperties$Operations",
-      "sourceType": "com.example.pcceobservability.config.PcceProperties",
+      "type": "com.cisco.cx.observability.config.PcceProperties$Operations",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties",
       "sourceMethod": "getOperations()"
     },
     {
       "name": "pcce.pcce-api",
-      "type": "com.example.pcceobservability.config.PcceProperties$PcceApi",
-      "sourceType": "com.example.pcceobservability.config.PcceProperties",
+      "type": "com.cisco.cx.observability.config.PcceProperties$PcceApi",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties",
       "sourceMethod": "getPcceApi()"
     },
     {
       "name": "pcce.performance",
-      "type": "com.example.pcceobservability.config.PcceProperties$Performance",
-      "sourceType": "com.example.pcceobservability.config.PcceProperties",
+      "type": "com.cisco.cx.observability.config.PcceProperties$Performance",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties",
       "sourceMethod": "getPerformance()"
     },
     {
       "name": "pcce.queries",
-      "type": "com.example.pcceobservability.config.PcceProperties$Queries",
-      "sourceType": "com.example.pcceobservability.config.PcceProperties",
+      "type": "com.cisco.cx.observability.config.PcceProperties$Queries",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties",
       "sourceMethod": "getQueries()"
     },
     {
       "name": "pcce.security",
-      "type": "com.example.pcceobservability.config.PcceProperties$Security",
-      "sourceType": "com.example.pcceobservability.config.PcceProperties",
+      "type": "com.cisco.cx.observability.config.PcceProperties$Security",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties",
       "sourceMethod": "getSecurity()"
     },
     {
       "name": "pcce.security.ldap",
-      "type": "com.example.pcceobservability.config.PcceProperties$Ldap",
-      "sourceType": "com.example.pcceobservability.config.PcceProperties$Security",
+      "type": "com.cisco.cx.observability.config.PcceProperties$Ldap",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$Security",
       "sourceMethod": "getLdap()"
+    },
+    {
+      "name": "pcce.security.rate-limit",
+      "type": "com.cisco.cx.observability.config.PcceProperties$Security$RateLimit",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$Security",
+      "sourceMethod": "getRateLimit()"
+    },
+    {
+      "name": "pcce.ssl",
+      "type": "com.cisco.cx.observability.config.PcceProperties$Ssl",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties",
+      "sourceMethod": "getSsl()"
     },
     {
       "name": "spring.datasource",
       "type": "org.springframework.boot.autoconfigure.jdbc.DataSourceProperties",
-      "sourceType": "com.example.pcceobservability.config.DataSourceConfig",
+      "sourceType": "com.cisco.cx.observability.config.DataSourceConfig",
       "sourceMethod": "appDataSourceProperties()"
     },
     {
       "name": "spring.datasource.hikari",
       "type": "javax.sql.DataSource",
-      "sourceType": "com.example.pcceobservability.config.DataSourceConfig",
+      "sourceType": "com.cisco.cx.observability.config.DataSourceConfig",
       "sourceMethod": "appDataSource()"
     },
     {
@@ -134,9 +188,247 @@
   ],
   "properties": [
     {
+      "name": "pcce.agent-provisioning.default-dry-run",
+      "type": "java.lang.Boolean",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$AgentProvisioning",
+      "defaultValue": true
+    },
+    {
+      "name": "pcce.agent-provisioning.execution-enabled",
+      "type": "java.lang.Boolean",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$AgentProvisioning",
+      "defaultValue": false
+    },
+    {
+      "name": "pcce.agent-provisioning.identity-domain",
+      "type": "java.lang.String",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$AgentProvisioning",
+      "defaultValue": "dev.mdi"
+    },
+    {
+      "name": "pcce.agent-provisioning.results-per-page",
+      "type": "java.lang.Integer",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$AgentProvisioning",
+      "defaultValue": 200
+    },
+    {
+      "name": "pcce.app-dynamics.account-name",
+      "type": "java.lang.String",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$AppDynamics"
+    },
+    {
+      "name": "pcce.app-dynamics.application-name",
+      "type": "java.lang.String",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$AppDynamics"
+    },
+    {
+      "name": "pcce.app-dynamics.controller-url",
+      "type": "java.lang.String",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$AppDynamics"
+    },
+    {
+      "name": "pcce.app-dynamics.dashboards",
+      "type": "java.util.List<com.cisco.cx.observability.config.PcceProperties$GrafanaDashboard>",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$AppDynamics"
+    },
+    {
+      "name": "pcce.app-dynamics.enabled",
+      "type": "java.lang.Boolean",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$AppDynamics",
+      "defaultValue": false
+    },
+    {
+      "name": "pcce.app-dynamics.password",
+      "type": "java.lang.String",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$AppDynamics"
+    },
+    {
+      "name": "pcce.app-dynamics.timeout",
+      "type": "java.time.Duration",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$AppDynamics",
+      "defaultValue": "10s"
+    },
+    {
+      "name": "pcce.app-dynamics.trust-all-certificates",
+      "type": "java.lang.Boolean",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$AppDynamics",
+      "defaultValue": false
+    },
+    {
+      "name": "pcce.app-dynamics.username",
+      "type": "java.lang.String",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$AppDynamics"
+    },
+    {
+      "name": "pcce.audit.retention-days",
+      "type": "java.lang.Integer",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$Audit",
+      "defaultValue": 90
+    },
+    {
       "name": "pcce.components",
-      "type": "java.util.List<com.example.pcceobservability.config.PcceProperties$ComponentTarget>",
-      "sourceType": "com.example.pcceobservability.config.PcceProperties"
+      "type": "java.util.List<com.cisco.cx.observability.config.PcceProperties$ComponentTarget>",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties"
+    },
+    {
+      "name": "pcce.cucm-axl.common-phone-profile",
+      "type": "java.lang.String",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$CucmAxl"
+    },
+    {
+      "name": "pcce.cucm-axl.device-pool",
+      "type": "java.lang.String",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$CucmAxl"
+    },
+    {
+      "name": "pcce.cucm-axl.dn-end",
+      "type": "java.lang.Integer",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$CucmAxl",
+      "defaultValue": 50999
+    },
+    {
+      "name": "pcce.cucm-axl.dn-start",
+      "type": "java.lang.Integer",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$CucmAxl",
+      "defaultValue": 50000
+    },
+    {
+      "name": "pcce.cucm-axl.enabled",
+      "type": "java.lang.Boolean",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$CucmAxl",
+      "defaultValue": false
+    },
+    {
+      "name": "pcce.cucm-axl.host",
+      "type": "java.lang.String",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$CucmAxl"
+    },
+    {
+      "name": "pcce.cucm-axl.line-css",
+      "type": "java.lang.String",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$CucmAxl"
+    },
+    {
+      "name": "pcce.cucm-axl.location",
+      "type": "java.lang.String",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$CucmAxl",
+      "defaultValue": "Hub_None"
+    },
+    {
+      "name": "pcce.cucm-axl.password",
+      "type": "java.lang.String",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$CucmAxl"
+    },
+    {
+      "name": "pcce.cucm-axl.phone-template",
+      "type": "java.lang.String",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$CucmAxl"
+    },
+    {
+      "name": "pcce.cucm-axl.route-partition",
+      "type": "java.lang.String",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$CucmAxl"
+    },
+    {
+      "name": "pcce.cucm-axl.security-profile",
+      "type": "java.lang.String",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$CucmAxl"
+    },
+    {
+      "name": "pcce.cucm-axl.service-profile",
+      "type": "java.lang.String",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$CucmAxl"
+    },
+    {
+      "name": "pcce.cucm-axl.sip-profile",
+      "type": "java.lang.String",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$CucmAxl"
+    },
+    {
+      "name": "pcce.cucm-axl.timeout",
+      "type": "java.time.Duration",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$CucmAxl",
+      "defaultValue": "15s"
+    },
+    {
+      "name": "pcce.cucm-axl.trust-all-certificates",
+      "type": "java.lang.Boolean",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$CucmAxl",
+      "defaultValue": false
+    },
+    {
+      "name": "pcce.cucm-axl.username",
+      "type": "java.lang.String",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$CucmAxl"
+    },
+    {
+      "name": "pcce.cucm-axl.version",
+      "type": "java.lang.String",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$CucmAxl",
+      "defaultValue": "15.0"
+    },
+    {
+      "name": "pcce.cvp-api.actions",
+      "type": "java.util.List<com.cisco.cx.observability.config.PcceProperties$ApiAction>",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$CvpApi"
+    },
+    {
+      "name": "pcce.cvp-api.api-key",
+      "type": "java.lang.String",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$CvpApi"
+    },
+    {
+      "name": "pcce.cvp-api.api-key-header-name",
+      "type": "java.lang.String",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$CvpApi"
+    },
+    {
+      "name": "pcce.cvp-api.auth-mode",
+      "type": "com.cisco.cx.observability.config.PcceProperties$ApiAuthMode",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$CvpApi"
+    },
+    {
+      "name": "pcce.cvp-api.base-url",
+      "type": "java.lang.String",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$CvpApi"
+    },
+    {
+      "name": "pcce.cvp-api.bearer-token",
+      "type": "java.lang.String",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$CvpApi"
+    },
+    {
+      "name": "pcce.cvp-api.enabled",
+      "type": "java.lang.Boolean",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$CvpApi",
+      "defaultValue": false
+    },
+    {
+      "name": "pcce.cvp-api.monitors",
+      "type": "java.util.List<com.cisco.cx.observability.config.PcceProperties$ApiMonitor>",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$CvpApi"
+    },
+    {
+      "name": "pcce.cvp-api.password",
+      "type": "java.lang.String",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$CvpApi"
+    },
+    {
+      "name": "pcce.cvp-api.timeout",
+      "type": "java.time.Duration",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$CvpApi",
+      "defaultValue": "10s"
+    },
+    {
+      "name": "pcce.cvp-api.trust-all-certificates",
+      "type": "java.lang.Boolean",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$CvpApi",
+      "defaultValue": false
+    },
+    {
+      "name": "pcce.cvp-api.username",
+      "type": "java.lang.String",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$CvpApi"
     },
     {
       "name": "pcce.datasources.aw.driver-class-name",
@@ -306,394 +598,512 @@
     {
       "name": "pcce.finesse.base-url",
       "type": "java.lang.String",
-      "sourceType": "com.example.pcceobservability.config.PcceProperties$Finesse"
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$Finesse"
     },
     {
       "name": "pcce.finesse.enabled",
       "type": "java.lang.Boolean",
-      "sourceType": "com.example.pcceobservability.config.PcceProperties$Finesse",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$Finesse",
       "defaultValue": false
     },
     {
       "name": "pcce.finesse.password",
       "type": "java.lang.String",
-      "sourceType": "com.example.pcceobservability.config.PcceProperties$Finesse"
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$Finesse"
     },
     {
       "name": "pcce.finesse.queue-ids",
       "type": "java.util.List<java.lang.String>",
-      "sourceType": "com.example.pcceobservability.config.PcceProperties$Finesse"
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$Finesse"
     },
     {
       "name": "pcce.finesse.team-ids",
       "type": "java.util.List<java.lang.String>",
-      "sourceType": "com.example.pcceobservability.config.PcceProperties$Finesse"
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$Finesse"
     },
     {
       "name": "pcce.finesse.timeout",
       "type": "java.time.Duration",
-      "sourceType": "com.example.pcceobservability.config.PcceProperties$Finesse",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$Finesse",
       "defaultValue": "10s"
     },
     {
       "name": "pcce.finesse.trust-all-certificates",
       "type": "java.lang.Boolean",
-      "sourceType": "com.example.pcceobservability.config.PcceProperties$Finesse",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$Finesse",
       "defaultValue": false
     },
     {
       "name": "pcce.finesse.user-ids",
       "type": "java.util.List<java.lang.String>",
-      "sourceType": "com.example.pcceobservability.config.PcceProperties$Finesse"
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$Finesse"
     },
     {
       "name": "pcce.finesse.username",
       "type": "java.lang.String",
-      "sourceType": "com.example.pcceobservability.config.PcceProperties$Finesse"
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$Finesse"
     },
     {
       "name": "pcce.grafana.dashboards",
-      "type": "java.util.List<com.example.pcceobservability.config.PcceProperties$GrafanaDashboard>",
-      "sourceType": "com.example.pcceobservability.config.PcceProperties$Grafana"
+      "type": "java.util.List<com.cisco.cx.observability.config.PcceProperties$GrafanaDashboard>",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$Grafana"
     },
     {
       "name": "pcce.grafana.enabled",
       "type": "java.lang.Boolean",
-      "sourceType": "com.example.pcceobservability.config.PcceProperties$Grafana",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$Grafana",
       "defaultValue": false
     },
     {
+      "name": "pcce.jmx.enabled",
+      "type": "java.lang.Boolean",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$Jmx",
+      "defaultValue": false
+    },
+    {
+      "name": "pcce.jmx.password",
+      "type": "java.lang.String",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$Jmx"
+    },
+    {
+      "name": "pcce.jmx.targets",
+      "type": "java.util.List<com.cisco.cx.observability.config.PcceProperties$JmxTarget>",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$Jmx"
+    },
+    {
+      "name": "pcce.jmx.timeout",
+      "type": "java.time.Duration",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$Jmx",
+      "defaultValue": "10s"
+    },
+    {
+      "name": "pcce.jmx.trust-store-configured",
+      "type": "java.lang.Boolean",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$Jmx",
+      "defaultValue": false
+    },
+    {
+      "name": "pcce.jmx.username",
+      "type": "java.lang.String",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$Jmx"
+    },
+    {
+      "name": "pcce.live-data.enabled",
+      "type": "java.lang.Boolean",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$LiveData",
+      "defaultValue": false
+    },
+    {
+      "name": "pcce.live-data.host",
+      "type": "java.lang.String",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$LiveData"
+    },
+    {
+      "name": "pcce.live-data.password",
+      "type": "java.lang.String",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$LiveData"
+    },
+    {
+      "name": "pcce.live-data.port",
+      "type": "java.lang.Integer",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$LiveData",
+      "defaultValue": 443
+    },
+    {
+      "name": "pcce.live-data.stock-reports",
+      "type": "java.util.List<java.lang.String>",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$LiveData"
+    },
+    {
+      "name": "pcce.live-data.timeout",
+      "type": "java.time.Duration",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$LiveData",
+      "defaultValue": "10s"
+    },
+    {
+      "name": "pcce.live-data.token-path",
+      "type": "java.lang.String",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$LiveData",
+      "defaultValue": "livedata\/token\/new"
+    },
+    {
+      "name": "pcce.live-data.trust-all-certificates",
+      "type": "java.lang.Boolean",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$LiveData",
+      "defaultValue": false
+    },
+    {
+      "name": "pcce.live-data.username",
+      "type": "java.lang.String",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$LiveData"
+    },
+    {
+      "name": "pcce.live-data.websocket-port",
+      "type": "java.lang.Integer",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$LiveData",
+      "defaultValue": 443
+    },
+    {
       "name": "pcce.notifications.minimum-severity",
-      "type": "com.example.pcceobservability.config.PcceProperties$AlertSeverity",
-      "sourceType": "com.example.pcceobservability.config.PcceProperties$Notifications"
+      "type": "com.cisco.cx.observability.config.PcceProperties$AlertSeverity",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$Notifications"
     },
     {
       "name": "pcce.notifications.sms-authorization",
       "type": "java.lang.String",
-      "sourceType": "com.example.pcceobservability.config.PcceProperties$Notifications"
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$Notifications"
     },
     {
       "name": "pcce.notifications.sms-enabled",
       "type": "java.lang.Boolean",
-      "sourceType": "com.example.pcceobservability.config.PcceProperties$Notifications",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$Notifications",
       "defaultValue": false
     },
     {
       "name": "pcce.notifications.sms-max-alerts-per-assessment",
       "type": "java.lang.Integer",
-      "sourceType": "com.example.pcceobservability.config.PcceProperties$Notifications",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$Notifications",
       "defaultValue": 5
     },
     {
       "name": "pcce.notifications.sms-minimum-severity",
-      "type": "com.example.pcceobservability.config.PcceProperties$AlertSeverity",
-      "sourceType": "com.example.pcceobservability.config.PcceProperties$Notifications"
+      "type": "com.cisco.cx.observability.config.PcceProperties$AlertSeverity",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$Notifications"
     },
     {
       "name": "pcce.notifications.sms-recipients",
       "type": "java.util.List<java.lang.String>",
-      "sourceType": "com.example.pcceobservability.config.PcceProperties$Notifications"
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$Notifications"
     },
     {
       "name": "pcce.notifications.sms-url",
       "type": "java.lang.String",
-      "sourceType": "com.example.pcceobservability.config.PcceProperties$Notifications"
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$Notifications"
     },
     {
       "name": "pcce.notifications.sms-user-agent",
       "type": "java.lang.String",
-      "sourceType": "com.example.pcceobservability.config.PcceProperties$Notifications",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$Notifications",
       "defaultValue": "D-Tech \/ v1.6"
     },
     {
       "name": "pcce.notifications.smtp-enabled",
       "type": "java.lang.Boolean",
-      "sourceType": "com.example.pcceobservability.config.PcceProperties$Notifications",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$Notifications",
       "defaultValue": false
     },
     {
       "name": "pcce.notifications.smtp-from",
       "type": "java.lang.String",
-      "sourceType": "com.example.pcceobservability.config.PcceProperties$Notifications",
-      "defaultValue": "pcce-observability@localhost"
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$Notifications",
+      "defaultValue": "cx-observability@localhost"
     },
     {
       "name": "pcce.notifications.smtp-recipients",
       "type": "java.util.List<java.lang.String>",
-      "sourceType": "com.example.pcceobservability.config.PcceProperties$Notifications"
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$Notifications"
     },
     {
       "name": "pcce.notifications.smtp-subject-prefix",
       "type": "java.lang.String",
-      "sourceType": "com.example.pcceobservability.config.PcceProperties$Notifications",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$Notifications",
       "defaultValue": "[PCCE Observability]"
     },
     {
       "name": "pcce.notifications.timeout",
       "type": "java.time.Duration",
-      "sourceType": "com.example.pcceobservability.config.PcceProperties$Notifications",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$Notifications",
       "defaultValue": "10s"
     },
     {
       "name": "pcce.notifications.webhook-enabled",
       "type": "java.lang.Boolean",
-      "sourceType": "com.example.pcceobservability.config.PcceProperties$Notifications",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$Notifications",
       "defaultValue": false
     },
     {
       "name": "pcce.notifications.webhook-url",
       "type": "java.lang.String",
-      "sourceType": "com.example.pcceobservability.config.PcceProperties$Notifications"
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$Notifications"
     },
     {
       "name": "pcce.operations.assessment-fixed-delay-ms",
       "type": "java.lang.Long",
-      "sourceType": "com.example.pcceobservability.config.PcceProperties$Operations",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$Operations",
       "defaultValue": 300000
     },
     {
       "name": "pcce.operations.audit-retention",
       "type": "java.lang.Integer",
-      "sourceType": "com.example.pcceobservability.config.PcceProperties$Operations",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$Operations",
       "defaultValue": 500
     },
     {
       "name": "pcce.operations.component-latency-critical-ms",
       "type": "java.lang.Integer",
-      "sourceType": "com.example.pcceobservability.config.PcceProperties$Operations",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$Operations",
       "defaultValue": 5000
     },
     {
       "name": "pcce.operations.component-latency-warning-ms",
       "type": "java.lang.Integer",
-      "sourceType": "com.example.pcceobservability.config.PcceProperties$Operations",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$Operations",
       "defaultValue": 1500
     },
     {
       "name": "pcce.operations.dropped-calls-critical-threshold",
       "type": "java.lang.Integer",
-      "sourceType": "com.example.pcceobservability.config.PcceProperties$Operations",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$Operations",
       "defaultValue": 25
     },
     {
       "name": "pcce.operations.dropped-calls-warning-threshold",
       "type": "java.lang.Integer",
-      "sourceType": "com.example.pcceobservability.config.PcceProperties$Operations",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$Operations",
       "defaultValue": 10
     },
     {
       "name": "pcce.operations.maintenance-mode",
       "type": "java.lang.Boolean",
-      "sourceType": "com.example.pcceobservability.config.PcceProperties$Operations",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$Operations",
       "defaultValue": false
     },
     {
       "name": "pcce.operations.maintenance-reason",
       "type": "java.lang.String",
-      "sourceType": "com.example.pcceobservability.config.PcceProperties$Operations"
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$Operations"
     },
     {
       "name": "pcce.operations.scheduled-assessment-enabled",
       "type": "java.lang.Boolean",
-      "sourceType": "com.example.pcceobservability.config.PcceProperties$Operations",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$Operations",
       "defaultValue": true
     },
     {
       "name": "pcce.operations.service-level-critical-pct",
       "type": "java.lang.Double",
-      "sourceType": "com.example.pcceobservability.config.PcceProperties$Operations",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$Operations",
       "defaultValue": 70
     },
     {
       "name": "pcce.operations.service-level-warning-pct",
       "type": "java.lang.Double",
-      "sourceType": "com.example.pcceobservability.config.PcceProperties$Operations",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$Operations",
       "defaultValue": 80
     },
     {
       "name": "pcce.pcce-api.actions",
-      "type": "java.util.List<com.example.pcceobservability.config.PcceProperties$ApiAction>",
-      "sourceType": "com.example.pcceobservability.config.PcceProperties$PcceApi"
+      "type": "java.util.List<com.cisco.cx.observability.config.PcceProperties$ApiAction>",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$PcceApi"
     },
     {
       "name": "pcce.pcce-api.api-key",
       "type": "java.lang.String",
-      "sourceType": "com.example.pcceobservability.config.PcceProperties$PcceApi"
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$PcceApi"
     },
     {
       "name": "pcce.pcce-api.api-key-header-name",
       "type": "java.lang.String",
-      "sourceType": "com.example.pcceobservability.config.PcceProperties$PcceApi"
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$PcceApi"
     },
     {
       "name": "pcce.pcce-api.auth-mode",
-      "type": "com.example.pcceobservability.config.PcceProperties$ApiAuthMode",
-      "sourceType": "com.example.pcceobservability.config.PcceProperties$PcceApi"
+      "type": "com.cisco.cx.observability.config.PcceProperties$ApiAuthMode",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$PcceApi"
     },
     {
       "name": "pcce.pcce-api.base-url",
       "type": "java.lang.String",
-      "sourceType": "com.example.pcceobservability.config.PcceProperties$PcceApi"
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$PcceApi"
     },
     {
       "name": "pcce.pcce-api.bearer-token",
       "type": "java.lang.String",
-      "sourceType": "com.example.pcceobservability.config.PcceProperties$PcceApi"
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$PcceApi"
     },
     {
       "name": "pcce.pcce-api.enabled",
       "type": "java.lang.Boolean",
-      "sourceType": "com.example.pcceobservability.config.PcceProperties$PcceApi",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$PcceApi",
       "defaultValue": false
     },
     {
       "name": "pcce.pcce-api.monitors",
-      "type": "java.util.List<com.example.pcceobservability.config.PcceProperties$ApiMonitor>",
-      "sourceType": "com.example.pcceobservability.config.PcceProperties$PcceApi"
+      "type": "java.util.List<com.cisco.cx.observability.config.PcceProperties$ApiMonitor>",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$PcceApi"
     },
     {
       "name": "pcce.pcce-api.password",
       "type": "java.lang.String",
-      "sourceType": "com.example.pcceobservability.config.PcceProperties$PcceApi"
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$PcceApi"
     },
     {
       "name": "pcce.pcce-api.timeout",
       "type": "java.time.Duration",
-      "sourceType": "com.example.pcceobservability.config.PcceProperties$PcceApi",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$PcceApi",
       "defaultValue": "10s"
     },
     {
       "name": "pcce.pcce-api.trust-all-certificates",
       "type": "java.lang.Boolean",
-      "sourceType": "com.example.pcceobservability.config.PcceProperties$PcceApi",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$PcceApi",
       "defaultValue": false
     },
     {
       "name": "pcce.pcce-api.username",
       "type": "java.lang.String",
-      "sourceType": "com.example.pcceobservability.config.PcceProperties$PcceApi"
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$PcceApi"
     },
     {
       "name": "pcce.performance.jdbc-query-timeout-seconds",
       "type": "java.lang.Integer",
-      "sourceType": "com.example.pcceobservability.config.PcceProperties$Performance",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$Performance",
       "defaultValue": 30
     },
     {
       "name": "pcce.performance.slow-query-warning-ms",
       "type": "java.lang.Long",
-      "sourceType": "com.example.pcceobservability.config.PcceProperties$Performance",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$Performance",
       "defaultValue": 2000
     },
     {
       "name": "pcce.performance.slow-request-warning-ms",
       "type": "java.lang.Long",
-      "sourceType": "com.example.pcceobservability.config.PcceProperties$Performance",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$Performance",
       "defaultValue": 3000
     },
     {
       "name": "pcce.queries.agent-stats",
       "type": "java.lang.String",
-      "sourceType": "com.example.pcceobservability.config.PcceProperties$Queries"
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$Queries"
     },
     {
       "name": "pcce.queries.agent-stats-tcd",
       "type": "java.lang.String",
-      "sourceType": "com.example.pcceobservability.config.PcceProperties$Queries"
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$Queries"
     },
     {
       "name": "pcce.queries.call-metrics",
       "type": "java.lang.String",
-      "sourceType": "com.example.pcceobservability.config.PcceProperties$Queries"
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$Queries"
     },
     {
       "name": "pcce.queries.call-metrics-tcd-fallback",
       "type": "java.lang.String",
-      "sourceType": "com.example.pcceobservability.config.PcceProperties$Queries"
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$Queries"
     },
     {
       "name": "pcce.queries.call-metrics-tcd-fallback-enabled",
       "type": "java.lang.Boolean",
-      "sourceType": "com.example.pcceobservability.config.PcceProperties$Queries",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$Queries",
       "defaultValue": true
     },
     {
       "name": "pcce.queries.call-type-metrics",
       "type": "java.lang.String",
-      "sourceType": "com.example.pcceobservability.config.PcceProperties$Queries"
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$Queries"
     },
     {
       "name": "pcce.queries.disposition-breakdown",
       "type": "java.lang.String",
-      "sourceType": "com.example.pcceobservability.config.PcceProperties$Queries"
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$Queries"
     },
     {
       "name": "pcce.queries.dropped-calls",
       "type": "java.lang.String",
-      "sourceType": "com.example.pcceobservability.config.PcceProperties$Queries"
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$Queries"
     },
     {
       "name": "pcce.queries.dropped-calls-enabled",
       "type": "java.lang.Boolean",
-      "sourceType": "com.example.pcceobservability.config.PcceProperties$Queries",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$Queries",
       "defaultValue": true
     },
     {
       "name": "pcce.queries.ivr-containment",
       "type": "java.lang.String",
-      "sourceType": "com.example.pcceobservability.config.PcceProperties$Queries"
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$Queries"
     },
     {
       "name": "pcce.security.ldap.admin-group",
       "type": "java.lang.String",
-      "sourceType": "com.example.pcceobservability.config.PcceProperties$Ldap"
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$Ldap"
     },
     {
       "name": "pcce.security.ldap.enabled",
       "type": "java.lang.Boolean",
-      "sourceType": "com.example.pcceobservability.config.PcceProperties$Ldap",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$Ldap",
       "defaultValue": false
     },
     {
       "name": "pcce.security.ldap.group-search-base",
       "type": "java.lang.String",
-      "sourceType": "com.example.pcceobservability.config.PcceProperties$Ldap"
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$Ldap"
     },
     {
       "name": "pcce.security.ldap.supervisor-group",
       "type": "java.lang.String",
-      "sourceType": "com.example.pcceobservability.config.PcceProperties$Ldap"
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$Ldap"
     },
     {
       "name": "pcce.security.ldap.user-search-base",
       "type": "java.lang.String",
-      "sourceType": "com.example.pcceobservability.config.PcceProperties$Ldap"
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$Ldap"
     },
     {
       "name": "pcce.security.ldap.user-search-filter",
       "type": "java.lang.String",
-      "sourceType": "com.example.pcceobservability.config.PcceProperties$Ldap",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$Ldap",
       "defaultValue": "(sAMAccountName={0})"
     },
     {
       "name": "pcce.security.ldap.viewer-group",
       "type": "java.lang.String",
-      "sourceType": "com.example.pcceobservability.config.PcceProperties$Ldap"
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$Ldap"
     },
     {
       "name": "pcce.security.ldap.workforce-manager-group",
       "type": "java.lang.String",
-      "sourceType": "com.example.pcceobservability.config.PcceProperties$Ldap"
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$Ldap"
+    },
+    {
+      "name": "pcce.security.rate-limit.enabled",
+      "type": "java.lang.Boolean",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$Security$RateLimit",
+      "defaultValue": true
+    },
+    {
+      "name": "pcce.security.rate-limit.max-requests-per-minute",
+      "type": "java.lang.Integer",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$Security$RateLimit",
+      "defaultValue": 120
     },
     {
       "name": "pcce.security.role-permissions",
-      "type": "java.util.Map<com.example.pcceobservability.config.PcceProperties$AppRole,java.util.List<com.example.pcceobservability.config.PcceProperties$Permission>>",
-      "sourceType": "com.example.pcceobservability.config.PcceProperties$Security"
+      "type": "java.util.Map<com.cisco.cx.observability.config.PcceProperties$AppRole,java.util.List<com.cisco.cx.observability.config.PcceProperties$Permission>>",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$Security"
     },
     {
       "name": "pcce.security.users",
-      "type": "java.util.List<com.example.pcceobservability.config.PcceProperties$AppUser>",
-      "sourceType": "com.example.pcceobservability.config.PcceProperties$Security"
+      "type": "java.util.List<com.cisco.cx.observability.config.PcceProperties$AppUser>",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$Security"
+    },
+    {
+      "name": "pcce.ssl.trust-store-password",
+      "type": "java.lang.String",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$Ssl",
+      "defaultValue": "changeit"
+    },
+    {
+      "name": "pcce.ssl.trust-store-path",
+      "type": "java.lang.String",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$Ssl"
+    },
+    {
+      "name": "pcce.ssl.verify-hostname",
+      "type": "java.lang.Boolean",
+      "sourceType": "com.cisco.cx.observability.config.PcceProperties$Ssl",
+      "defaultValue": true
     },
     {
       "name": "spring.datasource.driver-class-name",

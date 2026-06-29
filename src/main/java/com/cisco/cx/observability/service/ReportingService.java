@@ -404,6 +404,10 @@ public class ReportingService {
 
     public List<IvrContainmentMetric> ivrContainment(LocalDate from, LocalDate to) {
         validateDateRange(from, to);
+        List<IvrContainmentMetric> derived = deriveIvrContainmentFromNodes(from, to);
+        if (!derived.isEmpty()) {
+            return derived;
+        }
         try {
             return timedQuery("cvp.ivrContainment", () -> cvpReportingJdbcTemplate.query(
                         pcceProperties.getQueries().getIvrContainment(),
@@ -415,7 +419,7 @@ public class ReportingService {
                         exclusiveEnd(to)));
         } catch (DataAccessException ex) {
             log.warn("ivr_containment_unavailable error={}", ex.getMostSpecificCause().getMessage());
-            return deriveIvrContainmentFromNodes(from, to);
+            return List.of();
         }
     }
 

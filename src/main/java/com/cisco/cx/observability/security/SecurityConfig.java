@@ -2,6 +2,10 @@ package com.cisco.cx.observability.security;
 
 import static org.springframework.security.config.Customizer.withDefaults;
 
+import com.cisco.cx.observability.config.PcceProperties;
+import java.net.URI;
+import java.util.LinkedHashSet;
+import java.util.Set;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -24,12 +28,15 @@ public class SecurityConfig {
 
     private final LdapAuthenticationProvider ldapAuthenticationProvider;
     private final ConfiguredUserDetailsService configuredUserDetailsService;
+    private final PcceProperties pcceProperties;
 
     public SecurityConfig(
             LdapAuthenticationProvider ldapAuthenticationProvider,
-            ConfiguredUserDetailsService configuredUserDetailsService) {
+            ConfiguredUserDetailsService configuredUserDetailsService,
+            PcceProperties pcceProperties) {
         this.ldapAuthenticationProvider = ldapAuthenticationProvider;
         this.configuredUserDetailsService = configuredUserDetailsService;
+        this.pcceProperties = pcceProperties;
     }
 
     @Bean
@@ -62,11 +69,50 @@ public class SecurityConfig {
                 .headers(headers -> headers
                         .frameOptions(frameOptions -> frameOptions.sameOrigin())
                         .contentSecurityPolicy(csp -> csp.policyDirectives(
-                                "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'self'"))
+                                contentSecurityPolicy()))
                         .referrerPolicy(referrer -> referrer.policy(ReferrerPolicyHeaderWriter.ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN))
                         .addHeaderWriter(new StaticHeadersWriter("Permissions-Policy", "geolocation=(), microphone=(), camera=()")))
                 .httpBasic(withDefaults());
         return http.build();
+    }
+
+    private String contentSecurityPolicy() {
+        return "default-src 'self'; "
+                + "script-src 'self' 'unsafe-inline'; "
+                + "style-src 'self' 'unsafe-inline'; "
+                + "img-src 'self' data:; "
+                + "connect-src 'self'; "
+                + "frame-src 'self' " + grafanaFrameSources() + "; "
+                + "frame-ancestors 'self'";
+    }
+
+    private String grafanaFrameSources() {
+        Set<String> sources = new LinkedHashSet<>();
+        if (pcceProperties.getGrafana() != null && pcceProperties.getGrafana().getDashboards() != null) {
+            pcceProperties.getGrafana().getDashboards().stream()
+                    .filter(PcceProperties.GrafanaDashboard::isEnabled)
+                    .map(PcceProperties.GrafanaDashboard::getUrl)
+                    .map(this::originOf)
+                    .filter(origin -> !origin.isBlank())
+                    .forEach(sources::add);
+        }
+        return sources.isEmpty() ? "" : String.join(" ", sources);
+    }
+
+    private String originOf(String url) {
+        if (url == null || url.isBlank()) {
+            return "";
+        }
+        try {
+            URI uri = URI.create(url.trim());
+            if (uri.getScheme() == null || uri.getHost() == null) {
+                return "";
+            }
+            int port = uri.getPort();
+            return uri.getScheme() + "://" + uri.getHost() + (port > -1 ? ":" + port : "");
+        } catch (IllegalArgumentException ex) {
+            return "";
+        }
     }
 
     @Bean

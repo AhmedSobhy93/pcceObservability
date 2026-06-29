@@ -3,7 +3,7 @@ server:
 
 spring:
   application:
-    name: pcce-observability
+    name: cx-observability
   jackson:
     property-naming-strategy: SNAKE_CASE
   datasource:
@@ -27,7 +27,7 @@ spring:
     locations: classpath:db/migration
   h2:
     console:
-      enabled: ${H2_CONSOLE_ENABLED:true}
+      enabled: ${H2_CONSOLE_ENABLED:false}
       path: /h2-console
   mail:
     host: ${PCCE_SMTP_HOST:}
@@ -53,10 +53,79 @@ management:
         include: health,info,metrics
 
 pcce:
+  ssl:
+    trust-store-path: ${PCCE_SSL_TRUST_STORE:}
+    trust-store-password: ${PCCE_SSL_TRUST_STORE_PASS:changeit}
+    verify-hostname: ${PCCE_SSL_VERIFY_HOSTNAME:true}
+
+  audit:
+    retention-days: ${PCCE_AUDIT_RETENTION_DAYS:90}
+
   performance:
     jdbc-query-timeout-seconds: 30
     slow-query-warning-ms: 2000
     slow-request-warning-ms: 3000
+
+  live-data:
+    enabled: ${PCCE_LIVE_DATA_ENABLED:false}
+    host: ${PCCE_LIVE_DATA_HOST:vssitcuic01.dev.mdi}
+    port: ${PCCE_LIVE_DATA_PORT:443}
+    websocket-port: ${PCCE_LIVE_DATA_WEBSOCKET_PORT:443}
+    token-path: ${PCCE_LIVE_DATA_TOKEN_PATH:livedata/token/new}
+    username: ${PCCE_LIVE_DATA_USERNAME:LDi1edulmtibl2}
+    password: ${PCCE_LIVE_DATA_PASSWORD:}
+    timeout: ${PCCE_LIVE_DATA_TIMEOUT:10s}
+    trust-all-certificates: ${PCCE_LIVE_DATA_TRUST_ALL_CERTIFICATES:false}
+    stock-reports:
+      - Agent Real Time
+      - Agent Skill Group Real Time
+      - Call Type Real Time
+      - Skill Group Real Time
+
+  jmx:
+    enabled: ${PCCE_JMX_ENABLED:false}
+    username: ${PCCE_JMX_USERNAME:}
+    password: ${PCCE_JMX_PASSWORD:}
+    timeout: ${PCCE_JMX_TIMEOUT:10s}
+    trust-store-configured: ${PCCE_JMX_TRUST_STORE_CONFIGURED:false}
+    targets:
+      - name: CVP Call Server JMX
+        component: CVP_CallServer
+        enabled: ${PCCE_JMX_CVP_CALLSERVER_ENABLED:false}
+        service-url: ${PCCE_JMX_CVP_CALLSERVER_URL:}
+        mbeans:
+          - java.lang:type=Memory
+          - java.lang:type=Threading
+          - java.lang:type=OperatingSystem
+      - name: CVP Reporting JMX
+        component: CVP_ReportingServer
+        enabled: ${PCCE_JMX_CVP_REPORTING_ENABLED:false}
+        service-url: ${PCCE_JMX_CVP_REPORTING_URL:}
+        mbeans:
+          - java.lang:type=Memory
+          - java.lang:type=Threading
+          - java.lang:type=OperatingSystem
+
+  app-dynamics:
+    enabled: ${APPD_ENABLED:false}
+    controller-url: ${APPD_CONTROLLER_URL:}
+    account-name: ${APPD_ACCOUNT_NAME:}
+    username: ${APPD_USERNAME:}
+    password: ${APPD_PASSWORD:}
+    application-name: ${APPD_APPLICATION_NAME:PCCE}
+    timeout: ${APPD_TIMEOUT:10s}
+    trust-all-certificates: ${APPD_TRUST_ALL_CERTIFICATES:false}
+    dashboards:
+      - name: PCCE Application Flow Map
+        area: Contact Center APM
+        enabled: true
+        url: ${APPD_PCCE_FLOWMAP_URL:}
+        description: PCCE service flow, business transactions, errors and response time
+      - name: CVP / IVR JVM Health
+        area: CVP
+        enabled: true
+        url: ${APPD_CVP_JVM_URL:}
+        description: CVP JVM, servlet, backend and error monitoring
 
   finesse:
     enabled: ${FINESSE_ENABLED:true}
@@ -64,7 +133,7 @@ pcce:
     username: ${FINESSE_USERNAME:administrator}
     password: ${FINESSE_PASSWORD:}
     timeout: ${FINESSE_TIMEOUT:10s}
-    trust-all-certificates: ${FINESSE_TRUST_ALL_CERTIFICATES:true}
+    trust-all-certificates: ${FINESSE_TRUST_ALL_CERTIFICATES:false}
     user-ids: ${FINESSE_USER_IDS:}
     team-ids: ${FINESSE_TEAM_IDS:}
     queue-ids: ${FINESSE_QUEUE_IDS:}
@@ -79,7 +148,8 @@ pcce:
     api-key-header-name: ${PCCE_API_KEY_HEADER_NAME:}
     api-key: ${PCCE_API_KEY:}
     timeout: 10s
-    trust-all-certificates: true
+    trust-all-certificates: ${PCCE_API_TRUST_ALL_CERTIFICATES:false}
+
     monitors:
       - name: Users
         category: User Configuration and Management
@@ -152,6 +222,68 @@ pcce:
         admin-only: false
         method: GET
         path: /unifiedconfig/config/skillgroup
+      - id: skill.create
+        category: Skill Group Management
+        name: Create skill group
+        enabled: ${PCCE_API_WRITE_ACTIONS_ENABLED:false}
+        admin-only: true
+        method: POST
+        path: /unifiedconfig/config/skillgroup
+        content-type: application/xml
+      - id: skill.update
+        category: Skill Group Management
+        name: Update skill group
+        enabled: ${PCCE_API_WRITE_ACTIONS_ENABLED:false}
+        admin-only: true
+        method: PUT
+        path: /unifiedconfig/config/skillgroup/{id}
+        content-type: application/xml
+      - id: agents.list
+        category: Agents, Skills, Attributes, and Teams
+        name: List agents
+        enabled: true
+        admin-only: false
+        method: GET
+        path: /unifiedconfig/config/agent
+      - id: agent.create
+        category: Agents, Skills, Attributes, and Teams
+        name: Create agent
+        enabled: ${PCCE_API_WRITE_ACTIONS_ENABLED:false}
+        admin-only: true
+        method: POST
+        path: /unifiedconfig/config/agent
+        content-type: application/xml
+      - id: agent.update
+        category: Agents, Skills, Attributes, and Teams
+        name: Update agent
+        enabled: ${PCCE_API_WRITE_ACTIONS_ENABLED:false}
+        admin-only: true
+        method: PUT
+        path: /unifiedconfig/config/agent/{id}
+        content-type: application/xml
+      - id: supervisor.create
+        category: Agents, Skills, Attributes, and Teams
+        name: Create supervisor
+        enabled: ${PCCE_API_WRITE_ACTIONS_ENABLED:false}
+        admin-only: true
+        method: POST
+        path: /unifiedconfig/config/supervisor
+        content-type: application/xml
+      - id: supervisor.update
+        category: Agents, Skills, Attributes, and Teams
+        name: Update supervisor
+        enabled: ${PCCE_API_WRITE_ACTIONS_ENABLED:false}
+        admin-only: true
+        method: PUT
+        path: /unifiedconfig/config/supervisor/{id}
+        content-type: application/xml
+      - id: deskSettings.list
+        category: Agents, Skills, Attributes, and Teams
+        name: List agent desk settings
+        enabled: true
+        admin-only: false
+        method: GET
+        path: /unifiedconfig/config/agentdesksettings
       - id: dialedNumbers.list
         category: Call Configuration and Management
         name: List dialed numbers
@@ -201,6 +333,7 @@ pcce:
         admin-only: false
         method: GET
         path: /unifiedconfig/config/machineinventory
+
       - id: cvpReportingServer.get
         category: System Configuration
         name: Get CVP Reporting Server
@@ -230,6 +363,44 @@ pcce:
         method: PUT
         path: /unifiedconfig/config/businesshour/{id}
 
+  cucm-axl:
+    enabled: ${CUCM_AXL_ENABLED:false}
+    host: ${CUCM_AXL_HOST:vssitcucm01.dev.mdi}
+    username: ${CUCM_AXL_USERNAME:}
+    password: ${CUCM_AXL_PASSWORD:}
+    version: ${CUCM_AXL_VERSION:15.0}
+    timeout: ${CUCM_AXL_TIMEOUT:15s}
+    trust-all-certificates: ${CUCM_AXL_TRUST_ALL_CERTIFICATES:false}
+    dn-start: ${CUCM_AXL_DN_START:50000}
+    dn-end: ${CUCM_AXL_DN_END:50999}
+    device-pool: ${CUCM_AXL_DEVICE_POOL:}
+    phone-template: ${CUCM_AXL_PHONE_TEMPLATE:}
+    common-phone-profile: ${CUCM_AXL_COMMON_PHONE_PROFILE:}
+    location: ${CUCM_AXL_LOCATION:Hub_None}
+    security-profile: ${CUCM_AXL_SECURITY_PROFILE:}
+    sip-profile: ${CUCM_AXL_SIP_PROFILE:}
+    route-partition: ${CUCM_AXL_ROUTE_PARTITION:}
+    line-css: ${CUCM_AXL_LINE_CSS:}
+    service-profile: ${CUCM_AXL_SERVICE_PROFILE:}
+
+  agent-provisioning:
+    execution-enabled: ${AGENT_PROVISIONING_EXECUTION_ENABLED:false}
+    identity-domain: ${AGENT_PROVISIONING_DOMAIN:dev.mdi}
+    results-per-page: ${AGENT_PROVISIONING_RESULTS_PER_PAGE:200}
+    default-dry-run: ${AGENT_PROVISIONING_DEFAULT_DRY_RUN:true}
+
+  cvp-api:
+    enabled: ${CVP_API_ENABLED:false}
+    base-url: ${CVP_API_BASE_URL:http://10.10.90.194:8000}
+    username: ${CVP_API_USERNAME:}
+    password: ${CVP_API_PASSWORD:}
+    auth-mode: ${CVP_API_AUTH_MODE:BASIC}
+    bearer-token: ${CVP_API_BEARER_TOKEN:}
+    api-key-header-name: ${CVP_API_KEY_HEADER_NAME:}
+    api-key: ${CVP_API_KEY:}
+    timeout: ${CVP_API_TIMEOUT:10s}
+    trust-all-certificates: ${CVP_API_TRUST_ALL_CERTIFICATES:true}
+
   queries:
     call-metrics-tcd-fallback-enabled: true
 
@@ -250,7 +421,7 @@ pcce:
     webhook-enabled: false
     webhook-url: ${PCCE_ALERT_WEBHOOK_URL:}
     smtp-enabled: ${PCCE_SMTP_ENABLED:false}
-    smtp-from: ${PCCE_SMTP_FROM:pcce-observability@localhost}
+    smtp-from: ${PCCE_SMTP_FROM:cx-observability@localhost}
     smtp-recipients: ${PCCE_SMTP_RECIPIENTS:}
     smtp-subject-prefix: ${PCCE_SMTP_SUBJECT_PREFIX:[PCCE Observability]}
     sms-enabled: ${PCCE_SMS_ENABLED:false}
@@ -278,6 +449,10 @@ pcce:
         description: Recording platform health, storage, and service telemetry
 
   security:
+    rate-limit:
+      enabled: ${PCCE_RATE_LIMIT_ENABLED:true}
+      max-requests-per-minute: ${PCCE_RATE_LIMIT_RPM:120}
+
     ldap:
       enabled: ${APP_LDAP_ENABLED:false}
       user-search-base: ${APP_LDAP_USER_SEARCH_BASE:}
@@ -357,16 +532,37 @@ pcce:
       username: ${PCCE_AW_USERNAME:obser_user}
       password: ${PCCE_AW_PASSWORD:}
       driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
+      hikari:
+        maximum-pool-size: ${AW_DB_MAX_POOL_SIZE:4}
+        minimum-idle: ${AW_DB_MIN_IDLE:0}
+        connection-timeout: ${DB_CONNECTION_TIMEOUT_MS:5000}
+        validation-timeout: ${DB_VALIDATION_TIMEOUT_MS:3000}
+        max-lifetime: ${DB_MAX_LIFETIME_MS:600000}
+        read-only: true
     hds:
       url: ${PCCE_HDS_JDBC_URL:jdbc:sqlserver://10.10.90.193:1433;databaseName=pcce_hds;encrypt=true;trustServerCertificate=true}
       username: ${PCCE_HDS_USERNAME:obser_user}
       password: ${PCCE_HDS_PASSWORD:}
       driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
+      hikari:
+        maximum-pool-size: ${HDS_DB_MAX_POOL_SIZE:6}
+        minimum-idle: ${HDS_DB_MIN_IDLE:0}
+        connection-timeout: ${DB_CONNECTION_TIMEOUT_MS:5000}
+        validation-timeout: ${DB_VALIDATION_TIMEOUT_MS:3000}
+        max-lifetime: ${DB_MAX_LIFETIME_MS:600000}
+        read-only: true
     cvp-reporting:
       url: ${CVP_REPORTING_JDBC_URL:jdbc:informix-sqli://10.10.90.198:1526/cvp_data:INFORMIXSERVER=cvp;DELIMIDENT=y;}
       username: ${CVP_REPORTING_USERNAME:cvp_dbuser}
       password: ${CVP_REPORTING_PASSWORD:}
       driver-class-name: com.informix.jdbc.IfxDriver
+      hikari:
+        maximum-pool-size: ${CVP_DB_MAX_POOL_SIZE:4}
+        minimum-idle: ${CVP_DB_MIN_IDLE:0}
+        connection-timeout: ${DB_CONNECTION_TIMEOUT_MS:5000}
+        validation-timeout: ${DB_VALIDATION_TIMEOUT_MS:3000}
+        max-lifetime: ${DB_MAX_LIFETIME_MS:600000}
+        read-only: true
 
   components:
     - name: ICM_Router
@@ -451,7 +647,7 @@ pcce:
       probe: HTTP
       url: https://vssitfin01.dev.mdi:8445/desktop
       timeout: 15s
-      trust-all-certificates: true
+      trust-all-certificates: false
       expected-status-min: 200
       expected-status-max: 499
     - name: MediaSense
@@ -471,6 +667,6 @@ pcce:
       probe: HTTP
       url: https://vssitcuic01.dev.mdi/cuic
       timeout: 15s
-      trust-all-certificates: true
+      trust-all-certificates: false
       expected-status-min: 200
       expected-status-max: 499

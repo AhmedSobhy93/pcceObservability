@@ -8,6 +8,9 @@ server:
     key-store-type: ${SERVER_SSL_KEY_STORE_TYPE:PKCS12}
 
 spring:
+  h2:
+    console:
+      enabled: false
   datasource:
     url: ${APP_DB_URL:jdbc:postgresql://localhost:5432/pcce_observability}
     username: ${APP_DB_USERNAME:pcce_observability}
@@ -39,13 +42,26 @@ management:
 
 logging:
   file:
-    name: ${LOG_FILE:logs/pcce-observability.log}
+    name: ${LOG_FILE:logs/cx-observability.log}
   level:
     root: INFO
-    com.example.pcceobservability: INFO
+    com.cisco.cx.observability: INFO
     org.springframework.security: WARN
 
 pcce:
+  ssl:
+    trust-store-path: ${PCCE_SSL_TRUST_STORE:}
+    trust-store-password: ${PCCE_SSL_TRUST_STORE_PASS:changeit}
+    verify-hostname: ${PCCE_SSL_VERIFY_HOSTNAME:true}
+
+  audit:
+    retention-days: ${PCCE_AUDIT_RETENTION_DAYS:90}
+
+  security:
+    rate-limit:
+      enabled: ${PCCE_RATE_LIMIT_ENABLED:true}
+      max-requests-per-minute: ${PCCE_RATE_LIMIT_RPM:120}
+
   datasources:
     aw:
       hikari:
@@ -76,6 +92,70 @@ pcce:
     service-level-warning-pct: ${PCCE_SERVICE_LEVEL_WARNING:80}
     service-level-critical-pct: ${PCCE_SERVICE_LEVEL_CRITICAL:70}
     audit-retention: ${PCCE_AUDIT_RETENTION:1000}
+
+  live-data:
+    enabled: ${PCCE_LIVE_DATA_ENABLED:false}
+    host: ${PCCE_LIVE_DATA_HOST:}
+    port: ${PCCE_LIVE_DATA_PORT:443}
+    websocket-port: ${PCCE_LIVE_DATA_WEBSOCKET_PORT:443}
+    token-path: ${PCCE_LIVE_DATA_TOKEN_PATH:livedata/token/new}
+    username: ${PCCE_LIVE_DATA_USERNAME:}
+    password: ${PCCE_LIVE_DATA_PASSWORD:}
+    timeout: ${PCCE_LIVE_DATA_TIMEOUT:10s}
+    trust-all-certificates: ${PCCE_LIVE_DATA_TRUST_ALL_CERTIFICATES:false}
+
+  jmx:
+    enabled: ${PCCE_JMX_ENABLED:false}
+    username: ${PCCE_JMX_USERNAME:}
+    password: ${PCCE_JMX_PASSWORD:}
+    timeout: ${PCCE_JMX_TIMEOUT:10s}
+    trust-store-configured: ${PCCE_JMX_TRUST_STORE_CONFIGURED:false}
+    targets:
+      - name: CVP Call Server JMX A
+        component: CVP_CallServer
+        enabled: ${PCCE_JMX_CVP_CALLSERVER_A_ENABLED:false}
+        service-url: ${PCCE_JMX_CVP_CALLSERVER_A_URL:}
+      - name: CVP Call Server JMX B
+        component: CVP_CallServer
+        enabled: ${PCCE_JMX_CVP_CALLSERVER_B_ENABLED:false}
+        service-url: ${PCCE_JMX_CVP_CALLSERVER_B_URL:}
+      - name: CVP Reporting JMX
+        component: CVP_ReportingServer
+        enabled: ${PCCE_JMX_CVP_REPORTING_ENABLED:false}
+        service-url: ${PCCE_JMX_CVP_REPORTING_URL:}
+
+  app-dynamics:
+    enabled: ${APPD_ENABLED:false}
+    controller-url: ${APPD_CONTROLLER_URL:}
+    account-name: ${APPD_ACCOUNT_NAME:}
+    username: ${APPD_USERNAME:}
+    password: ${APPD_PASSWORD:}
+    application-name: ${APPD_APPLICATION_NAME:PCCE}
+    timeout: ${APPD_TIMEOUT:10s}
+    trust-all-certificates: ${APPD_TRUST_ALL_CERTIFICATES:false}
+    dashboards:
+      - name: PCCE Application Flow Map
+        area: Contact Center APM
+        enabled: true
+        url: ${APPD_PCCE_FLOWMAP_URL:}
+        description: PCCE service flow, business transactions, errors and response time
+      - name: CVP / IVR JVM Health
+        area: CVP
+        enabled: true
+        url: ${APPD_CVP_JVM_URL:}
+        description: CVP JVM, servlet, backend and error monitoring
+
+  cvp-api:
+    enabled: ${CVP_API_ENABLED:false}
+    base-url: ${CVP_API_BASE_URL:}
+    username: ${CVP_API_USERNAME:}
+    password: ${CVP_API_PASSWORD:}
+    auth-mode: ${CVP_API_AUTH_MODE:BASIC}
+    bearer-token: ${CVP_API_BEARER_TOKEN:}
+    api-key-header-name: ${CVP_API_KEY_HEADER_NAME:}
+    api-key: ${CVP_API_KEY:}
+    timeout: ${CVP_API_TIMEOUT:10s}
+    trust-all-certificates: ${CVP_API_TRUST_ALL_CERTIFICATES:false}
 
   components:
     - name: ICM_Router
@@ -121,7 +201,7 @@ pcce:
       probe: HTTP
       url: ${AW_A_HEALTH_URL:https://aw-a.example.local/unifiedconfig/config/deploymenttype}
       timeout: 10s
-      trust-all-certificates: true
+      trust-all-certificates: false
       expected-status-min: 200
       expected-status-max: 499
     - name: ICM_Distributor_AW
@@ -133,7 +213,7 @@ pcce:
       probe: HTTP
       url: ${AW_B_HEALTH_URL:https://aw-b.example.local/unifiedconfig/config/deploymenttype}
       timeout: 10s
-      trust-all-certificates: true
+      trust-all-certificates: false
       expected-status-min: 200
       expected-status-max: 499
     - name: Live_Data
@@ -145,7 +225,7 @@ pcce:
       probe: HTTP
       url: ${LIVEDATA_A_URL:https://livedata-a.example.local}
       timeout: 10s
-      trust-all-certificates: true
+      trust-all-certificates: false
       expected-status-min: 200
       expected-status-max: 499
     - name: CTI_Server
@@ -253,7 +333,7 @@ pcce:
       probe: HTTP
       url: ${VVB_1_URL:https://vvb-1.example.local}
       timeout: 10s
-      trust-all-certificates: true
+      trust-all-certificates: false
       expected-status-min: 200
       expected-status-max: 499
     - name: Finesse
@@ -265,7 +345,7 @@ pcce:
       probe: HTTP
       url: ${FINESSE_A_URL:https://finesse-a.example.local:8445/desktop}
       timeout: 15s
-      trust-all-certificates: true
+      trust-all-certificates: false
       expected-status-min: 200
       expected-status-max: 499
     - name: Finesse
@@ -277,7 +357,7 @@ pcce:
       probe: HTTP
       url: ${FINESSE_B_URL:https://finesse-b.example.local:8445/desktop}
       timeout: 15s
-      trust-all-certificates: true
+      trust-all-certificates: false
       expected-status-min: 200
       expected-status-max: 499
     - name: CUIC
@@ -289,7 +369,7 @@ pcce:
       probe: HTTP
       url: ${CUIC_PUB_URL:https://cuic-pub.example.local/cuic}
       timeout: 15s
-      trust-all-certificates: true
+      trust-all-certificates: false
       expected-status-min: 200
       expected-status-max: 499
     - name: CUCM_Publisher
@@ -301,7 +381,7 @@ pcce:
       probe: HTTP
       url: ${CUCM_PUB_URL:https://cucm-pub.example.local}
       timeout: 10s
-      trust-all-certificates: true
+      trust-all-certificates: false
       expected-status-min: 200
       expected-status-max: 499
     - name: CUCM_Subscriber
@@ -313,7 +393,7 @@ pcce:
       probe: HTTP
       url: ${CUCM_SUB1_URL:https://cucm-sub1.example.local}
       timeout: 10s
-      trust-all-certificates: true
+      trust-all-certificates: false
       expected-status-min: 200
       expected-status-max: 499
     - name: VoIP_Gateway
@@ -335,7 +415,7 @@ pcce:
       probe: HTTP
       url: ${CC_VIP_URL:https://cc-vip.example.local}
       timeout: 10s
-      trust-all-certificates: true
+      trust-all-certificates: false
       expected-status-min: 200
       expected-status-max: 499
     - name: Eleveo_Recording
@@ -347,6 +427,6 @@ pcce:
       probe: HTTP
       url: ${ELEVEO_RECORDING_URL:https://eleveo.example.local}
       timeout: 10s
-      trust-all-certificates: true
+      trust-all-certificates: false
       expected-status-min: 200
       expected-status-max: 499
