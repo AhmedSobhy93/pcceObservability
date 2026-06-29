@@ -143,7 +143,8 @@
     <section class="view" id="view-agents">
         <div class="filter-bar page-filter">
             <label class="date-field"><span>Agent</span><input type="text" id="agentPageFilter" list="agentOptions" placeholder="All"></label>
-            <label class="date-field"><span>Team</span><input type="text" id="agentTeamInput" placeholder="All"></label>
+            <label class="date-field hidden-field"><span>Team</span><input type="hidden" id="agentTeamInput"></label>
+            <div class="multi-field" data-target="agentTeamInput" data-source="teams" data-label="Teams"></div>
             <label class="date-field"><span>Status</span><select id="agentStatusFilter"><option value="">All</option><option value="available">Available</option><option value="on_call">On call</option><option value="wrap_up">Wrap up</option><option value="not_ready">Not ready</option><option value="offline">Offline</option></select></label>
             <label class="date-field"><span>Search</span><input type="text" id="agentSearchFilter" placeholder="Name, ID, skill"></label>
             <button class="primary-btn" id="agentFilterBtn">Apply</button>
@@ -169,36 +170,25 @@
             <div class="running-call-grid" id="runningCallGrid"></div>
         </article>
         <article class="panel full api-functions-panel">
-            <div class="panel-head"><h2>Agent Action Center</h2><span>Approved API actions and required payloads</span></div>
-            <div class="agent-action-grid" id="agentActionCenter"></div>
-        </article>
-        <article class="panel full api-functions-panel">
-            <div class="panel-head"><h2>Agent Skill Assignment Manager</h2><span>App-controlled desired state before approved PCCE API execution</span></div>
+            <div class="panel-head"><h2>Agent Provisioning and Skill Assignment</h2><span>CUCM AXL + PCCE Unified Config preparation</span></div>
             <div class="admin-form plan-editor-form">
                 <label class="date-field"><span>Agent ID / Login</span><input id="assignmentAgentId" list="agentOptions" placeholder="cc.agent1 or SkillTargetID"></label>
                 <label class="date-field"><span>Agent Name</span><input id="assignmentAgentName" placeholder="Display name"></label>
                 <label class="date-field"><span>Team</span><input id="assignmentTeam" placeholder="Team name"></label>
                 <label class="date-field"><span>Skill Group</span><input id="assignmentSkill" list="skillOptions" placeholder="Skill group"></label>
                 <label class="date-field"><span>Proficiency</span><input id="assignmentProficiency" type="number" min="1" max="10" placeholder="1-10"></label>
+                <label class="date-field"><span>Agent Type</span><select id="assignmentAgentType"><option value="agent">Agent</option><option value="supervisor">Supervisor</option></select></label>
+                <label class="date-field"><span>User Mode</span><select id="assignmentUserMode"><option value="existing">Existing LDAP/CUCM user</option><option value="new">New CUCM user</option></select></label>
                 <label class="date-field"><span>Enabled</span><select id="assignmentEnabled"><option value="true">Enabled</option><option value="false">Disabled</option></select></label>
                 <label class="date-field editor-wide"><span>Notes</span><input id="assignmentNotes" placeholder="Change ticket / reason"></label>
                 <button class="primary-btn" id="saveAgentSkillAssignmentBtn">Save Assignment</button>
             </div>
+            <div class="metric-list" id="agentProvisioningGuide"></div>
             <div class="table-wrap"><table><thead><tr><th>Agent</th><th>Team</th><th>Skill</th><th>Prof.</th><th>State</th><th>Source</th><th>Updated</th><th></th></tr></thead><tbody id="agentSkillAssignmentTable"></tbody></table></div>
         </article>
         <div class="content-grid support-grid">
-            <article class="panel wide">
-                <div class="panel-head"><h2>Finesse Live Agents</h2><span id="finesseAgentCount"></span></div>
-                <div class="component-grid" id="finesseAgentGrid"></div>
-            </article>
-            <article class="panel">
-                <div class="panel-head"><h2>Finesse Dialogs</h2><span id="finesseDialogCount"></span></div>
-                <div class="metric-list" id="finesseDialogList"></div>
-            </article>
-        </div>
-        <div class="content-grid support-grid">
             <article class="panel wide"><h2>Finesse Teams / Queues</h2><div class="metric-list" id="finesseTeamQueueList"></div></article>
-            <article class="panel"><h2>Finesse System</h2><div class="metric-list" id="finesseSystemList"></div></article>
+            <article class="panel"><h2>Agent Discovery Notes</h2><div class="metric-list" id="finesseDiscoveryList"></div></article>
         </div>
     </section>
 
@@ -239,6 +229,10 @@
         <article class="panel full api-functions-panel">
             <div class="panel-head"><h2>Server Metrics</h2><span>CPU, memory, disk, and service collection readiness</span></div>
             <div class="component-grid" id="serverMetricGrid"></div>
+        </article>
+        <article class="panel full api-functions-panel">
+            <div class="panel-head"><h2>Finesse System Status</h2><span>SystemInfo and CTI heartbeat from Finesse API</span></div>
+            <div class="component-grid" id="finesseSystemGrid"></div>
         </article>
     </section>
 

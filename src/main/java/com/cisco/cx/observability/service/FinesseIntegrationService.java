@@ -83,7 +83,6 @@ public class FinesseIntegrationService {
             Set<String> userIds = new LinkedHashSet<>(userIdsFromDirectory(directory.body()));
             userIds.addAll(configuredUserIds());
             results.addAll(userIds.parallelStream()
-                    .limit(25)
                     .map(userId -> request("User " + userId, "/finesse/api/User/" + encodePath(userId)))
                     .toList());
             cachedAgents = List.copyOf(results);
@@ -105,15 +104,14 @@ public class FinesseIntegrationService {
             if (!fresh(cachedAgentsAt) || cachedAgents.isEmpty()) {
                 agents();
             }
-            Set<String> userIds = activeFinesseUserIds(cachedAgents);
+            Set<String> userIds = allFinesseUserIds(cachedAgents);
             if (userIds.isEmpty()) {
                 cachedDialogs = List.of(new FinesseEndpointResult("Dialogs", "GET", targetTemplate("/finesse/api/User/{id}/Dialogs"),
-                        204, 0, "No active TALKING/RESERVED/HOLD agents discovered in cached Finesse user state.", Instant.now()));
+                        204, 0, "No Finesse users discovered for dialog polling.", Instant.now()));
                 cachedDialogsAt = Instant.now();
                 return cachedDialogs;
             }
             List<FinesseEndpointResult> results = userIds.parallelStream()
-                    .limit(12)
                     .map(userId -> request("Dialogs " + userId, "/finesse/api/User/" + encodePath(userId) + "/Dialogs"))
                     .toList();
             cachedDialogs = List.copyOf(results);
@@ -256,6 +254,29 @@ public class FinesseIntegrationService {
             matcher.reset();
             while (matcher.find()) {
                 collectActiveUserId(matcher.group(), ids);
+            }
+        }
+        return ids;
+    }
+
+    private Set<String> allFinesseUserIds(List<FinesseEndpointResult> agentResults) {
+        Set<String> ids = new LinkedHashSet<>();
+        for (FinesseEndpointResult result : agentResults == null ? List.<FinesseEndpointResult>of() : agentResults) {
+            String body = result.body();
+            Matcher matcher = FINESSE_USER_BLOCK_PATTERN.matcher(body == null ? "" : body);
+            if (!matcher.find() && StringUtils.hasText(body)) {
+                String id = xmlTag(body, "id");
+                if (StringUtils.hasText(id)) {
+                    ids.add(id.trim());
+                }
+                continue;
+            }
+            matcher.reset();
+            while (matcher.find()) {
+                String id = xmlTag(matcher.group(), "id");
+                if (StringUtils.hasText(id)) {
+                    ids.add(id.trim());
+                }
             }
         }
         return ids;

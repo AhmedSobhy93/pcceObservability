@@ -681,7 +681,8 @@ public class ReportingService {
             String key = agentKey(active);
             AgentStat base = merged.get(key);
             if (base == null) {
-                merged.put(key, active);
+                log.debug("agent_activity_without_roster_match ignored agentId={} agentName={}",
+                        active.agentId(), active.agentName());
             } else {
                 merged.put(key, new AgentStat(
                         active.date() == null ? base.date() : active.date(),

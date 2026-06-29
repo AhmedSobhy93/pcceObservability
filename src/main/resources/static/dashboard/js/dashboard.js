@@ -72,7 +72,7 @@ const pages = {
 };
 
 const colors = ["#2ed3c2", "#3d82f6", "#f4a51c", "#8d6cf7", "#24e0a4", "#ff626c"];
-const uiState = { ivrNodePage: 0, ivrNodePageSize: 50, agentPage: 0, agentPageSize: 25, journeyPage: 0, journeyPageSize: 12, callTypePage: 0, callTypePageSize: 50 };
+const uiState = { ivrNodePage: 0, ivrNodePageSize: 50, agentPage: 0, agentPageSize: 10, journeyPage: 0, journeyPageSize: 12, callTypePage: 0, callTypePageSize: 50 };
 const businessSettings = loadBusinessSettings();
 const planState = { view: "tasks", topic: "ALL", collapsed: new Set() };
 let activeView = "overview";
@@ -279,7 +279,7 @@ function agentParams() {
     const agent = firstFilterValue("#agentPageFilter");
     const team = firstFilterValue("#agentTeamInput");
     if (agent) params.set("agentId", agent);
-    if (team) params.set("team", team);
+    if (team && !team.includes(",")) params.set("team", team);
     return params.toString();
 }
 
@@ -517,7 +517,7 @@ async function refresh() {
                 safeLoad("cvpActions", "/api/v1/cvp-api/actions", state.cvpActions),
                 safeLoad("ivrFeatures", "/api/v1/workforce-management/ivr-features", state.ivrFeatures));
     }
-    if (wantsAgents || wantsIntegration) {
+    if (wantsAgents || wantsIntegration || wantsSystem) {
         supportLoads.push(
                 safeLoad("finesseCapabilities", "/api/v1/finesse/capabilities", state.finesseCapabilities),
                 safeLoad("finesseSystem", "/api/v1/finesse/system", state.finesseSystem, { timeoutMs: 12000 }),
@@ -917,7 +917,7 @@ function renderAgents() {
             <td>${fmt(liveDialogs.length)}</td>
             <td>${escapeHtml(firstDialog.fromAddress || firstDialog.ani || "--")}</td>
             <td>${fmt(pick(agent, "calls_handled", "callsHandled"))}</td>
-            <td>${seconds(pick(agent, "avg_handle_time", "avgHandleTime"))}</td>
+            <td>${agentMetricSeconds(agent, "avg_handle_time", "avgHandleTime")}</td>
             <td>${progressCell(occupancy)}</td>
             <td>${progressCell(adherence)}</td>
             <td>${fmt(pick(agent, "transfers"))}</td>
@@ -927,12 +927,11 @@ function renderAgents() {
 }
 
 function filteredAgents() {
-    const selectedTeam = document.querySelector(".team-filter.active")?.dataset.team || "ALL";
+    const selectedTeams = splitCsv(firstFilterValue("#agentTeamInput"));
     const statusFilter = firstFilterValue("#agentStatusFilter").toLowerCase();
     const search = firstFilterValue("#agentSearchFilter").toLowerCase();
-    return (selectedTeam === "ALL"
-        ? state.agents
-        : state.agents.filter(agent => (pick(agent, "team") || "UNKNOWN") === selectedTeam))
+    return state.agents
+        .filter(agent => selectedTeams.length === 0 || selectedTeams.includes(pick(agent, "team") || "UNKNOWN"))
         .filter(agent => !statusFilter || effectiveAgentStatus(agent) === statusFilter)
         .filter(agent => {
             if (!search) return true;
@@ -947,16 +946,19 @@ function filteredAgents() {
 
 function renderAgentVisuals(agents) {
     renderAgentKpis(agents);
-    renderAgentCards(agents);
-    renderAgentCharts(agents);
+    const totalPages = Math.max(1, Math.ceil(agents.length / uiState.agentPageSize));
+    uiState.agentPage = Math.min(uiState.agentPage, totalPages - 1);
+    const start = uiState.agentPage * uiState.agentPageSize;
+    const pageRows = agents.slice(start, start + uiState.agentPageSize);
+    renderAgentCards(pageRows);
+    renderAgentCharts(pageRows);
     renderAgentApiWorkspace();
     renderRunningAgentCalls();
-    renderAgentActionCenter();
 }
 
 function renderAgentKpis(agents) {
     const total = agents.length;
-    const active = agents.filter(agent => num(pick(agent, "calls_handled", "callsHandled")) > 0).length;
+    const active = agents.filter(agent => activeDialogsForAgent(agent).length > 0 || effectiveAgentStatus(agent) === "on_call").length;
     const handled = sum(agents, "calls_handled", "callsHandled");
     const aht = average(agents.filter(agent => pick(agent, "avg_handle_time", "avgHandleTime") !== null), "avg_handle_time", "avgHandleTime");
     const teams = unique(agents.map(agent => pick(agent, "team") || "UNKNOWN")).length;
@@ -965,7 +967,7 @@ function renderAgentKpis(agents) {
     const activeDialogs = parsedFinesseDialogs().filter(dialog => dialog.state && !/ended|dropped|failed/i.test(dialog.state)).length;
     qs("#agentKpis").innerHTML = [
         agentKpi("Agents", total, `${teams} teams`),
-        agentKpi("Active", active, "handled calls in range"),
+        agentKpi("Active", active, "live calls / on call"),
         agentKpi("Handled", fmt(handled), "selected interval"),
         agentKpi("AHT", metricSeconds(aht), "Cisco interval/proxy"),
         agentKpi("Finesse Users", finesseUsers ?? "--", "live directory"),
@@ -979,15 +981,19 @@ function agentKpi(label, value, detail) {
     return `<article class="kpi-card compact agent-kpi"><div class="kpi-top"><span>${escapeHtml(label)}</span></div><strong>${escapeHtml(String(value))}</strong><small>${escapeHtml(detail)}</small></article>`;
 }
 
+function agentMetricSeconds(agent, ...fields) {
+    const value = pick(agent, ...fields);
+    if (value === null || value === undefined || num(value) === 0) return "--";
+    return `${seconds(value)}s`;
+}
+
 function renderAgentCards(agents) {
-    const top = [...agents]
-        .sort((a, b) => num(pick(b, "calls_handled", "callsHandled")) - num(pick(a, "calls_handled", "callsHandled")))
-        .slice(0, 8);
-    qs("#agentVisualCards").innerHTML = top.map(agent => {
+    qs("#agentVisualCards").innerHTML = agents.map(agent => {
         const status = effectiveAgentStatus(agent);
         const calls = num(pick(agent, "calls_handled", "callsHandled"));
         const occupancy = pick(agent, "occupancy_pct", "occupancyPct");
         const adherence = pick(agent, "adherence_pct", "adherencePct");
+        const liveDialogs = activeDialogsForAgent(agent);
         return `<article class="agent-card">
             <div class="agent-avatar">${escapeHtml(agentInitials(agent))}</div>
             <div class="agent-card-main">
@@ -996,8 +1002,9 @@ function renderAgentCards(agents) {
                     <span class="badge ${status}">${escapeHtml(status.replace("_", " "))}</span>
                 </div>
                 <div class="agent-card-stats">
+                    <span>Live <b>${fmt(liveDialogs.length)}</b></span>
                     <span>Calls <b>${fmt(calls)}</b></span>
-                    <span>AHT <b>${seconds(pick(agent, "avg_handle_time", "avgHandleTime"))}s</b></span>
+                    <span>AHT <b>${agentMetricSeconds(agent, "avg_handle_time", "avgHandleTime")}</b></span>
                     <span>Transfers <b>${fmt(pick(agent, "transfers"))}</b></span>
                     <span>Not Ready <b>${minutes(pick(agent, "not_ready_time_min", "notReadyTimeMin"))}</b></span>
                 </div>
@@ -1011,9 +1018,7 @@ function renderAgentCards(agents) {
 }
 
 function renderAgentCharts(agents) {
-    const top = [...agents]
-        .sort((a, b) => num(pick(b, "calls_handled", "callsHandled")) - num(pick(a, "calls_handled", "callsHandled")))
-        .slice(0, 10);
+    const top = agents;
     const labels = top.map(shortAgentName);
     drawStackedBarChart(qs("#agentAhtChart"), labels, [
         { label: "Talk", color: "#2ed3c2", values: top.map(agent => num(pick(agent, "avg_talk_time", "avgTalkTime")) || num(pick(agent, "avg_handle_time", "avgHandleTime"))) },
@@ -1026,16 +1031,12 @@ function renderAgentCharts(agents) {
 function renderAgentApiWorkspace() {
     const finesseUsers = finesseDirectoryCount();
     const finesseTeams = countXmlTags((state.finesseTeams.find(item => String(pick(item, "name") || "").toLowerCase().includes("teams directory")) || {}).body, "Team");
-    const agentActions = state.pcceActions.filter(action => /agent|team|skill|attribute/i.test(`${pick(action, "id")} ${pick(action, "name")} ${pick(action, "category")}`));
     qs("#agentApiWorkspace").innerHTML = [
         apiWorkspaceCard("Finesse Users", finesseUsers ?? "--", "GET /finesse/api/Users", "Live agent directory and desktop-visible users"),
         apiWorkspaceCard("Finesse Teams", finesseTeams ?? "--", "GET /finesse/api/Teams", "Supervisor/team inventory from Finesse"),
-        apiWorkspaceCard("Dialogs", state.finesseDialogs.length, "GET /finesse/api/User/{id}/Dialogs", "Live call/dialog state per user"),
-        apiWorkspaceCard("PCCE Agent Config", agentActions.length, "Unified Config", "Agent, team, skill group, and attribute APIs")
-    ].join("") + `<div class="api-chip-row">${agentActions.slice(0, 10).map(action => `<button class="small-btn" data-action-id="${escapeHtml(pick(action, "id") || "")}" ${pick(action, "enabled") ? "" : "disabled"}>${escapeHtml(pick(action, "name") || pick(action, "id") || "")}</button>`).join("")}</div>`;
-    document.querySelectorAll("#agentApiWorkspace [data-action-id]").forEach(button => {
-        button.addEventListener("click", () => executePcceAction(button.dataset.actionId));
-    });
+        apiWorkspaceCard("Running Calls", parsedFinesseDialogs().length, "GET /finesse/api/User/{id}/Dialogs", "Rendered below as live calls with caller/dialed/participant details"),
+        apiWorkspaceCard("PCCE Agent Config", "Ready", "Unified Config", "Use the provisioning manager below for team/skill desired state")
+    ].join("");
 }
 
 function renderRunningAgentCalls() {
@@ -1058,34 +1059,6 @@ function renderRunningAgentCalls() {
         </div>
         <details><summary>Raw Finesse Dialog</summary><pre class="mini-json">${escapeHtml(call.raw || "")}</pre></details>
     </article>`).join("") || `<div class="empty-state"><strong>No running calls found</strong><span>Finesse Dialogs returned no active dialog details for discovered users.</span></div>`;
-}
-
-function renderAgentActionCenter() {
-    const pcceActions = state.pcceActions.filter(action => /agent|team|skill|attribute/i.test(`${pick(action, "id")} ${pick(action, "name")} ${pick(action, "category")}`));
-    const finesseActions = [
-        ["Set Agent Ready", "PUT", "/finesse/api/User/{id}", "<User><state>READY</state></User>", "Agent or supervisor permission required"],
-        ["Set Agent Not Ready", "PUT", "/finesse/api/User/{id}", "<User><state>NOT_READY</state><reasonCodeId>{id}</reasonCodeId></User>", "Requires valid reason code"],
-        ["Dialog Hold", "PUT", "/finesse/api/Dialog/{dialogId}", "<Dialog><requestedAction>HOLD</requestedAction></Dialog>", "Only while dialog is active and permitted"],
-        ["Dialog Retrieve", "PUT", "/finesse/api/Dialog/{dialogId}", "<Dialog><requestedAction>RETRIEVE</requestedAction></Dialog>", "Only for held dialog"],
-        ["Dialog Drop", "PUT", "/finesse/api/Dialog/{dialogId}", "<Dialog><requestedAction>DROP</requestedAction></Dialog>", "High impact; keep disabled unless approved"]
-    ];
-    qs("#agentActionCenter").innerHTML = `
-        <div class="action-section">
-            <h3>PCCE Unified Config Actions</h3>
-            <div class="api-chip-row">${pcceActions.map(action => `<button class="small-btn" data-action-id="${escapeHtml(pick(action, "id") || "")}" ${pick(action, "enabled") ? "" : "disabled"}>${escapeHtml(pick(action, "name") || pick(action, "id") || "")}</button>`).join("") || "<span class='muted-value'>No agent configuration actions loaded</span>"}</div>
-        </div>
-        <div class="action-section">
-            <h3>Finesse Operational Actions</h3>
-            <div class="agent-action-list">${finesseActions.map(([name, method, path, body, note]) => `<article class="agent-action-card">
-                <strong>${escapeHtml(name)}</strong>
-                <span>${escapeHtml(method)} ${escapeHtml(path)}</span>
-                <code>${escapeHtml(body)}</code>
-                <small>${escapeHtml(note)}. Execution is intentionally not enabled until an admin approves action safety.</small>
-            </article>`).join("")}</div>
-        </div>`;
-    document.querySelectorAll("#agentActionCenter [data-action-id]").forEach(button => {
-        button.addEventListener("click", () => executePcceAction(button.dataset.actionId));
-    });
 }
 
 function apiWorkspaceCard(title, value, method, detail) {
@@ -1253,29 +1226,23 @@ function mapFinesseState(value) {
 }
 
 function renderFinesse() {
-    const agentGrid = qs("#finesseAgentGrid");
-    if (!agentGrid) return;
     const directory = state.finesseAgents.find(item => String(pick(item, "name") || "").toLowerCase().includes("users directory"));
     const directoryCount = directory ? countXmlTags(pick(directory, "body"), "User") : null;
-    qs("#finesseAgentCount").textContent = directoryCount === null
-        ? `${state.finesseAgents.length} Finesse probes`
-        : `${directoryCount} Finesse users discovered`;
-    qs("#finesseDialogCount").textContent = `${state.finesseDialogs.length} dialog probes`;
-    agentGrid.innerHTML = state.finesseAgents.map(endpointCard).join("") ||
-        `<article class="component-card"><h3>Finesse Agents</h3><span class="badge warn">not configured</span><p>Set FINESSE_ENABLED=true and FINESSE_USER_IDS or app user agent IDs.</p></article>`;
-    qs("#finesseDialogList").innerHTML = state.finesseDialogs.map(item =>
-        metricRow(`${pick(item, "name")} - HTTP ${pick(item, "status_code", "statusCode") || 0}`,
-            `${fmt(pick(item, "latency_ms", "latencyMs"))} ms | ${snippet(pick(item, "body"), 180)}`)
-    ).join("") || metricRow("Dialogs", "No configured Finesse user IDs");
     const teamQueueItems = [...state.finesseTeams, ...state.finesseQueues];
-    qs("#finesseTeamQueueList").innerHTML = teamQueueItems.map(item =>
+    const teamQueueList = qs("#finesseTeamQueueList");
+    if (teamQueueList) teamQueueList.innerHTML = teamQueueItems.map(item =>
         metricRow(`${pick(item, "name")} - HTTP ${pick(item, "status_code", "statusCode") || 0}`,
             `${fmt(pick(item, "latency_ms", "latencyMs"))} ms | ${snippet(pick(item, "body"), 180)}`)
     ).join("") || metricRow("Teams / Queues", "Configure FINESSE_TEAM_IDS and FINESSE_QUEUE_IDS if needed");
-    qs("#finesseSystemList").innerHTML = state.finesseSystem.map(item =>
-        metricRow(`${pick(item, "name")} - HTTP ${pick(item, "status_code", "statusCode") || 0}`,
-            `${fmt(pick(item, "latency_ms", "latencyMs"))} ms | ${snippet(pick(item, "body"), 200)}`)
-    ).join("") || metricRow("SystemInfo", "Finesse system endpoint not loaded");
+    const discovery = qs("#finesseDiscoveryList");
+    if (discovery) {
+        discovery.innerHTML = [
+            metricRow("Finesse users", directoryCount === null ? `${state.finesseAgents.length} probes` : `${directoryCount} discovered`),
+            metricRow("User states", `${parsedFinesseUsers().length} detailed users parsed`),
+            metricRow("Dialog probes", `${state.finesseDialogs.length} users checked`),
+            metricRow("Active dialogs", `${parsedFinesseDialogs().length} rendered as live calls`)
+        ].join("");
+    }
 }
 
 function renderDrops() {
@@ -1403,6 +1370,11 @@ function renderComponents() {
             <p>${escapeHtml(pick(metric, "detail") || "")}</p>
         </article>`;
     }).join("") || `<article class="component-card"><h3>Server Metrics</h3><span class="badge warn">not configured</span><p>Configure SNMP/WMI/exporter collection for remote servers.</p></article>`;
+    const finesseSystemGrid = qs("#finesseSystemGrid");
+    if (finesseSystemGrid) {
+        finesseSystemGrid.innerHTML = state.finesseSystem.map(endpointCard).join("") ||
+            `<article class="component-card"><h3>Finesse SystemInfo</h3><span class="badge warn">not loaded</span><p>Open System Health after configuring Finesse base URL and credentials.</p></article>`;
+    }
 }
 
 function componentMeta(item) {
@@ -2577,6 +2549,19 @@ function taskChip(task) {
 function renderManagementControls() {
     renderAgentSkillAssignments();
     renderIvrFeatures();
+    renderAgentProvisioningGuide();
+}
+
+function renderAgentProvisioningGuide() {
+    const guide = qs("#agentProvisioningGuide");
+    if (!guide) return;
+    guide.innerHTML = [
+        metricRow("Identity rule", "CUCM uses bare username; PCCE uses username@domain."),
+        metricRow("Provisioning path", "CUCM AXL user/line/CSF phone first, then PCCE agent or supervisor upsert."),
+        metricRow("PCCE upsert", "Search all agents with pagination, update existing changeStamp or create new agent/supervisor."),
+        metricRow("Skill assignment", "Resolve team, skill group, desk settings and supervised teams before executing PCCE config changes."),
+        metricRow("Safety", "Rollback is a controlled admin action; this page stores desired state and audit notes.")
+    ].join("");
 }
 
 function renderAgentSkillAssignments() {
@@ -2762,7 +2747,9 @@ function refreshMultiSelects() {
 }
 
 function multiSourceValues(source) {
-    const rows = source === "callTypes" ? state.callTypeOptions : state.skillGroups;
+    const rows = source === "callTypes" ? state.callTypeOptions
+        : source === "teams" ? state.agents.map(agent => pick(agent, "team") || "UNKNOWN")
+        : state.skillGroups;
     return Array.from(new Set((rows || [])
         .map(row => String(pick(row, "value", "label", "name", "enterpriseName", "callType", "id") || row || "").trim())
         .filter(Boolean)))
@@ -3007,17 +2994,8 @@ function averageCvpDuration() {
 }
 
 function renderAgentFilters() {
-    const teams = ["ALL", ...new Set(state.agents.map(agent => pick(agent, "team") || "UNKNOWN"))];
-    const active = document.querySelector(".team-filter.active")?.dataset.team || "ALL";
-    qs("#agentTeamFilters").innerHTML = teams.map(team => `<button class="team-filter ${team === active ? "active" : ""}" data-team="${escapeHtml(team)}">${escapeHtml(team === "ALL" ? "All" : team)}</button>`).join("");
-    document.querySelectorAll(".team-filter").forEach(button => {
-        button.addEventListener("click", () => {
-            document.querySelectorAll(".team-filter").forEach(item => item.classList.remove("active"));
-            button.classList.add("active");
-            uiState.agentPage = 0;
-            renderAgents();
-        });
-    });
+    refreshMultiSelects();
+    qs("#agentTeamFilters").innerHTML = "";
 }
 
 function progressCell(value) {
