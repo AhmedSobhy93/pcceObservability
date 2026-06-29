@@ -111,7 +111,8 @@
         <div class="filter-bar page-filter">
             <label class="date-field hidden-field"><span>Skill Group</span><input type="hidden" id="businessSkillFilter"></label>
             <div class="multi-field" data-target="businessSkillFilter" data-source="skillGroups" data-label="Skill Groups"></div>
-            <label class="date-field"><span>IVR App</span><input type="text" id="ivrAppFilter" value="OneBank_Main_IVR"></label>
+            <label class="date-field hidden-field"><span>IVR Apps</span><input type="hidden" id="ivrAppFilter"></label>
+            <div class="multi-field" data-target="ivrAppFilter" data-source="cvpApps" data-label="IVR Apps"></div>
             <label class="date-field"><span>SL Target %</span><input type="number" id="businessSlTarget" min="0" max="100" step="1"></label>
             <label class="date-field"><span>AHT Target Sec</span><input type="number" id="businessAhtTarget" min="1" step="1"></label>
             <label class="date-field"><span>Fallback</span><select id="businessFallbackMode"><option value="derived">Derived when interval empty</option><option value="strict">Cisco interval only</option></select></label>
@@ -119,7 +120,9 @@
             <label class="date-field"><span>Min Calls</span><input type="number" id="businessMinCalls" min="0" step="1"></label>
             <label class="date-field"><span>FCR Window Days</span><input type="number" id="businessFcrWindowDays" min="1" max="90" step="1"></label>
             <label class="date-field"><span>Business View</span><select id="businessViewMode"><option value="daily">Daily</option><option value="hourly">Hourly</option><option value="live">Live</option></select></label>
+            <label class="date-field"><span>Rows / Page</span><select id="businessPageSize"><option value="10" selected>10</option><option value="25">25</option><option value="50">50</option><option value="100">100</option></select></label>
         </div>
+        <div class="table-pager business-card-pager"><button class="small-btn" id="businessCardsPrevPage">Previous</button><span id="businessCardsPageInfo"></span><button class="small-btn" id="businessCardsNextPage">Next</button></div>
         <div class="business-card-grid" id="businessSkillCards"></div>
         <div class="content-grid">
             <article class="panel wide"><h2>Service Level Trend by Hour</h2><canvas id="serviceTrendChart" height="280"></canvas></article>

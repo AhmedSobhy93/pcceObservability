@@ -77,15 +77,17 @@ const pages = {
 const colors = ["#2ed3c2", "#3d82f6", "#f4a51c", "#8d6cf7", "#24e0a4", "#ff626c"];
 const uiState = {
     ivrNodePage: 0,
-    ivrNodePageSize: 50,
+    ivrNodePageSize: 10,
+    businessCardPage: 0,
+    businessPageSize: 10,
     agentPage: 0,
     agentCardPage: 0,
     agentPageSize: 10,
     agentCardPageSize: 10,
     journeyPage: 0,
-    journeyPageSize: 12,
+    journeyPageSize: 10,
     callTypePage: 0,
-    callTypePageSize: 50
+    callTypePageSize: 10
 };
 const businessSettings = loadBusinessSettings();
 const planState = { view: "tasks", topic: "ALL", collapsed: new Set() };
@@ -156,6 +158,14 @@ document.addEventListener("DOMContentLoaded", () => {
         uiState.callTypePage += 1;
         renderCallTypes();
     });
+    qs("#businessCardsPrevPage")?.addEventListener("click", () => {
+        uiState.businessCardPage = Math.max(0, uiState.businessCardPage - 1);
+        renderBusinessCards();
+    });
+    qs("#businessCardsNextPage")?.addEventListener("click", () => {
+        uiState.businessCardPage += 1;
+        renderBusinessCards();
+    });
     qs("#adminQuickBtn")?.addEventListener("click", () => switchView("admin"));
     qs("#adminSaveUserBtn")?.addEventListener("click", saveAdminUser);
     qs("#adminSaveRoleBtn")?.addEventListener("click", saveAdminRole);
@@ -183,6 +193,7 @@ document.addEventListener("DOMContentLoaded", () => {
         uiState.ivrNodePage = 0;
         uiState.journeyPage = 0;
         uiState.callTypePage = 0;
+        uiState.businessCardPage = 0;
         refresh();
     }, 450);
     [
@@ -192,13 +203,22 @@ document.addEventListener("DOMContentLoaded", () => {
         const element = qs(selector);
         element?.addEventListener("change", event => {
             if (selector === "#datePreset") applyDatePreset(event.target.value);
+            if (selector === "#fromDate" || selector === "#toDate") qs("#datePreset").value = "custom";
             debouncedRefresh();
         });
         element?.addEventListener("input", debouncedRefresh);
     });
-    ["#businessSlTarget", "#businessAhtTarget", "#businessFallbackMode", "#businessAhtProxyMode", "#businessMinCalls", "#businessFcrWindowDays", "#businessViewMode"].forEach(selector => {
+    ["#businessSlTarget", "#businessAhtTarget", "#businessFallbackMode", "#businessAhtProxyMode", "#businessMinCalls", "#businessFcrWindowDays", "#businessViewMode", "#businessPageSize"].forEach(selector => {
         qs(selector)?.addEventListener("change", () => {
             saveBusinessSettings();
+            uiState.businessPageSize = Number(qs("#businessPageSize")?.value || 10);
+            uiState.ivrNodePageSize = uiState.businessPageSize;
+            uiState.journeyPageSize = uiState.businessPageSize;
+            uiState.callTypePageSize = uiState.businessPageSize;
+            uiState.businessCardPage = 0;
+            uiState.ivrNodePage = 0;
+            uiState.journeyPage = 0;
+            uiState.callTypePage = 0;
             renderBusiness();
             renderKpis();
         });
@@ -332,8 +352,8 @@ function dateParams() {
         from: dates.from,
         to: dates.to
     });
-    const skill = pageSkillFilter();
-    if (skill) params.set("skillGroup", skill);
+    const skills = splitCsv(pageSkillFilter());
+    if (skills.length === 1) params.set("skillGroup", skills[0]);
     return params.toString();
 }
 
@@ -345,7 +365,8 @@ function callTypeParams() {
     });
     const skill = firstFilterValue("#callsSkillFilter");
     const callType = firstFilterValue("#callsCallTypeFilter");
-    if (skill) params.set("skillGroup", skill);
+    const skills = splitCsv(skill);
+    if (skills.length === 1) params.set("skillGroup", skills[0]);
     if (callType) params.set("callType", callType);
     return params.toString();
 }
@@ -380,8 +401,8 @@ function ivrNodeParams() {
         from: dates.from,
         to: dates.to
     });
-    const appName = activeView === "business" || activeView === "cvp" ? firstFilterValue("#ivrAppFilter") : "";
-    if (appName) params.set("appName", appName);
+    const apps = splitCsv(activeView === "business" || activeView === "cvp" ? firstFilterValue("#ivrAppFilter") : "");
+    if (apps.length === 1) params.set("appName", apps[0]);
     return params.toString();
 }
 
@@ -401,6 +422,16 @@ function pageSkillFilter() {
     if (activeView === "calls") return firstFilterValue("#callsSkillFilter");
     if (activeView === "overview") return firstFilterValue("#overviewSkillFilter");
     return "";
+}
+
+function filteredCallRows(view = activeView) {
+    const selector = view === "business" ? "#businessSkillFilter"
+        : view === "calls" ? "#callsSkillFilter"
+        : view === "overview" ? "#overviewSkillFilter"
+        : "";
+    const skills = splitCsv(selector ? firstFilterValue(selector) : "");
+    if (!skills.length) return state.calls;
+    return state.calls.filter(row => skills.includes(pick(row, "skill_group", "skillGroup") || "UNKNOWN"));
 }
 
 function firstFilterValue(...selectors) {
@@ -430,10 +461,11 @@ function loadBusinessSettings() {
             minCalls: 0,
             fcrWindowDays: 7,
             viewMode: "daily",
+            pageSize: 10,
             ...JSON.parse(localStorage.getItem("pcceBusinessSettings") || "{}")
         };
     } catch {
-        return { slTarget: 80, ahtTarget: 300, fallbackMode: "derived", ahtProxyMode: "none", minCalls: 0, fcrWindowDays: 7, viewMode: "daily" };
+        return { slTarget: 80, ahtTarget: 300, fallbackMode: "derived", ahtProxyMode: "none", minCalls: 0, fcrWindowDays: 7, viewMode: "daily", pageSize: 10 };
     }
 }
 
@@ -445,6 +477,11 @@ function initBusinessSettings() {
     if (qs("#businessMinCalls")) qs("#businessMinCalls").value = businessSettings.minCalls;
     if (qs("#businessFcrWindowDays")) qs("#businessFcrWindowDays").value = businessSettings.fcrWindowDays;
     if (qs("#businessViewMode")) qs("#businessViewMode").value = businessSettings.viewMode || "daily";
+    if (qs("#businessPageSize")) qs("#businessPageSize").value = businessSettings.pageSize || 10;
+    uiState.businessPageSize = Number(businessSettings.pageSize || 10);
+    uiState.ivrNodePageSize = uiState.businessPageSize;
+    uiState.journeyPageSize = uiState.businessPageSize;
+    uiState.callTypePageSize = uiState.businessPageSize;
 }
 
 function saveBusinessSettings() {
@@ -455,6 +492,7 @@ function saveBusinessSettings() {
     businessSettings.minCalls = Number(qs("#businessMinCalls")?.value || 0);
     businessSettings.fcrWindowDays = Number(qs("#businessFcrWindowDays")?.value || 7);
     businessSettings.viewMode = qs("#businessViewMode")?.value || "daily";
+    businessSettings.pageSize = Number(qs("#businessPageSize")?.value || 10);
     localStorage.setItem("pcceBusinessSettings", JSON.stringify(businessSettings));
 }
 
@@ -777,13 +815,14 @@ function renderAll(errors) {
 }
 
 function renderKpis() {
-    const offered = sum(state.calls, "calls_offered", "callsOffered");
-    const handled = sum(state.calls, "calls_handled", "callsHandled");
-    const abandoned = sum(state.calls, "calls_abandoned", "callsAbandoned");
+    const rows = filteredCallRows();
+    const offered = sum(rows, "calls_offered", "callsOffered");
+    const handled = sum(rows, "calls_handled", "callsHandled");
+    const abandoned = sum(rows, "calls_abandoned", "callsAbandoned");
     const dropped = sum(state.drops, "dropped_calls", "droppedCalls");
     const unhandled = Math.max(0, offered - handled);
-    const service = businessServiceLevel(state.calls).value;
-    const aht = businessAht(state.calls).value;
+    const service = businessServiceLevel(rows).value;
+    const aht = businessAht(rows).value;
 
     qs("#kpiOffered").textContent = fmt(offered);
     qs("#kpiHandled").textContent = fmt(handled);
@@ -792,8 +831,8 @@ function renderKpis() {
     qs("#trendDropped").textContent = dropped ? "Disposition based" : "Not configured";
     qs("#kpiService").textContent = pct(service);
     qs("#kpiAht").textContent = seconds(aht);
-    qs("#trendService").textContent = businessServiceLevel(state.calls).source;
-    qs("#kpiAht").nextElementSibling.textContent = businessAht(state.calls).source;
+    qs("#trendService").textContent = businessServiceLevel(rows).source;
+    qs("#kpiAht").nextElementSibling.textContent = businessAht(rows).source;
     qs("#chartRange").textContent = `${qs("#fromDate").value} to ${qs("#toDate").value}`;
     const skillLabel = pageSkillFilter();
     if (skillLabel) {
@@ -806,7 +845,8 @@ function renderKpis() {
 }
 
 function renderCharts() {
-    const hourly = groupByHour(state.calls);
+    const rows = filteredCallRows(activeView);
+    const hourly = groupByHour(rows);
     if (!hourly.hasData) {
         drawEmptyChart(qs("#volumeChart"), "No call volume rows for selected range");
     } else {
@@ -816,7 +856,7 @@ function renderCharts() {
     ]);
     }
 
-    const skills = groupBySkill(state.calls, "calls_offered", "callsOffered");
+    const skills = groupBySkill(rows, "calls_offered", "callsOffered");
     if (skills.labels.length) drawDoughnut(qs("#skillChart"), skills.labels, skills.values, colors);
     else drawEmptyChart(qs("#skillChart"), "No skill group volume for selected range");
     qs("#skillLegend").innerHTML = skills.labels.map((label, index) =>
@@ -843,15 +883,16 @@ function renderBusiness() {
     renderCvpIvrNodes();
     renderCvpJourney();
     renderBusinessRules();
-    const offered = sum(state.calls, "calls_offered", "callsOffered");
-    const handled = sum(state.calls, "calls_handled", "callsHandled");
-    const abandoned = sum(state.calls, "calls_abandoned", "callsAbandoned");
+    const rowsSource = filteredCallRows("business");
+    const offered = sum(rowsSource, "calls_offered", "callsOffered");
+    const handled = sum(rowsSource, "calls_handled", "callsHandled");
+    const abandoned = sum(rowsSource, "calls_abandoned", "callsAbandoned");
     const dropped = sum(state.drops, "dropped_calls", "droppedCalls");
-    const service = businessServiceLevel(state.calls);
-    const aht = businessAht(state.calls);
-    const asa = businessAsa(state.calls);
+    const service = businessServiceLevel(rowsSource);
+    const aht = businessAht(rowsSource);
+    const asa = businessAsa(rowsSource);
     const ivrContainment = businessIvrContainment();
-    const fcr = businessFcr(state.calls);
+    const fcr = businessFcr(rowsSource);
     const rows = [
         ["Calls Offered", fmt(offered)],
         ["Calls Handled", fmt(handled)],
@@ -888,11 +929,14 @@ function renderCvpIvrNodes() {
     if (!count || !table) return;
     const callIdFilter = firstFilterValue("#ivrCallIdFilter").toLowerCase();
     const callerFilter = firstFilterValue("#ivrCallerFilter").toLowerCase();
+    const appFilters = splitCsv(firstFilterValue("#ivrAppFilter"));
     const rows = state.cvpIvrNodes.filter(row => {
         const callId = String(pick(row, "call_id", "callId") || "").toLowerCase();
         const caller = String(pick(row, "caller_number", "callerNumber") || "").toLowerCase();
+        const app = String(pick(row, "app_name", "appName") || "UNKNOWN");
         return (!callIdFilter || callId.includes(callIdFilter))
-            && (!callerFilter || caller.includes(callerFilter));
+            && (!callerFilter || caller.includes(callerFilter))
+            && (!appFilters.length || appFilters.includes(app));
     });
     const totalPages = Math.max(1, Math.ceil(rows.length / uiState.ivrNodePageSize));
     uiState.ivrNodePage = Math.min(uiState.ivrNodePage, totalPages - 1);
@@ -959,7 +1003,10 @@ function renderCvpJourney() {
 
 function cvpJourneys() {
     const map = new Map();
-    state.cvpIvrNodes.forEach(row => {
+    const appFilters = splitCsv(firstFilterValue("#ivrAppFilter"));
+    state.cvpIvrNodes
+        .filter(row => !appFilters.length || appFilters.includes(pick(row, "app_name", "appName") || "UNKNOWN"))
+        .forEach(row => {
         const callId = pick(row, "call_id", "callId") || "UNKNOWN";
         const existing = map.get(callId) || {
             callId,
@@ -3016,7 +3063,11 @@ function initMultiSelects() {
                 if (other !== field) other.classList.remove("open");
             });
         });
-        field.querySelector(".multi-search input").addEventListener("input", () => filterMultiOptions(field));
+        field.querySelector(".multi-menu").addEventListener("click", event => event.stopPropagation());
+        field.querySelector(".multi-search input").addEventListener("input", event => {
+            event.stopPropagation();
+            filterMultiOptions(field);
+        });
         field.querySelector("[data-action='all']").addEventListener("click", () => setMultiValue(field, ""));
         field.querySelector("[data-action='clear']").addEventListener("click", () => setMultiValue(field, ""));
     });
@@ -3036,6 +3087,7 @@ function refreshMultiSelects() {
             input.addEventListener("change", () => {
                 const next = Array.from(options.querySelectorAll("input[type='checkbox']:checked")).map(item => item.value);
                 setMultiValue(field, next.join(","));
+                filterMultiOptions(field);
             });
         });
         updateMultiSummary(field);
@@ -3049,6 +3101,7 @@ function multiSourceValues(source) {
         : source === "teams" ? state.agents.map(agent => pick(agent, "team") || "UNKNOWN")
         : source === "provisioningSkills" ? (pick(catalog, "skill_groups", "skillGroups") || [])
         : source === "provisioningTeams" ? (pick(catalog, "teams") || [])
+        : source === "cvpApps" ? state.cvpIvrNodes.map(row => pick(row, "app_name", "appName") || "UNKNOWN")
         : state.skillGroups;
     return Array.from(new Set((rows || [])
         .map(row => String(pick(row, "value", "label", "name", "enterpriseName", "callType", "id") || row || "").trim())
@@ -3082,7 +3135,8 @@ function updateMultiSummary(field) {
 function filterMultiOptions(field) {
     const query = field.querySelector(".multi-search input")?.value?.trim().toLowerCase() || "";
     field.querySelectorAll(".multi-option").forEach(option => {
-        option.hidden = Boolean(query) && !String(option.dataset.text || "").includes(query);
+        const text = String(option.textContent || option.dataset.text || "").toLowerCase();
+        option.hidden = Boolean(query) && !text.includes(query);
     });
 }
 
@@ -3104,8 +3158,18 @@ function systemKpi(label, value, detail) {
 }
 
 function renderBusinessCards() {
-    const grouped = groupSkillMetrics();
-    qs("#businessSkillCards").innerHTML = grouped.slice(0, 6).map((item, index) => `<article class="business-card">
+    const grouped = groupSkillMetrics(filteredCallRows("business"));
+    const totalPages = Math.max(1, Math.ceil(grouped.length / uiState.businessPageSize));
+    uiState.businessCardPage = Math.min(uiState.businessCardPage, totalPages - 1);
+    const start = uiState.businessCardPage * uiState.businessPageSize;
+    const rows = grouped.slice(start, start + uiState.businessPageSize);
+    const pageInfo = qs("#businessCardsPageInfo");
+    if (pageInfo) pageInfo.textContent = `${grouped.length} skill groups | page ${uiState.businessCardPage + 1}/${totalPages}`;
+    const prev = qs("#businessCardsPrevPage");
+    const next = qs("#businessCardsNextPage");
+    if (prev) prev.disabled = uiState.businessCardPage === 0;
+    if (next) next.disabled = uiState.businessCardPage >= totalPages - 1;
+    qs("#businessSkillCards").innerHTML = rows.map((item, index) => `<article class="business-card">
         <h3><i class="dot" style="background:${colors[index % colors.length]}"></i>${escapeHtml(item.skill)}</h3>
         <div class="business-metrics">
             <span>Offered<strong>${fmt(item.offered)}</strong></span>
@@ -3119,9 +3183,9 @@ function renderBusinessCards() {
     </article>`).join("") || `<article class="business-card"><h3>No skill group data</h3><p>Check HDS query mapping and selected date range.</p></article>`;
 }
 
-function groupSkillMetrics() {
+function groupSkillMetrics(rows = filteredCallRows("business")) {
     const map = new Map();
-    state.calls.forEach(row => {
+    rows.forEach(row => {
         const skill = pick(row, "skill_group", "skillGroup") || "UNKNOWN";
         const existing = map.get(skill) || { skill, offered: 0, handled: 0, abandoned: 0, weightedService: 0, serviceWeight: 0, weightedAht: 0, ahtWeight: 0 };
         const offered = num(pick(row, "calls_offered", "callsOffered"));
@@ -3144,7 +3208,7 @@ function groupSkillMetrics() {
     return [...map.values()].filter(item => item.offered >= num(businessSettings.minCalls)).map(item => ({
         ...item,
         service: item.serviceWeight ? item.weightedService / item.serviceWeight : derivedPct(item.handled, item.offered),
-        aht: item.ahtWeight ? item.weightedAht / item.ahtWeight : businessAht(state.calls).value,
+        aht: item.ahtWeight ? item.weightedAht / item.ahtWeight : businessAht(rows).value,
         fcr: businessFcrForCounts(item.offered, item.handled, item.abandoned),
         answerRate: derivedPct(item.handled, item.offered),
         abandonRate: derivedPct(item.abandoned, item.offered)
@@ -3152,13 +3216,14 @@ function groupSkillMetrics() {
 }
 
 function serviceTrendByHour() {
-    const topSkills = groupSkillMetrics().slice(0, 3).map(item => item.skill);
+    const rows = filteredCallRows("business");
+    const topSkills = groupSkillMetrics(rows).slice(0, 3).map(item => item.skill);
     const hours = Array.from({ length: 24 }, (_, hour) => hour);
     const labels = hours.map(hour => `${hour}:00`);
     const series = topSkills.map((skill, index) => ({
         label: skill,
         color: colors[index % colors.length],
-        values: hours.map(hour => skillHourService(skill, hour))
+        values: hours.map(hour => skillHourService(skill, hour, rows))
     }));
     return {
         labels,
@@ -3167,8 +3232,8 @@ function serviceTrendByHour() {
     };
 }
 
-function skillHourService(skill, hour) {
-    const rows = state.calls.filter(row => (pick(row, "skill_group", "skillGroup") || "UNKNOWN") === skill && num(pick(row, "hour")) === hour);
+function skillHourService(skill, hour, sourceRows = filteredCallRows("business")) {
+    const rows = sourceRows.filter(row => (pick(row, "skill_group", "skillGroup") || "UNKNOWN") === skill && num(pick(row, "hour")) === hour);
     const real = weightedAverage(rows, "service_level_pct", "serviceLevelPct", "calls_offered", "callsOffered");
     if (real !== null) return real;
     if (businessSettings.fallbackMode !== "derived") return 0;
@@ -3176,8 +3241,9 @@ function skillHourService(skill, hour) {
 }
 
 function radarMetrics() {
-    return groupSkillMetrics().slice(0, 3).map((skill, index) => {
-        const rows = state.calls.filter(row => (pick(row, "skill_group", "skillGroup") || "UNKNOWN") === skill.skill);
+    const sourceRows = filteredCallRows("business");
+    return groupSkillMetrics(sourceRows).slice(0, 3).map((skill, index) => {
+        const rows = sourceRows.filter(row => (pick(row, "skill_group", "skillGroup") || "UNKNOWN") === skill.skill);
         const offered = sum(rows, "calls_offered", "callsOffered");
         const handled = sum(rows, "calls_handled", "callsHandled");
         const abandoned = sum(rows, "calls_abandoned", "callsAbandoned");
@@ -3253,11 +3319,12 @@ function businessFcrForCounts(offered, handled, abandoned) {
 
 function renderBusinessRules() {
     qs("#businessCalcSummary").textContent = `SL target ${businessSettings.slTarget}% | AHT target ${businessSettings.ahtTarget}s | FCR window ${businessSettings.fcrWindowDays || 7}d | ${businessSettings.fallbackMode}`;
-    const sl = businessServiceLevel(state.calls);
-    const aht = businessAht(state.calls);
-    const asa = businessAsa(state.calls);
+    const rows = filteredCallRows("business");
+    const sl = businessServiceLevel(rows);
+    const aht = businessAht(rows);
+    const asa = businessAsa(rows);
     const ivr = businessIvrContainment();
-    const fcr = businessFcr(state.calls);
+    const fcr = businessFcr(rows);
     qs("#businessCalcRules").innerHTML = [
         metricRow("Service Level", `${sl.source}. Formula: Cisco ServiceLevelCalls / ServiceLevelCallsOffered; fallback: handled / offered.`),
         metricRow("AHT", `${aht.source}. Formula: Cisco interval talk + wrap (+ hold when mapped) / handled.`),
@@ -3268,8 +3335,9 @@ function renderBusinessRules() {
 }
 
 function fcrBySkill() {
-    const items = groupSkillMetrics().slice(0, 8);
-    return { labels: items.map(item => item.skill), values: items.map(item => businessFcr(state.calls.filter(row => (pick(row, "skill_group", "skillGroup") || "UNKNOWN") === item.skill)).value || 0) };
+    const sourceRows = filteredCallRows("business");
+    const items = groupSkillMetrics(sourceRows).slice(0, 8);
+    return { labels: items.map(item => item.skill), values: items.map(item => businessFcr(sourceRows.filter(row => (pick(row, "skill_group", "skillGroup") || "UNKNOWN") === item.skill)).value || 0) };
 }
 
 function ivrByApp() {
