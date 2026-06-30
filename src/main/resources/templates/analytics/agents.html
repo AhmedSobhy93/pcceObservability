@@ -5,6 +5,7 @@
 <main th:replace="~{layout/base :: page('Agent Performance', 'Finesse, teams, skills, and agent productivity')}">
     <section th:fragment="content" class="panel">
         <a th:href="@{/dashboard/index.html(view='agents')}">Open Agent Performance</a>
+        <script type="module" th:src="@{/js/views/cx-agents.js}"></script>
     </section>
 </main>
 </body>

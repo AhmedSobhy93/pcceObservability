@@ -1,0 +1,176 @@
+:root {
+    --cx-radius-sm: 8px;
+    --cx-radius-md: 12px;
+    --cx-radius-lg: 14px;
+    --cx-control: #1b2330;
+    --cx-control-hover: #222d3b;
+    --cx-focus: rgba(46, 211, 194, .28);
+}
+
+.topbar {
+    position: sticky;
+    top: 0;
+    z-index: 12;
+    margin: -18px -4px 24px -8px;
+    padding: 18px 4px 18px 8px;
+    background: linear-gradient(180deg, rgba(11, 16, 23, .98) 0%, rgba(11, 16, 23, .92) 78%, rgba(11, 16, 23, 0) 100%);
+    backdrop-filter: blur(10px);
+}
+
+.toolbar,
+.filter-bar {
+    align-items: end;
+}
+
+.date-field input,
+.date-field select,
+.primary-btn,
+.small-btn,
+.team-filter,
+.multi-trigger {
+    border-radius: var(--cx-radius-sm);
+}
+
+.date-field input:focus,
+.date-field select:focus,
+.multi-search input:focus {
+    border-color: var(--teal);
+    box-shadow: 0 0 0 3px var(--cx-focus);
+    outline: none;
+}
+
+.page-filter {
+    position: relative;
+    padding: 14px;
+    border: 1px solid rgba(39, 49, 64, .8);
+    border-radius: var(--cx-radius-md);
+    background: rgba(17, 23, 32, .72);
+}
+
+.multi-field {
+    min-width: 260px;
+}
+
+.multi-trigger {
+    min-height: 64px;
+    background: var(--cx-control);
+}
+
+.multi-trigger:hover {
+    background: var(--cx-control-hover);
+}
+
+.multi-summary {
+    max-width: 230px;
+}
+
+.multi-chips {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    min-height: 0;
+}
+
+.multi-chip {
+    max-width: 100%;
+    height: 26px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border: 1px solid rgba(46, 211, 194, .35);
+    border-radius: 999px;
+    color: var(--teal);
+    background: rgba(46, 211, 194, .1);
+    padding: 0 9px;
+    cursor: pointer;
+}
+
+.multi-chip::after {
+    content: "x";
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1;
+}
+
+.multi-chip.more {
+    cursor: default;
+}
+
+.multi-chip.more::after {
+    content: "";
+}
+
+.multi-chip span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.multi-menu {
+    z-index: 30;
+}
+
+.multi-option small {
+    margin-left: auto;
+    color: var(--muted);
+    font-size: 11px;
+}
+
+.table-pager {
+    align-items: center;
+}
+
+.table-pager .small-btn:disabled,
+.small-btn:disabled {
+    opacity: .45;
+    cursor: not-allowed;
+}
+
+.panel,
+.kpi-card,
+.business-card,
+.agent-card,
+.journey-card {
+    border-radius: var(--cx-radius-md);
+}
+
+.business-card-grid,
+.agent-card-grid {
+    align-items: stretch;
+}
+
+.business-card,
+.agent-card {
+    min-width: 0;
+}
+
+.business-metrics strong,
+.agent-card-stats b {
+    overflow-wrap: anywhere;
+}
+
+.status-strip {
+    position: sticky;
+    top: 96px;
+    z-index: 11;
+}
+
+@media (max-width: 1100px) {
+    .topbar {
+        position: static;
+        margin: 0 0 20px;
+        padding: 0;
+        background: transparent;
+        backdrop-filter: none;
+    }
+
+    .status-strip {
+        position: static;
+    }
+
+    .multi-field,
+    .date-field {
+        min-width: min(100%, 260px);
+    }
+}

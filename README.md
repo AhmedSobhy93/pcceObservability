@@ -14,6 +14,7 @@ Spring Boot API for Cisco PCCE 12.6.2 reporting across AW/HDS/CVP Reporting data
 - `GET /api/v1/summary?from=2026-06-01&to=2026-06-15`
 - OpenAPI UI: `/swagger-ui/index.html`
 - Dashboard UI: `/dashboard`
+- Login UI: `/login` and `/profile/login`
 
 JSON uses snake_case, matching the metric names you provided.
 
@@ -38,6 +39,8 @@ curl.exe -u agent.1001:change-me "http://localhost:8080/api/v1/agents/stats?from
 ```
 
 Use encoded passwords in production, for example `{bcrypt}...`, and set them through environment variables or a secrets manager. The `{noop}change-me` defaults are only placeholders.
+
+Runtime integration secrets are environment-variable only. `application.yml` intentionally keeps password defaults blank for database, SMTP, Finesse, PCCE API, CVP API, CUCM AXL, SMS, and trust-store credentials.
 
 Admin endpoints:
 
@@ -86,6 +89,12 @@ $env:PCCE_HDS_PASSWORD="..."
 $env:CVP_REPORTING_JDBC_URL="jdbc:informix-sqli://cvp-reporting-host:1526/cvp_data:INFORMIXSERVER=cvp_report;DELIMIDENT=y;"
 $env:CVP_REPORTING_USERNAME="cvp_reader"
 $env:CVP_REPORTING_PASSWORD="..."
+$env:FINESSE_PASSWORD="..."
+$env:PCCE_API_PASSWORD="..."
+$env:CVP_API_PASSWORD="..."
+$env:CUCM_AXL_PASSWORD="..."
+$env:PCCE_SMTP_PASSWORD="..."
+$env:PCCE_SMS_AUTHORIZATION="Basic ..."
 ```
 
 Then edit `src/main/resources/application.yml` to enable component probes and set the real hostnames, ports, and URLs.
@@ -233,6 +242,16 @@ Phase 6 protects support-console request mapping.
 
 - Controller request DTO fields for body, path parameters, and query parameters must be passed unchanged to the integration service.
 - This keeps UI-driven PCCE/CVP API execution predictable when operators provide endpoint parameters.
+
+## UI Rebuild Phase
+
+The dashboard UI keeps the existing `/dashboard/index.html` shell and API contracts while rebuilding in small slices.
+
+- Shared visual overrides live in `src/main/resources/static/dashboard/css/ui-rebuild.css`.
+- Page filters use searchable multi-select controls with visible removable chips.
+- Pagination controls stay page-local and default to 10 rows/cards where supported.
+- Thymeleaf page shells now use the requested folders: `templates/analytics`, `templates/operations`, `templates/configuration`, `templates/integrations`, `templates/admin`, and `templates/project`.
+- New ES module entry points live under `src/main/resources/static/js`: `cx-core.js`, `cx-charts.js`, and `views/cx-*.js`.
 
 ## Remaining Development Plan
 

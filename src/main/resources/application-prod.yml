@@ -51,7 +51,7 @@ logging:
 pcce:
   ssl:
     trust-store-path: ${PCCE_SSL_TRUST_STORE:}
-    trust-store-password: ${PCCE_SSL_TRUST_STORE_PASS:changeit}
+    trust-store-password: ${PCCE_SSL_TRUST_STORE_PASS:}
     verify-hostname: ${PCCE_SSL_VERIFY_HOSTNAME:true}
 
   audit:

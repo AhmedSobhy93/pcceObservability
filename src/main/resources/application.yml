@@ -30,14 +30,14 @@ spring:
       enabled: ${H2_CONSOLE_ENABLED:false}
       path: /h2-console
   mail:
-    host: ${PCCE_SMTP_HOST:}
+    host: ${PCCE_SMTP_HOST:mail.dev.mdi}
     port: ${PCCE_SMTP_PORT:25}
-    username: ${PCCE_SMTP_USERNAME:}
+    username: ${PCCE_SMTP_USERNAME:d-pcce-smtp-svc@mail.dev.mdi}
     password: ${PCCE_SMTP_PASSWORD:}
     properties:
       mail:
         smtp:
-          auth: ${PCCE_SMTP_AUTH:false}
+          auth: ${PCCE_SMTP_AUTH:true}
           starttls:
             enable: ${PCCE_SMTP_STARTTLS:false}
   ldap:
@@ -55,7 +55,7 @@ management:
 pcce:
   ssl:
     trust-store-path: ${PCCE_SSL_TRUST_STORE:}
-    trust-store-password: ${PCCE_SSL_TRUST_STORE_PASS:changeit}
+    trust-store-password: ${PCCE_SSL_TRUST_STORE_PASS:}
     verify-hostname: ${PCCE_SSL_VERIFY_HOSTNAME:true}
 
   audit:
@@ -141,7 +141,7 @@ pcce:
   pcce-api:
     enabled: ${PCCE_API_ENABLED:true}
     base-url: ${PCCE_API_BASE_URL:https://vswsitaw01}
-    username: ${PCCE_API_USERNAME:}
+    username: ${PCCE_API_USERNAME:pcce-admin-svc@dev.mdi}
     password: ${PCCE_API_PASSWORD:}
     auth-mode: ${PCCE_API_AUTH_MODE:BASIC}
     bearer-token: ${PCCE_API_BEARER_TOKEN:}
@@ -364,9 +364,9 @@ pcce:
         path: /unifiedconfig/config/businesshour/{id}
 
   cucm-axl:
-    enabled: ${CUCM_AXL_ENABLED:false}
+    enabled: ${CUCM_AXL_ENABLED:true}
     host: ${CUCM_AXL_HOST:vssitcucm01.dev.mdi}
-    username: ${CUCM_AXL_USERNAME:}
+    username: ${CUCM_AXL_USERNAME:AXL}
     password: ${CUCM_AXL_PASSWORD:}
     version: ${CUCM_AXL_VERSION:15.0}
     timeout: ${CUCM_AXL_TIMEOUT:15s}
@@ -390,16 +390,16 @@ pcce:
     default-dry-run: ${AGENT_PROVISIONING_DEFAULT_DRY_RUN:true}
 
   cvp-api:
-    enabled: ${CVP_API_ENABLED:false}
+    enabled: ${CVP_API_ENABLED:true}
     base-url: ${CVP_API_BASE_URL:http://10.10.90.194:8000}
-    username: ${CVP_API_USERNAME:}
+    username: ${CVP_API_USERNAME:pcce-admin-svc}
     password: ${CVP_API_PASSWORD:}
     auth-mode: ${CVP_API_AUTH_MODE:BASIC}
     bearer-token: ${CVP_API_BEARER_TOKEN:}
     api-key-header-name: ${CVP_API_KEY_HEADER_NAME:}
     api-key: ${CVP_API_KEY:}
     timeout: ${CVP_API_TIMEOUT:10s}
-    trust-all-certificates: ${CVP_API_TRUST_ALL_CERTIFICATES:true}
+    trust-all-certificates: ${CVP_API_TRUST_ALL_CERTIFICATES:false}
 
   queries:
     call-metrics-tcd-fallback-enabled: true
@@ -418,24 +418,24 @@ pcce:
     audit-retention: 500
 
   notifications:
-    webhook-enabled: false
+    webhook-enabled: true
     webhook-url: ${PCCE_ALERT_WEBHOOK_URL:}
-    smtp-enabled: ${PCCE_SMTP_ENABLED:false}
+    smtp-enabled: ${PCCE_SMTP_ENABLED:true}
     smtp-from: ${PCCE_SMTP_FROM:cx-observability@localhost}
-    smtp-recipients: ${PCCE_SMTP_RECIPIENTS:}
+    smtp-recipients: ${PCCE_SMTP_RECIPIENTS:d-ahmed.sobhy@dev.mdi}
     smtp-subject-prefix: ${PCCE_SMTP_SUBJECT_PREFIX:[PCCE Observability]}
-    sms-enabled: ${PCCE_SMS_ENABLED:false}
+    sms-enabled: ${PCCE_SMS_ENABLED:true}
     sms-url: ${PCCE_SMS_URL:http://sms-microgateway.sit.apps.openshift.dev.mdi/mgw/v1/system/secure/sms-gateway/sms/immediate}
     sms-authorization: ${PCCE_SMS_AUTHORIZATION:}
     sms-user-agent: ${PCCE_SMS_USER_AGENT:D-Tech / v1.6}
-    sms-recipients: ${PCCE_SMS_RECIPIENTS:}
+    sms-recipients: ${PCCE_SMS_RECIPIENTS:01201035641}
     sms-minimum-severity: CRITICAL
     sms-max-alerts-per-assessment: 5
     minimum-severity: CRITICAL
     timeout: 10s
 
   grafana:
-    enabled: ${ELEVEO_GRAFANA_ENABLED:false}
+    enabled: ${ELEVEO_GRAFANA_ENABLED:true}
     dashboards:
       - name: Eleveo QM Overview
         area: QM
@@ -454,8 +454,8 @@ pcce:
       max-requests-per-minute: ${PCCE_RATE_LIMIT_RPM:120}
 
     ldap:
-      enabled: ${APP_LDAP_ENABLED:false}
-      user-search-base: ${APP_LDAP_USER_SEARCH_BASE:}
+      enabled: ${APP_LDAP_ENABLED:true}
+      user-search-base: ${APP_LDAP_USER_SEARCH_BASE:OU=Contact Center,OU=Users,OU=DEV,DC=DEV,DC=MDI}
       user-search-filter: ${APP_LDAP_USER_SEARCH_FILTER:(sAMAccountName={0})}
       group-search-base: ${APP_LDAP_GROUP_SEARCH_BASE:}
       admin-group: ${APP_LDAP_ADMIN_GROUP:}
@@ -650,14 +650,7 @@ pcce:
       trust-all-certificates: false
       expected-status-min: 200
       expected-status-max: 499
-    - name: MediaSense
-      display-name: MediaSense
-      side: SHARED
-      site: SIT
-      tier: RECORDING
-      enabled: false
-      probe: HTTP
-      url: https://mediasense.example.local
+
     - name: CUIC
       display-name: Lab CUIC
       side: LAB
@@ -670,3 +663,5 @@ pcce:
       trust-all-certificates: false
       expected-status-min: 200
       expected-status-max: 499
+
+ 

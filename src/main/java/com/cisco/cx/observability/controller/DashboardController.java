@@ -13,52 +13,52 @@ public class DashboardController {
 
     @GetMapping({"/overview", "/home"})
     public String overview() {
-        return "core/home";
+        return "analytics/overview";
     }
 
     @GetMapping("/business")
     public String business() {
-        return "core/business";
+        return "analytics/business";
     }
 
     @GetMapping("/agents")
     public String agents() {
-        return "core/agents";
+        return "analytics/agents";
     }
 
     @GetMapping("/calls")
     public String calls() {
-        return "core/calls";
+        return "analytics/calls";
     }
 
     @GetMapping({"/system", "/infra"})
     public String system() {
-        return "core/system";
+        return "operations/system";
     }
 
     @GetMapping({"/integrations", "/pcce"})
     public String integrations() {
-        return dashboardView("integration");
+        return "integrations/integration";
     }
 
     @GetMapping("/cvp")
     public String cvp() {
-        return dashboardView("cvp");
+        return "configuration/cvp";
     }
 
     @GetMapping({"/advanced", "/jmx", "/appdynamics", "/live-data"})
     public String advanced() {
-        return dashboardView("advanced");
+        return "integrations/advanced";
     }
 
     @GetMapping({"/alerts", "/smtp", "/sms"})
     public String alerts() {
-        return dashboardView("smtp");
+        return "operations/alerts";
     }
 
     @GetMapping({"/spog", "/operations"})
     public String spog() {
-        return dashboardView("spog");
+        return "operations/spog";
     }
 
     @GetMapping({"/eleveo", "/quality"})
@@ -68,7 +68,17 @@ public class DashboardController {
 
     @GetMapping("/admin")
     public String admin() {
-        return dashboardView("admin");
+        return "admin/admin";
+    }
+
+    @GetMapping("/servers")
+    public String servers() {
+        return "configuration/servers";
+    }
+
+    @GetMapping({"/config", "/agent-skills"})
+    public String config() {
+        return "configuration/config";
     }
 
     @GetMapping({"/app", "/support"})
@@ -80,7 +90,7 @@ public class DashboardController {
     public String plannedPageAliases(jakarta.servlet.http.HttpServletRequest request) {
         String path = request.getRequestURI();
         return switch (path) {
-            case "/wallboard" -> "operations/wallboard";
+            case "/wallboard" -> "analytics/wallboard";
             case "/supervisor" -> "operations/supervisor";
             case "/sla-trends" -> "operations/sla-trends";
             case "/ivr" -> "operations/ivr";
@@ -94,7 +104,7 @@ public class DashboardController {
         };
     }
 
-    @GetMapping("/login")
+    @GetMapping({"/login", "/profile/login"})
     public String login() {
         return "auth/login";
     }

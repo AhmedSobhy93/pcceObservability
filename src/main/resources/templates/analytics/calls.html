@@ -5,6 +5,7 @@
 <main th:replace="~{layout/base :: page('Call Analytics', 'Call flow, disposition, queue, and IVR journey analytics')}">
     <section th:fragment="content" class="panel">
         <a th:href="@{/dashboard/index.html(view='calls')}">Open Call Analytics</a>
+        <script type="module" th:src="@{/js/views/cx-calls.js}"></script>
     </section>
 </main>
 </body>

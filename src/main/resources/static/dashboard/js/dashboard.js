@@ -3120,6 +3120,7 @@ function initMultiSelects() {
             <button type="button" class="multi-trigger" aria-haspopup="listbox" aria-expanded="false">
                 <span class="multi-title">${escapeHtml(field.dataset.label || "Filter")}</span>
                 <span class="multi-summary">All</span>
+                <span class="multi-chips" aria-live="polite"></span>
             </button>
             <div class="multi-menu" role="listbox" aria-multiselectable="true">
                 <label class="multi-search"><span>Search</span><input type="search" placeholder="Type to filter"></label>
@@ -3220,6 +3221,28 @@ function updateMultiSummary(field) {
     const summary = field.querySelector(".multi-summary");
     if (summary) {
         summary.textContent = values.length === 0 ? "All" : values.length <= 2 ? values.join(", ") : `${values.length} selected`;
+    }
+    const chips = field.querySelector(".multi-chips");
+    if (chips) {
+        chips.innerHTML = values.slice(0, 4).map(value => `
+            <span class="multi-chip" data-remove-value="${escapeHtml(value)}" role="button" tabindex="0" aria-label="Remove ${escapeHtml(value)}">
+                <span>${escapeHtml(value)}</span>
+            </span>`).join("") + (values.length > 4 ? `<span class="multi-chip more">+${values.length - 4}</span>` : "");
+        chips.querySelectorAll("[data-remove-value]").forEach(button => {
+            const removeValue = event => {
+                event.stopPropagation();
+                const remove = button.dataset.removeValue;
+                setMultiValue(field, values.filter(value => value !== remove).join(","));
+                filterMultiOptions(field);
+            };
+            button.addEventListener("click", removeValue);
+            button.addEventListener("keydown", event => {
+                if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    removeValue(event);
+                }
+            });
+        });
     }
     field.querySelectorAll(".multi-options input[type='checkbox']").forEach(input => {
         input.checked = values.includes(input.value);

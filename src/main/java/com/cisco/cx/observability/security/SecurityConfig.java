@@ -51,7 +51,7 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/actuator/health").permitAll()
-                        .requestMatchers("/login", "/login.html", "/logout.html", "/login.css").permitAll()
+                        .requestMatchers("/login", "/profile/login", "/login.html", "/logout.html", "/login.css").permitAll()
                         .requestMatchers("/h2-console/**").hasAuthority("PERM_SOLUTION_ADMIN")
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").hasAuthority("PERM_SOLUTION_ADMIN")
                         .anyRequest().authenticated())

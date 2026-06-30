@@ -1,0 +1,12 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout/base :: head('Admin')}"></head>
+<body>
+<main th:replace="~{layout/base :: page('Admin', 'Users, roles, privileges and runtime configuration')}">
+    <section th:fragment="content" class="panel">
+        <a th:href="@{/dashboard/index.html(view='admin')}">Open Admin Center</a>
+        <script type="module" th:src="@{/js/views/cx-admin.js}"></script>
+    </section>
+</main>
+</body>
+</html>

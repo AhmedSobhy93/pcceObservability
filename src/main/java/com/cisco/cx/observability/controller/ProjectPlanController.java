@@ -37,7 +37,7 @@ public class ProjectPlanController {
     public String project(Model model, Principal principal) {
         populate(model);
         model.addAttribute("canEdit", principal != null);
-        return "project";
+        return "project/project";
     }
 
     @GetMapping("/api/v1/project/tasks")
