@@ -1,11 +1,42 @@
 <!doctype html>
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
-<head th:replace="~{layout/base :: head('Login')}"></head>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>PCCE Observability Login</title>
+    <link rel="stylesheet" th:href="@{/login.css}">
+</head>
 <body>
-<section class="panel">
-    <h1>Login</h1>
-    <p>Use the production login page while the Thymeleaf shell is migrated.</p>
-    <a class="primary" th:href="@{/login.html}">Open Login</a>
-</section>
+<main class="login-shell">
+    <section class="login-panel">
+        <div class="brand-row">
+            <div class="brand-mark">CC</div>
+            <div>
+                <h1>PCCE 12.6.2</h1>
+                <p>Observability and Contact Center Operations</p>
+            </div>
+        </div>
+        <div th:if="${param.error}" class="status-message error">Invalid username or password.</div>
+        <div th:if="${param.logout}" class="status-message ok">You have been signed out.</div>
+        <div th:unless="${param.error} or ${param.logout}" class="status-message">Use your assigned operations account.</div>
+        <form class="login-form" method="post" th:action="@{/login}">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+            <label>
+                <span>Username</span>
+                <input name="username" autocomplete="username" required autofocus>
+            </label>
+            <label>
+                <span>Password</span>
+                <input name="password" type="password" autocomplete="current-password" required>
+            </label>
+            <button type="submit">Sign in</button>
+        </form>
+        <div class="login-meta">
+            <span>Role based access</span>
+            <span>AW/HDS/CVP monitoring</span>
+            <span>Alerts and admin controls</span>
+        </div>
+    </section>
+</main>
 </body>
 </html>

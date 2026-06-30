@@ -96,7 +96,7 @@ public class DashboardController {
 
     @GetMapping("/login")
     public String login() {
-        return "redirect:/login.html";
+        return "auth/login";
     }
 
     private String dashboardView(String view) {

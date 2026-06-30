@@ -238,6 +238,53 @@ Phase 6 protects support-console request mapping.
 
 Use this plan for parallel work with colleagues. Keep every phase small: add tests first, preserve public REST paths, and avoid mixing package moves with behavior changes.
 
+### Delivery Principles
+
+- Keep PCCE AW/HDS and CVP Reporting databases read-only.
+- Prefer app-owned DB tables for users, project plan, audit, runtime settings, and feature toggles.
+- Use Live Data or bounded realtime snapshots for live dashboards; keep HDS/CVP historical queries paginated and cached.
+- Treat Cisco API mutating actions as disabled by default until admin permissions, audit, and dry-run behavior are tested.
+- Every implementation phase must end with `mvn clean test` and a short note of changed files.
+- Any UI redesign must preserve existing API contracts until backend tests cover the replacement.
+
+### Workstreams And Owners
+
+| Workstream | Primary focus | Suggested owner | Can run in parallel with |
+|---|---|---|---|
+| Reporting | HDS/AW/CVP SQL, filters, CUIC alignment | Backend/reporting engineer | Finesse, Project Plan |
+| Realtime | Live Data, Finesse, running calls | Finesse/API engineer | Reporting once shared filters are agreed |
+| Operations | System health, SNMP/JMX/AppDynamics/logs | Infrastructure engineer | Admin/config hardening |
+| Admin/Security | Users, roles, LDAP, secrets, audit | Security/backend engineer | Project Plan |
+| UI | Page filters, charts, pagination, dashboard split | Frontend engineer | After contracts/tests exist |
+| Architecture | Package split, module boundaries, cleanup | Senior backend reviewer | After each domain is tested |
+
+### Dependency Map
+
+```text
+Phase 7 Reporting Filters
+  -> Phase 8 Finesse/Live Agent shared filters
+  -> Phase 9 CVP Journey filter and trace scoping
+  -> Phase 13 UI page-local filters
+
+Phase 10 Project Plan
+  -> Phase 11 Admin roles and sharing permissions
+
+Phase 11 Admin/Config
+  -> Phase 12 Monitoring collectors and production readiness
+
+Phases 7-12 tested contracts
+  -> Phase 13 UI modularization
+  -> Phase 14 architecture split
+```
+
+### Release Milestones
+
+| Milestone | Included phases | Outcome |
+|---|---|---|
+| M1 Stabilize Data | 7, 8, 9 | Business, agent, and CVP data behavior is predictable and tested. |
+| M2 Operationalize | 10, 11, 12 | Shared planning, admin/security, and monitoring readiness are production-shaped. |
+| M3 Maintainability | 13, 14 | UI and backend structure are easier to maintain without changing behavior. |
+
 ### Phase 7 - Reporting And Filter Safety
 
 Goal: make business pages reliable before changing dashboards.
@@ -247,6 +294,8 @@ Tasks:
 - Add tests for `t_Skill_Group_Interval` to `t_Termination_Call_Detail` fallback behavior.
 - Verify empty filter values do not become `NULL`/`UNKNOWN` filters accidentally.
 - Document which metrics are HDS-derived, AW realtime-derived, CVP-derived, or externally derived.
+- Add a small matrix for each metric: source table/API, filter support, expected null behavior, and fallback.
+- Add regression coverage for service level, AHT, ASA, abandoned, dropped, first-call resolution placeholder, and IVR containment placeholder.
 
 Dependencies:
 - Phases 1-6 complete.
@@ -260,6 +309,7 @@ Exit criteria:
 - `mvn clean test` passes.
 - Filters affect only their own page/query.
 - No production query behavior changes without a matching test.
+- Business owner signs off against at least one CUIC sample export.
 
 ### Phase 8 - Finesse And Live-Agent Safety
 
@@ -270,6 +320,8 @@ Tasks:
 - Add tests for fallback from configured user IDs to discovered users and AW login IDs.
 - Add tests proving Finesse status overlays historical HDS agent rows without duplicating agents.
 - Define how running calls are displayed: agent, extension, caller, dialog state, queue/skill, and start time.
+- Add stale-data rules: when Finesse is unavailable, show last known status age instead of `offline`.
+- Define agent identity matching priority: PCCE agent ID, login name, extension, then display name.
 
 Dependencies:
 - Phase 7 for shared agent/team filter contracts.
@@ -283,6 +335,7 @@ Exit criteria:
 - `mvn clean test` passes.
 - No live Finesse endpoint is required for unit tests.
 - Agent row count and live status behavior are deterministic.
+- Running-call cards are based on Finesse dialog data, not historical HDS data.
 
 ### Phase 9 - CVP IVR Journey And Containment
 
@@ -294,6 +347,8 @@ Tasks:
 - Define journey ordering rules so routing nodes appear in customer-event order.
 - Add call trace filtering tests: selected call GUID returns only that journey.
 - Document disposition mapping for customer abandon, agent/network disconnect, normal completion, and CVP errors.
+- Add pagination and date-window tests for CVP IVR calls.
+- Define journey grouping key: call GUID plus call start date where required by CVP Reporting.
 
 Dependencies:
 - Phase 7 metric filter contracts.
@@ -307,6 +362,7 @@ Exit criteria:
 - `mvn clean test` passes.
 - CVP unavailable state is explicit, not silently empty.
 - Trace output is scoped to selected call GUID.
+- IVR containment calculation states its numerator, denominator, and excluded dispositions.
 
 ### Phase 10 - Project Plan Management
 
@@ -318,6 +374,8 @@ Tasks:
 - Add audit expectations for task changes.
 - Define share modes: viewer, editor, manager/admin.
 - Only after tests, improve one-row task editing UI and resource assignment UX.
+- Add task dependency model: blocked-by, parent milestone, and external dependency.
+- Add import/export path for stakeholder sharing if required: CSV first, Excel/PDF later.
 
 Dependencies:
 - App-owned DB migrations are stable.
@@ -331,6 +389,7 @@ Exit criteria:
 - `mvn clean test` passes.
 - Project-plan edits persist in app DB.
 - Viewer/editor/admin behavior is explicit.
+- Plan page supports team review without exposing operational admin screens.
 
 ### Phase 11 - Admin, Config, And Secrets Hardening
 
@@ -342,6 +401,8 @@ Tasks:
 - Confirm LDAP/local-auth precedence and fallback behavior.
 - Document environment-specific config: local, SIT, UAT, production, DR.
 - Add readiness checks for SMTP, SMS, PCCE API, CVP API, Finesse, Live Data, JMX, AppDynamics, and Grafana.
+- Add audit coverage for user, role, component, alert, and integration-setting changes.
+- Add dry-run preview for dangerous operations where possible.
 
 Dependencies:
 - Phases 7-10 identify which integrations are required per environment.
@@ -355,6 +416,7 @@ Exit criteria:
 - `mvn clean test` passes.
 - Production startup fails fast on unsafe defaults.
 - README/environment docs show required variables by environment.
+- Security owner approves local-user, LDAP, and emergency-admin behavior.
 
 ### Phase 12 - Observability, Logs, JMX, SNMP, And AppDynamics
 
@@ -366,6 +428,8 @@ Tasks:
 - Add log-target validation for Router, Logger/AW/HDS, PG/CTI, CVP, VVB, Finesse, CUIC, CUCM, gateway, and Eleveo.
 - Document CVP JMX prerequisites and AppDynamics dashboard embedding rules.
 - Keep remote probes bounded by timeout and cache slow calls.
+- Add health-state taxonomy: UP, DEGRADED, DOWN, DISABLED, NOT_CONFIGURED, STALE.
+- Add alert routing matrix for SMTP, SMS, webhook/SIEM, and dashboard-only notices.
 
 Dependencies:
 - Phase 11 config validation.
@@ -379,6 +443,7 @@ Exit criteria:
 - `mvn clean test` passes.
 - System Health distinguishes "service down" from "collector not configured".
 - No UI refresh depends on long-running monitoring calls.
+- Alert thresholds are configurable and audit-visible.
 
 ### Phase 13 - UI Modularization And Page-Specific Filters
 
@@ -390,6 +455,8 @@ Tasks:
 - Make filters page-local and multi-select/searchable where needed.
 - Standardize pagination controls with default page size 10.
 - Replace duplicated rendering helpers with shared utilities only after tests exist.
+- Add frontend smoke checklist for dashboard, business, agents, calls, system, integrations, alerts, admin, and project plan.
+- Keep chart empty states explicit: no data, unavailable source, permission denied, or filter has no matches.
 
 Dependencies:
 - Phases 7-12 provide stable contracts.
@@ -403,6 +470,7 @@ Exit criteria:
 - `mvn clean test` passes.
 - Browser smoke test confirms main tabs render.
 - No page filter changes another page's state.
+- Static assets are grouped by page/domain and have cache-busting strategy.
 
 ### Phase 14 - Incremental Architecture Split
 
@@ -414,6 +482,8 @@ Tasks:
 - Keep public `/api/v1/...` paths unchanged.
 - Compile and test after each move.
 - Update `docs/ARCHITECTURE.md` after each completed domain move.
+- Remove compatibility scaffolding only after IntelliJ run configs and docs point to the final application class.
+- Keep one pull request per domain move where possible.
 
 Dependencies:
 - Relevant domain tests are in place.
@@ -427,3 +497,20 @@ Exit criteria:
 - `mvn clean test` passes after every small move.
 - No mixed refactor/feature commits.
 - Architecture docs match the codebase.
+- Old package/class names are either removed or documented as intentional compatibility shims.
+
+### Backlog Triage Rules
+
+- P0: login, app startup, security bypass, data corruption, or production outage risk.
+- P1: incorrect business KPIs, broken filters, failed PCCE/CVP/Finesse connectivity, or blocked admin workflow.
+- P2: missing visualization, weak empty states, slow but bounded screens, or incomplete project-plan UX.
+- P3: cosmetic improvements, package cleanup, comments, or nonblocking documentation.
+
+### Team Handoff Checklist
+
+- Link the phase and exact task in the ticket.
+- State affected endpoints, pages, SQL/API sources, and roles.
+- Include sample input/output or a CUIC/Finesse/CVP sample where relevant.
+- Add or update tests before changing behavior.
+- Run `mvn clean test`.
+- Summarize changed files and any remaining risk.
