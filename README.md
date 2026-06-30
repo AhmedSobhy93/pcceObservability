@@ -252,6 +252,7 @@ The dashboard UI keeps the existing `/dashboard/index.html` shell and API contra
 - Pagination controls stay page-local and default to 10 rows/cards where supported.
 - Thymeleaf page shells now use the requested folders: `templates/analytics`, `templates/operations`, `templates/configuration`, `templates/integrations`, `templates/admin`, and `templates/project`.
 - New ES module entry points live under `src/main/resources/static/js`: `cx-core.js`, `cx-charts.js`, and `views/cx-*.js`.
+- The legacy dashboard script is being split incrementally: page metadata is in `static/dashboard/js/cx-dashboard-pages.js`, chart rendering is in `static/dashboard/js/cx-dashboard-charts.js`, and `dashboard.js` keeps compatibility wrappers for existing render calls.
 
 ## Remaining Development Plan
 

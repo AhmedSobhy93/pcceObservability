@@ -4,7 +4,7 @@
 <body>
 <main th:replace="~{layout/base :: page('Wallboard', 'Fullscreen live contact center view')}">
     <section th:fragment="content" class="panel">
-        <a th:href="@{/dashboard/index.html(view='overview')}">Open Live Wallboard</a>
+        <a data-dashboard-view="overview" th:href="@{/dashboard/index.html(view='overview')}">Open Live Wallboard</a>
         <script type="module" th:src="@{/js/views/cx-wallboard.js}"></script>
     </section>
 </main>

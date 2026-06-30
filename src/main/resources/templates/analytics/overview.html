@@ -4,7 +4,7 @@
 <body>
 <main th:replace="~{layout/base :: page('Overview', 'Contact center operational overview')}">
     <section th:fragment="content" class="panel">
-        <a th:href="@{/dashboard/index.html(view='overview')}">Open Overview Dashboard</a>
+        <a data-dashboard-view="overview" th:href="@{/dashboard/index.html(view='overview')}">Open Overview Dashboard</a>
         <script type="module" th:src="@{/js/views/cx-overview.js}"></script>
     </section>
 </main>

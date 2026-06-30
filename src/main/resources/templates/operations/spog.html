@@ -4,7 +4,7 @@
 <body>
 <main th:replace="~{layout/base :: page('SPOG Operations', 'Single pane operations and support actions')}">
     <section th:fragment="content" class="panel">
-        <a th:href="@{/dashboard/index.html(view='spog')}">Open SPOG Operations</a>
+        <a data-dashboard-view="spog" th:href="@{/dashboard/index.html(view='spog')}">Open SPOG Operations</a>
         <script type="module" th:src="@{/js/views/cx-spog.js}"></script>
     </section>
 </main>

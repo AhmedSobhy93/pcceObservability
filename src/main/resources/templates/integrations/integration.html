@@ -4,7 +4,7 @@
 <body>
 <main th:replace="~{layout/base :: page('PCCE Integration', 'AW/HDS, CUIC, Finesse, CVP and Unified Config integration readiness')}">
     <section th:fragment="content" class="panel">
-        <a th:href="@{/dashboard/index.html(view='integration')}">Open PCCE Integration</a>
+        <a data-dashboard-view="integration" th:href="@{/dashboard/index.html(view='integration')}">Open PCCE Integration</a>
         <script type="module" th:src="@{/js/views/cx-integration.js}"></script>
     </section>
 </main>

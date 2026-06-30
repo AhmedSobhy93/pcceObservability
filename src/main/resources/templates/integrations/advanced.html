@@ -4,7 +4,7 @@
 <body>
 <main th:replace="~{layout/base :: page('Advanced Monitoring', 'Live Data, secure JMX, AppDynamics and platform telemetry')}">
     <section th:fragment="content" class="panel">
-        <a th:href="@{/dashboard/index.html(view='advanced')}">Open Advanced Monitoring</a>
+        <a data-dashboard-view="advanced" th:href="@{/dashboard/index.html(view='advanced')}">Open Advanced Monitoring</a>
         <script type="module" th:src="@{/js/views/cx-advanced.js}"></script>
     </section>
 </main>

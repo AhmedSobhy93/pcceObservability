@@ -4,7 +4,7 @@
 <body>
 <main th:replace="~{layout/base :: page('CVP APIs', 'CVP REST, ORM actions, VXML apps, media and diagnostics')}">
     <section th:fragment="content" class="panel">
-        <a th:href="@{/dashboard/index.html(view='cvp')}">Open CVP APIs</a>
+        <a data-dashboard-view="cvp" th:href="@{/dashboard/index.html(view='cvp')}">Open CVP APIs</a>
         <script type="module" th:src="@{/js/views/cx-cvp.js}"></script>
     </section>
 </main>

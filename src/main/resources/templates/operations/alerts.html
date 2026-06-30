@@ -4,7 +4,7 @@
 <body>
 <main th:replace="~{layout/base :: page('Alerts', 'SMTP, SMS, webhook thresholds and escalation')}">
     <section th:fragment="content" class="panel">
-        <a th:href="@{/dashboard/index.html(view='smtp')}">Open Alerts Console</a>
+        <a data-dashboard-view="smtp" th:href="@{/dashboard/index.html(view='smtp')}">Open Alerts Console</a>
         <script type="module" th:src="@{/js/views/cx-alerts.js}"></script>
     </section>
 </main>

@@ -4,7 +4,7 @@
 <body>
 <main th:replace="~{layout/base :: page('Skill and Agent Config', 'PCCE and CUCM AXL agent, team and skill administration')}">
     <section th:fragment="content" class="panel">
-        <a th:href="@{/dashboard/index.html(view='agent-skills')}">Open Skill and Agent Config</a>
+        <a data-dashboard-view="agent-skills" th:href="@{/dashboard/index.html(view='agent-skills')}">Open Skill and Agent Config</a>
         <script type="module" th:src="@{/js/views/cx-config.js}"></script>
     </section>
 </main>

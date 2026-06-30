@@ -4,7 +4,7 @@
 <body>
 <main th:replace="~{layout/base :: page('Server Management', 'Inventory, probes, SNMP, JMX and service collection readiness')}">
     <section th:fragment="content" class="panel">
-        <a th:href="@{/dashboard/index.html(view='system')}">Open Server Management</a>
+        <a data-dashboard-view="system" th:href="@{/dashboard/index.html(view='system')}">Open Server Management</a>
         <script type="module" th:src="@{/js/views/cx-servers.js}"></script>
     </section>
 </main>
