@@ -183,3 +183,60 @@ java -jar target/pcce-observability-0.0.1-SNAPSHOT.jar
 For on-prem production deployment, see `ON_PREM_RUNBOOK.md`.
 
 For dashboard/report alignment with Cisco stock reports, see `CISCO_STOCK_REPORT_MAPPING.md`.
+
+## Phase 1 Baseline
+
+Phase 1 keeps the existing business logic intact and focuses on repository hygiene, startup confidence, and a clear boundary for later refactoring.
+
+- Main application package: `com.cisco.cx.observability`.
+- Legacy IntelliJ launcher remains as a compatibility shim only.
+- Generated Maven output belongs under ignored `target/` and should not be tracked.
+- Baseline validation command: `mvn clean test`.
+- Next development phases should split large services and dashboard scripts incrementally, with tests added before behavior changes.
+
+## Phase 2 Baseline
+
+Phase 2 adds focused regression tests before further integration work. The first protected area is the PCCE/CVP API action catalog used by the support console.
+
+- PCCE read actions such as `users.list` and `machineInventory.list` must stay enabled and read-only.
+- CVP operations read actions such as `cvp.syslog.get` and `cvp.snmp.get` must stay enabled and read-only.
+- Built-in safe read actions must override stale disabled config entries for the same action ID.
+- No external PCCE/CVP connectivity is required for these unit tests.
+
+## Phase 3 Baseline
+
+Phase 3 extends the API support-console safety net without changing runtime behavior.
+
+- Actions with path placeholders must fail fast when required path parameters are missing.
+- Missing path parameters are validated before any outbound PCCE/CVP network call is attempted.
+- This protects actions such as PCCE `agent.get` and CVP `cvp.app.get` from malformed Cisco API requests.
+
+## Phase 4 Baseline
+
+Phase 4 covers default-deny behavior for mutating Cisco API actions.
+
+- Disabled mutating PCCE actions, such as `skill.create`, must be rejected before any outbound API call.
+- Disabled mutating CVP actions, such as `cvp.syslog.update`, must be rejected before any outbound API call.
+- Read-only support-console actions remain the only safe defaults.
+
+## Phase 5 Baseline
+
+Phase 5 adds controller-level permission coverage for the API support console.
+
+- Operations users can execute read-only support-console actions.
+- Mutating or admin-only PCCE/CVP actions require `PERM_SOLUTION_ADMIN`.
+- Controllers must reject unauthorized mutating actions before calling the integration service.
+
+## Phase 6 Baseline
+
+Phase 6 protects support-console request mapping.
+
+- Controller request DTO fields for body, path parameters, and query parameters must be passed unchanged to the integration service.
+- This keeps UI-driven PCCE/CVP API execution predictable when operators provide endpoint parameters.
+
+## Remaining Development Plan
+
+- Add focused tests around reporting filters and query fallback behavior.
+- Add focused tests around Finesse status/dialog parsing before changing live-agent UI behavior.
+- Add focused tests around project-plan updates before improving the editable planning UI.
+- Then split large JavaScript and service classes incrementally, one domain at a time.
