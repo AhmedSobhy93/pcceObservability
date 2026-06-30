@@ -253,6 +253,7 @@ The dashboard UI keeps the existing `/dashboard/index.html` shell and API contra
 - Thymeleaf page shells now use the requested folders: `templates/analytics`, `templates/operations`, `templates/configuration`, `templates/integrations`, `templates/admin`, and `templates/project`.
 - New ES module entry points live under `src/main/resources/static/js`: `cx-core.js`, `cx-charts.js`, and `views/cx-*.js`.
 - The legacy dashboard script is being split incrementally: page metadata is in `static/dashboard/js/cx-dashboard-pages.js`, chart rendering is in `static/dashboard/js/cx-dashboard-charts.js`, and `dashboard.js` keeps compatibility wrappers for existing render calls.
+- Heavy page logic has started moving into page scripts: Agent/Finesse rendering is in `static/dashboard/js/views/cx-dashboard-agents.js`, and Business/Call Analytics rendering is in `static/dashboard/js/views/cx-dashboard-business-calls.js`. The remaining `dashboard.js` stays as the shared shell/orchestrator.
 
 ## Remaining Development Plan
 
