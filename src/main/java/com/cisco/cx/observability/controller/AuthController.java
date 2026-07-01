@@ -1,8 +1,8 @@
 package com.cisco.cx.observability.controller;
 
 import com.cisco.cx.observability.model.CurrentUserView;
-import com.cisco.cx.observability.security.AccessControlService;
-import com.cisco.cx.observability.security.AppUserDetails;
+import com.cisco.cx.observability.security.access.AccessControlService;
+import com.cisco.cx.observability.security.userdetails.AppUserDetails;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;

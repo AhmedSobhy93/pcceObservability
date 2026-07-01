@@ -13,7 +13,7 @@ import com.cisco.cx.observability.model.UpdateNotificationSettingsRequest;
 import com.cisco.cx.observability.model.UpdateRolePermissionsRequest;
 import com.cisco.cx.observability.model.UpdateServerLogTargetRequest;
 import com.cisco.cx.observability.model.UpsertUserRequest;
-import com.cisco.cx.observability.security.PermissionCatalog;
+import com.cisco.cx.observability.security.access.PermissionCatalog;
 import com.cisco.cx.observability.service.AuditService;
 import com.cisco.cx.observability.service.SupportCapabilityService;
 import java.time.Duration;

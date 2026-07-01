@@ -496,13 +496,13 @@ pcce:
 
     users:
       - username: admin
-        password: ${PCCE_ADMIN_PASSWORD:{noop}change-me}
+        password: ${PCCE_ADMIN_PASSWORD:}
         display-name: Solution Administrator
         enabled: true
         roles:
           - ADMIN
       - username: workforce.manager
-        password: ${PCCE_WFM_PASSWORD:{noop}change-me}
+        password: ${PCCE_WFM_PASSWORD:}
         display-name: Workforce Manager
         enabled: true
         roles:
@@ -511,7 +511,7 @@ pcce:
           - Sales
           - Support
       - username: supervisor.sales
-        password: ${PCCE_SUPERVISOR_PASSWORD:{noop}change-me}
+        password: ${PCCE_SUPERVISOR_PASSWORD:}
         display-name: Sales Supervisor
         enabled: true
         roles:
@@ -519,7 +519,7 @@ pcce:
         allowed-teams:
           - Sales
       - username: agent.1001
-        password: ${PCCE_AGENT_PASSWORD:{noop}change-me}
+        password: ${PCCE_AGENT_PASSWORD:}
         display-name: Agent 1001
         enabled: true
         agent-id: "1001"

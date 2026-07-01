@@ -1788,7 +1788,7 @@ public class PcceProperties {
 
     public static class Ssl {
         private String trustStorePath;
-        private String trustStorePassword = "changeit";
+        private String trustStorePassword;
         private boolean verifyHostname = true;
 
         public String getTrustStorePath() {
@@ -1890,7 +1890,7 @@ public class PcceProperties {
         private static List<AppUser> defaultUsers() {
             AppUser admin = new AppUser();
             admin.setUsername("admin");
-            admin.setPassword("{noop}change-me");
+            admin.setPassword("");
             admin.setDisplayName("Solution Administrator");
             admin.setRoles(List.of(AppRole.ADMIN));
             admin.setEnabled(true);

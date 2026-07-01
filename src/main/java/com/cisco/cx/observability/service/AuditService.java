@@ -2,7 +2,7 @@ package com.cisco.cx.observability.service;
 
 import com.cisco.cx.observability.config.PcceProperties;
 import com.cisco.cx.observability.model.AuditEvent;
-import com.cisco.cx.observability.security.AccessControlService;
+import com.cisco.cx.observability.security.access.AccessControlService;
 import java.time.Instant;
 import java.util.ArrayDeque;
 import java.util.ArrayList;

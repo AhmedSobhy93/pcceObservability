@@ -2,19 +2,21 @@ package com.cisco.cx.observability.service;
 
 import com.cisco.cx.observability.config.PcceProperties;
 import com.cisco.cx.observability.config.PcceProperties.AlertSeverity;
+import com.cisco.cx.observability.feature.reporting.domain.CallMetric;
+import com.cisco.cx.observability.feature.reporting.domain.DroppedCallMetric;
+import com.cisco.cx.observability.feature.reporting.service.ReportingService;
 import com.cisco.cx.observability.model.AlertStatus;
-import com.cisco.cx.observability.model.CallMetric;
-import com.cisco.cx.observability.model.ComponentState;
 import com.cisco.cx.observability.model.ComponentStatus;
-import com.cisco.cx.observability.model.DroppedCallMetric;
 import com.cisco.cx.observability.model.OperationalAlert;
 import com.cisco.cx.observability.model.ProductionAssessment;
 import com.cisco.cx.observability.model.ProductionReadinessItem;
+import com.cisco.cx.observability.shared.domain.ComponentState;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -159,9 +161,9 @@ public class OperationsService {
                 enabledComponents + " component probes enabled",
                 "Enable probes for every production PCCE/CVP/CUIC/Finesse component pair."));
         items.add(new ProductionReadinessItem(
-                "Default Admin Password",
-                pcceProperties.getSecurity().getUsers().stream().noneMatch(user -> user.getPassword() != null && user.getPassword().contains("change-me")),
-                "One or more users may still use placeholder credentials",
+                "Configured User Passwords",
+                pcceProperties.getSecurity().getUsers().stream().noneMatch(user -> isUnsafePassword(user.getPassword())),
+                "One or more users have blank or placeholder credentials",
                 "Use bcrypt passwords from a vault or environment variables before production."));
         items.add(new ProductionReadinessItem(
                 "Healthy Components",
@@ -174,6 +176,14 @@ public class OperationsService {
                 pcceProperties.getOperations().isMaintenanceMode() ? "Maintenance mode is enabled" : "Maintenance mode is disabled",
                 "Keep maintenance mode disabled during normal banking production hours."));
         return items;
+    }
+
+    private boolean isUnsafePassword(String password) {
+        String normalized = password == null ? "" : password.trim().toLowerCase(Locale.ROOT);
+        return password == null
+                || normalized.isBlank()
+                || normalized.startsWith("{noop}")
+                || normalized.contains("password");
     }
 
     private BigDecimal averageServiceLevel(List<CallMetric> metrics) {

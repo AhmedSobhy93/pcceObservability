@@ -8,7 +8,7 @@ import com.cisco.cx.observability.model.ApiActionView;
 import com.cisco.cx.observability.model.ApiCapability;
 import com.cisco.cx.observability.model.ApiFunctionView;
 import com.cisco.cx.observability.model.ApiMonitorStatus;
-import com.cisco.cx.observability.model.ComponentState;
+import com.cisco.cx.observability.shared.domain.ComponentState;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;

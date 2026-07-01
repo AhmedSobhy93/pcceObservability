@@ -22,7 +22,8 @@ JSON uses snake_case, matching the metric names you provided.
 
 All API endpoints require HTTP Basic authentication except `/actuator/health`.
 
-Default users are configured in `src/main/resources/application.yml` under `pcce.security.users`:
+Bootstrap users are configured in `src/main/resources/application.yml` under `pcce.security.users`.
+Passwords are intentionally blank by default and must be supplied with environment variables before local or production login.
 
 - `ADMIN`: full access, including `/api/v1/admin/**` and Swagger/OpenAPI.
 - `WORKFORCE_MANAGER`: reads contact center metrics and agent stats for configured `allowed-teams`.
@@ -30,15 +31,16 @@ Default users are configured in `src/main/resources/application.yml` under `pcce
 - `AGENT`: reads only their own `/api/v1/agents/stats` using configured `agent-id`.
 - `VIEWER`: read-only contact center visibility without solution administration.
 
-Example:
+Local example:
 
 ```powershell
-curl.exe -u admin:change-me "http://localhost:8080/api/v1/auth/me"
-curl.exe -u supervisor.sales:change-me "http://localhost:8080/api/v1/agents/stats?from=2026-06-01&to=2026-06-15&team=Sales"
-curl.exe -u agent.1001:change-me "http://localhost:8080/api/v1/agents/stats?from=2026-06-01&to=2026-06-15"
+$env:PCCE_ADMIN_PASSWORD="{noop}<local-admin-password>"
+curl.exe -u "admin:<local-admin-password>" "http://localhost:8080/api/v1/auth/me"
+curl.exe -u "supervisor.sales:<supervisor-password>" "http://localhost:8080/api/v1/agents/stats?from=2026-06-01&to=2026-06-15&team=Sales"
+curl.exe -u "agent.1001:<agent-password>" "http://localhost:8080/api/v1/agents/stats?from=2026-06-01&to=2026-06-15"
 ```
 
-Use encoded passwords in production, for example `{bcrypt}...`, and set them through environment variables or a secrets manager. The `{noop}change-me` defaults are only placeholders.
+Use encoded passwords in production, for example `{bcrypt}...`, and set them through environment variables or a secrets manager. Do not store working credentials in source-controlled YAML.
 
 Runtime integration secrets are environment-variable only. `application.yml` intentionally keeps password defaults blank for database, SMTP, Finesse, PCCE API, CVP API, CUCM AXL, SMS, and trust-store credentials.
 
@@ -102,7 +104,7 @@ Then edit `src/main/resources/application.yml` to enable component probes and se
 If the dashboard still shows an old probe URL after editing YAML, check IntelliJ active profile and environment overrides, then restart the Spring Boot run configuration. You can verify the effective runtime component config with:
 
 ```powershell
-curl.exe -u admin:change-me "http://localhost:8080/api/v1/admin/components"
+curl.exe -u "admin:<local-admin-password>" "http://localhost:8080/api/v1/admin/components"
 ```
 
 For PCCE REST API surveillance, set:
@@ -156,9 +158,9 @@ Fields such as `first_call_resolution`, `csat_score`, `adherence_pct`, and some 
 The default `pcce.queries.ivr-containment` is intentionally a safe no-data Informix query. After confirming your CVP Reporting schema, override it with the bank-approved query. Useful discovery calls:
 
 ```powershell
-curl.exe -u admin:change-me "http://localhost:8080/api/v1/admin/diagnostics/cvp-reporting/tables?namePattern=%25call%25"
-curl.exe -u admin:change-me "http://localhost:8080/api/v1/admin/diagnostics/cvp-reporting/columns?tablePattern=%25call%25&columnPattern=%25start%25"
-curl.exe -u admin:change-me "http://localhost:8080/api/v1/admin/diagnostics/cvp-reporting/columns?tablePattern=%25call%25&columnPattern=%25end%25"
+curl.exe -u "admin:<local-admin-password>" "http://localhost:8080/api/v1/admin/diagnostics/cvp-reporting/tables?namePattern=%25call%25"
+curl.exe -u "admin:<local-admin-password>" "http://localhost:8080/api/v1/admin/diagnostics/cvp-reporting/columns?tablePattern=%25call%25&columnPattern=%25start%25"
+curl.exe -u "admin:<local-admin-password>" "http://localhost:8080/api/v1/admin/diagnostics/cvp-reporting/columns?tablePattern=%25call%25&columnPattern=%25end%25"
 ```
 
 ## Run
@@ -178,8 +180,8 @@ For first local run without real PCCE database connectivity:
 Then verify:
 
 ```powershell
-curl.exe -u admin:change-me "http://localhost:8080/api/v1/auth/me"
-curl.exe -u admin:change-me "http://localhost:8080/api/v1/components/status"
+curl.exe -u "admin:<local-admin-password>" "http://localhost:8080/api/v1/auth/me"
+curl.exe -u "admin:<local-admin-password>" "http://localhost:8080/api/v1/components/status"
 ```
 
 Build:
@@ -193,6 +195,50 @@ For on-prem production deployment, see `ON_PREM_RUNBOOK.md`.
 
 For dashboard/report alignment with Cisco stock reports, see `CISCO_STOCK_REPORT_MAPPING.md`.
 
+## Phase 0 Architecture Baseline
+
+Phase 0 is the control point before any package movement. It records the current app shape and the target boundaries so later phases can move code without changing behavior.
+
+Current backend package shape:
+
+- `config`: cache, datasource, executor, HTTP client, Micrometer, MVC, and the large `PcceProperties` configuration object.
+- `controller`: REST APIs, page routing, request logging, and exception handling.
+- `service`: reporting, components, operations, integrations, monitoring, notifications, workforce, audit, and project-plan logic.
+- `model`: mixed API DTOs, view models, reporting records, operational records, and configuration request models.
+- `entity` and `repository`: app-owned persistence for project plan, agent-skill assignments, and IVR feature toggles.
+- `security`: form login, LDAP provider, configured users, permissions, and rate limiting.
+- `com.example.pcceobservability`: compatibility launcher only; IntelliJ should use `com.cisco.cx.observability.CxObservabilityApplication`.
+
+Current UI shape:
+
+- Legacy SPA shell: `src/main/resources/static/dashboard/index.html`.
+- Legacy dashboard scripts: `src/main/resources/static/dashboard/js`.
+- Thymeleaf shells: `templates/analytics`, `templates/operations`, `templates/configuration`, `templates/integrations`, `templates/admin`, `templates/project`, `templates/workforce`, `templates/technical`, and `templates/executive`.
+- Split JS entry points have started under `src/main/resources/static/js` and `src/main/resources/static/js/views`.
+
+Target backend boundaries:
+
+- `platform`: technical infrastructure only, such as datasource wiring, HTTP/SSL clients, MVC, logging, global error handling, caching, metrics, and startup validation.
+- `shared`: small cross-feature DTOs, base domain types, and utilities that are reused by multiple features.
+- `security`: authentication, authorization, LDAP, user details, permissions, and rate limiting.
+- `feature`: business modules for portal routing, auth, user management, audit, reporting, components, operations, monitoring, notifications, workforce, project plan, and integrations.
+
+Target UI boundaries:
+
+- `templates/layout`: base shell and reusable fragments.
+- `templates/auth`: standalone login.
+- `templates/feature/*`: feature-owned pages and HTMX fragments.
+- `static/js/shared`: CSRF, API helpers, toasts, filters, pagination, and chart helpers.
+- `static/js/feature/*`: page-owned Alpine/HTMX behavior.
+
+Phase 0 findings:
+
+- Public REST and page routes are already broad; preserve existing `/api/v1/**`, `/dashboard/index.html`, `/profile/login`, `/login`, and `/project` contracts during migration.
+- `pom.xml` currently uses Spring Boot `3.3.5`, while the repo instruction target is Spring Boot `3.5`; upgrade this in a dedicated dependency phase, not during package movement.
+- `PcceProperties` is still the main configuration aggregation point and should be split only after feature package tests exist.
+- No working credentials should be committed. Password defaults in application config are blank and must be provided through environment variables or a secrets manager.
+- Legacy dashboard assets stay in place until each page-owned Thymeleaf/Alpine/HTMX replacement is verified.
+
 ## Phase 1 Baseline
 
 Phase 1 keeps the existing business logic intact and focuses on repository hygiene, startup confidence, and a clear boundary for later refactoring.
@@ -203,6 +249,28 @@ Phase 1 keeps the existing business logic intact and focuses on repository hygie
 - Baseline validation command: `mvn clean test`.
 - Next development phases should split large services and dashboard scripts incrementally, with tests added before behavior changes.
 
+## Phase 1 Architecture Movement
+
+Phase 1 starts the target architecture migration with platform-only movement. No controllers, endpoints, service logic, SQL, UI templates, or security rules are changed in this phase.
+
+Moved platform infrastructure:
+
+- `config/CacheConfig.java` -> `platform/config/CacheConfig.java`
+- `config/ExecutorConfig.java` -> `platform/config/ExecutorConfig.java`
+- `config/MicrometerConfig.java` -> `platform/config/MicrometerConfig.java`
+- `config/WebMvcConfig.java` -> `platform/config/WebMvcConfig.java`
+- `config/DataSourceConfig.java` -> `platform/persistence/DataSourceConfig.java`
+- `config/HttpClientConfig.java` -> `platform/http/HttpClientConfig.java`
+- `controller/ApiExceptionHandler.java` -> `platform/web/ApiExceptionHandler.java`
+- `controller/RequestLoggingFilter.java` -> `platform/web/RequestLoggingFilter.java`
+
+Intentionally unchanged:
+
+- `PcceProperties` remains in `config` as the compatibility configuration root until feature-scoped properties are introduced with tests.
+- Business controllers remain in `controller` until the feature package split starts.
+- Public routes such as `/api/v1/**`, `/dashboard/index.html`, `/profile/login`, `/login`, and `/project` are unchanged.
+- Existing Thymeleaf and static dashboard assets are unchanged.
+
 ## Phase 2 Baseline
 
 Phase 2 adds focused regression tests before further integration work. The first protected area is the PCCE/CVP API action catalog used by the support console.
@@ -212,6 +280,27 @@ Phase 2 adds focused regression tests before further integration work. The first
 - Built-in safe read actions must override stale disabled config entries for the same action ID.
 - No external PCCE/CVP connectivity is required for these unit tests.
 
+## Phase 2 Architecture Movement
+
+Phase 2 organizes the security layer without changing authentication, authorization, routes, or permissions.
+
+Moved security classes:
+
+- `security/AccessControlService.java` -> `security/access/AccessControlService.java`
+- `security/PermissionCatalog.java` -> `security/access/PermissionCatalog.java`
+- `security/AppUserDetails.java` -> `security/userdetails/AppUserDetails.java`
+- `security/ConfiguredUserDetailsService.java` -> `security/userdetails/ConfiguredUserDetailsService.java`
+- `security/LdapAuthenticationProvider.java` -> `security/ldap/LdapAuthenticationProvider.java`
+- `security/RateLimitConfig.java` -> `security/ratelimit/RateLimitConfig.java`
+- `security/RateLimitFilter.java` -> `security/ratelimit/RateLimitFilter.java`
+
+Intentionally unchanged:
+
+- `SecurityConfig` remains at `security/SecurityConfig.java` as the root web-security entry point.
+- `PcceProperties.Security` remains in the compatibility configuration root until feature-scoped security properties are introduced with tests.
+- Form login, HTTP Basic, CSRF behavior, LDAP fallback, rate limiting, and existing permission names are unchanged.
+- Public route behavior is unchanged.
+
 ## Phase 3 Baseline
 
 Phase 3 extends the API support-console safety net without changing runtime behavior.
@@ -220,6 +309,21 @@ Phase 3 extends the API support-console safety net without changing runtime beha
 - Missing path parameters are validated before any outbound PCCE/CVP network call is attempted.
 - This protects actions such as PCCE `agent.get` and CVP `cvp.app.get` from malformed Cisco API requests.
 
+## Phase 3 Architecture Movement
+
+Phase 3 introduces the `shared` package with only types that are already reused across feature boundaries.
+
+Moved shared primitives:
+
+- `model/ComponentState.java` -> `shared/domain/ComponentState.java`
+- `model/ReferenceOption.java` -> `shared/dto/ReferenceOption.java`
+
+Intentionally unchanged:
+
+- Project-plan types such as `TopicStat` and `ResourceStat` stay feature-owned until `feature/projectplan` is introduced.
+- API console, reporting, operations, notification, and workforce DTOs stay in `model` until their owning feature packages are moved.
+- No record fields, JSON shapes, endpoint paths, or SQL behavior changed.
+
 ## Phase 4 Baseline
 
 Phase 4 covers default-deny behavior for mutating Cisco API actions.
@@ -227,6 +331,25 @@ Phase 4 covers default-deny behavior for mutating Cisco API actions.
 - Disabled mutating PCCE actions, such as `skill.create`, must be rejected before any outbound API call.
 - Disabled mutating CVP actions, such as `cvp.syslog.update`, must be rejected before any outbound API call.
 - Read-only support-console actions remain the only safe defaults.
+
+## Phase 4 Architecture Movement
+
+Phase 4 extracts the reporting feature package without changing route contracts, SQL, filters, JSON records, or dashboard behavior.
+
+Moved reporting feature classes:
+
+- `controller/ReportingController.java` -> `feature/reporting/web/ReportingController.java`
+- `controller/ReferenceController.java` -> `feature/reporting/web/ReferenceController.java`
+- `service/ReportingService.java` -> `feature/reporting/service/ReportingService.java`
+- `service/DispositionCodeService.java` -> `feature/reporting/service/DispositionCodeService.java`
+- Reporting records such as `CallMetric`, `AgentStat`, `DroppedCallMetric`, `CvpIvrNodeMetric`, `DispositionCode`, and related DTOs -> `feature/reporting/domain`
+
+Intentionally unchanged:
+
+- Public `/api/v1/...` and `/api/v1/reference/...` endpoints are unchanged.
+- AW/HDS/CVP query definitions remain under the existing `PcceProperties` compatibility root.
+- Datasource wiring remains under `platform/persistence`.
+- No Thymeleaf templates, static dashboard assets, SQL logic, or Cisco integration behavior changed.
 
 ## Phase 5 Baseline
 
@@ -417,7 +540,7 @@ Exit criteria:
 Goal: make production configuration safe for banking deployment.
 
 Tasks:
-- Add startup validation for `prod` profile: no `{noop}change-me`, no blank required secrets, and no `trustAll` unless explicitly allowed for SIT.
+- Add startup validation for `prod` profile: no placeholder passwords, no blank required secrets, and no `trustAll` unless explicitly allowed for SIT.
 - Add tests for role permission updates and user enable/disable behavior.
 - Confirm LDAP/local-auth precedence and fallback behavior.
 - Document environment-specific config: local, SIT, UAT, production, DR.

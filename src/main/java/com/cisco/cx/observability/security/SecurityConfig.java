@@ -3,6 +3,8 @@ package com.cisco.cx.observability.security;
 import static org.springframework.security.config.Customizer.withDefaults;
 
 import com.cisco.cx.observability.config.PcceProperties;
+import com.cisco.cx.observability.security.ldap.LdapAuthenticationProvider;
+import com.cisco.cx.observability.security.userdetails.ConfiguredUserDetailsService;
 import java.net.URI;
 import java.util.LinkedHashSet;
 import java.util.Set;

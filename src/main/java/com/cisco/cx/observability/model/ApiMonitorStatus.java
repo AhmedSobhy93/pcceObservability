@@ -1,5 +1,6 @@
 package com.cisco.cx.observability.model;
 
+import com.cisco.cx.observability.shared.domain.ComponentState;
 import java.time.Instant;
 
 public record ApiMonitorStatus(

@@ -2,8 +2,8 @@ package com.cisco.cx.observability.service;
 
 import com.cisco.cx.observability.config.PcceProperties;
 import com.cisco.cx.observability.config.PcceProperties.ComponentTarget;
-import com.cisco.cx.observability.model.ComponentState;
 import com.cisco.cx.observability.model.ComponentStatus;
+import com.cisco.cx.observability.shared.domain.ComponentState;
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.io.IOException;
