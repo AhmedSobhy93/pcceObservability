@@ -3,13 +3,19 @@
 <head th:fragment="head(title)">
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="_csrf" th:content="${_csrf?.token}">
+    <meta name="_csrf_header" th:content="${_csrf?.headerName}">
     <title th:text="${title} ?: 'CX Observability Platform'">CX Observability Platform</title>
     <link rel="stylesheet" th:href="@{/dashboard/css/styles.css}">
     <link rel="stylesheet" th:href="@{/css/dashboard.css}">
+    <script defer th:src="@{/js/vendor/htmx.min.js}"></script>
+    <script defer th:src="@{/js/vendor/alpine.min.js}"></script>
+    <script type="module" th:src="@{/js/core/app.js}"></script>
 </head>
 <body>
 <main th:fragment="page(title, subtitle)">
     <section class="content">
+        <div th:replace="~{layout/fragments/status-strip :: statusStrip}"></div>
         <header class="page-header">
             <div>
                 <h1 th:text="${title}">CX Observability Platform</h1>

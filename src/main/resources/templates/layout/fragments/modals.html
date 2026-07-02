@@ -1,0 +1,12 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<body>
+<dialog th:fragment="confirmModal" data-confirm-modal>
+    <form method="dialog">
+        <p data-confirm-message>Confirm action?</p>
+        <button value="cancel">Cancel</button>
+        <button value="confirm">Confirm</button>
+    </form>
+</dialog>
+</body>
+</html>

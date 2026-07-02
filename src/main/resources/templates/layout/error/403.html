@@ -1,0 +1,9 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout/base :: head('Access denied')}"></head>
+<body>
+<main th:replace="~{layout/base :: page('Access denied', 'You do not have permission to open this page')}">
+    <section th:fragment="content" class="panel">Contact an administrator if your access should be changed.</section>
+</main>
+</body>
+</html>

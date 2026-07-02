@@ -1,0 +1,10 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<body>
+<nav th:fragment="pager(label)" class="table-pager" th:aria-label="${label}">
+    <button class="small-btn" type="button" data-page-prev>Previous</button>
+    <span data-page-info></span>
+    <button class="small-btn" type="button" data-page-next>Next</button>
+</nav>
+</body>
+</html>

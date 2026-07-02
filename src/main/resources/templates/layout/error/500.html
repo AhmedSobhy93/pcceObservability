@@ -1,0 +1,9 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout/base :: head('Application error')}"></head>
+<body>
+<main th:replace="~{layout/base :: page('Application error', 'The application could not complete the request')}">
+    <section th:fragment="content" class="panel">Check application logs and retry the operation.</section>
+</main>
+</body>
+</html>

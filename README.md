@@ -351,6 +351,31 @@ Intentionally unchanged:
 - Datasource wiring remains under `platform/persistence`.
 - No Thymeleaf templates, static dashboard assets, SQL logic, or Cisco integration behavior changed.
 
+## Architecture Migration Progress
+
+The project is being moved toward the target feature-first architecture without changing public routes or business behavior.
+
+Completed package moves:
+
+- `feature/portal/web`: dashboard/page routing.
+- `feature/auth/web`: auth API and current-user view.
+- `feature/usermgmt/web`: admin and diagnostics APIs plus admin request/view records.
+- `feature/reporting`: reporting controllers, services, and reporting domain records.
+- `feature/components`: component status controller, services, and component status domain record.
+- `feature/operations`: production assessment, readiness, alerts, support capabilities, and server log targets.
+- `feature/monitoring`: query performance, server metrics, schema diagnostics records, and monitoring API.
+- `feature/notifications`: alert notification sender and notification settings request/view records.
+- `feature/integration`: PCCE API, CVP API, Finesse, Live Data, Grafana, advanced integrations, and common integration records.
+- `feature/workforce`: agent/skill assignments, IVR toggles, provisioning services, entities, and repositories.
+- `feature/audit`: audit service and audit event record.
+- `feature/projectplan`: project plan controller, service, entities, repository, and task/stat records.
+
+Intentionally unchanged:
+
+- Public `/api/v1/**` routes, Thymeleaf template names, dashboard static assets, SQL strings, and Cisco integration behavior.
+- `PcceProperties` remains the compatibility configuration root until feature-scoped properties are introduced with tests.
+- `shared/domain/ComponentState` remains shared because component health and integration monitors both use it.
+
 ## Phase 5 Baseline
 
 Phase 5 adds controller-level permission coverage for the API support console.
@@ -358,6 +383,7 @@ Phase 5 adds controller-level permission coverage for the API support console.
 - Operations users can execute read-only support-console actions.
 - Mutating or admin-only PCCE/CVP actions require `PERM_SOLUTION_ADMIN`.
 - Controllers must reject unauthorized mutating actions before calling the integration service.
+- Tests cover both rejection for operations-only users and successful delegation for solution administrators.
 
 ## Phase 6 Baseline
 
@@ -365,6 +391,7 @@ Phase 6 protects support-console request mapping.
 
 - Controller request DTO fields for body, path parameters, and query parameters must be passed unchanged to the integration service.
 - This keeps UI-driven PCCE/CVP API execution predictable when operators provide endpoint parameters.
+- Tests cover PCCE and CVP controller forwarding for body, path parameters, and query parameters in the same request.
 
 ## UI Rebuild Phase
 
@@ -440,6 +467,11 @@ Tasks:
 - Document which metrics are HDS-derived, AW realtime-derived, CVP-derived, or externally derived.
 - Add a small matrix for each metric: source table/API, filter support, expected null behavior, and fallback.
 - Add regression coverage for service level, AHT, ASA, abandoned, dropped, first-call resolution placeholder, and IVR containment placeholder.
+
+Phase 7 progress:
+- Added reporting service coverage that blank skill-group filters are sent to SQL as `null` filter arguments.
+- Added reporting service coverage that nonblank call-type and skill-group filters are preserved when forwarded to SQL.
+- No reporting SQL, controller route, or dashboard behavior changed in this phase.
 
 Dependencies:
 - Phases 1-6 complete.
@@ -658,3 +690,13 @@ Exit criteria:
 - Add or update tests before changing behavior.
 - Run `mvn clean test`.
 - Summarize changed files and any remaining risk.
+
+## Phase 9 Refactor Acceptance
+
+- Backend refactor decision: accepted with minor risks.
+- Thin Thymeleaf wrapper pages now live under `templates/feature/*`.
+- Shared layout fragments and basic error pages were added under `templates/layout`.
+- Page wrapper scripts moved to `static/js/feature/*`; shared helpers moved to `static/js/core`.
+- Local HTMX 2.0.4 and Alpine.js 3.14.8 vendor files were added under `static/js/vendor`.
+- `/system` has a read-only HTMX component health fragment pilot backed by the existing component service.
+- Handover and roadmap docs: `PROJECT_HANDOVER.md`, `REFACTORING_LOG.md`, `UI_ARCHITECTURE.md`, `NEXT_IMPLEMENTATION_PLAN.md`.

@@ -1,0 +1,12 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout/base :: head('Overview')}"></head>
+<body>
+<main th:replace="~{layout/base :: page('Overview', 'Contact center operational overview')}">
+    <section th:fragment="content" class="panel">
+        <a data-dashboard-view="overview" th:href="@{/dashboard/index.html(view='overview')}">Open Overview Dashboard</a>
+        <script type="module" th:src="@{/js/feature/reporting/cx-overview.js}"></script>
+    </section>
+</main>
+</body>
+</html>

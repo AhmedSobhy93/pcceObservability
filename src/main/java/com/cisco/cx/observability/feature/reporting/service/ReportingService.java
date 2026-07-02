@@ -1,6 +1,7 @@
 package com.cisco.cx.observability.feature.reporting.service;
 
 import com.cisco.cx.observability.config.PcceProperties;
+import com.cisco.cx.observability.feature.components.service.ComponentStatusService;
 import com.cisco.cx.observability.feature.reporting.domain.AgentStat;
 import com.cisco.cx.observability.feature.reporting.domain.AgentStatus;
 import com.cisco.cx.observability.feature.reporting.domain.CallFlowEvent;
@@ -11,9 +12,8 @@ import com.cisco.cx.observability.feature.reporting.domain.CuicReportView;
 import com.cisco.cx.observability.feature.reporting.domain.CvpIvrNodeMetric;
 import com.cisco.cx.observability.feature.reporting.domain.DispositionBreakdown;
 import com.cisco.cx.observability.feature.reporting.domain.DroppedCallMetric;
+import com.cisco.cx.observability.feature.monitoring.service.QueryPerformanceService;
 import com.cisco.cx.observability.security.access.AccessControlService;
-import com.cisco.cx.observability.service.ComponentStatusService;
-import com.cisco.cx.observability.service.QueryPerformanceService;
 import com.cisco.cx.observability.shared.dto.ReferenceOption;
 import java.math.BigDecimal;
 import java.sql.ResultSet;

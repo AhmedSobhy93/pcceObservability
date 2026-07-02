@@ -1,0 +1,11 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<body>
+<header th:fragment="topbar(title, subtitle)" class="page-header">
+    <div>
+        <h1 th:text="${title}">CX Observability Platform</h1>
+        <p th:text="${subtitle}">Cisco PCCE observability and operations</p>
+    </div>
+</header>
+</body>
+</html>

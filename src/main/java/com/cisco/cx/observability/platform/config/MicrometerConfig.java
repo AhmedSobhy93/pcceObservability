@@ -1,6 +1,6 @@
 package com.cisco.cx.observability.platform.config;
 
-import com.cisco.cx.observability.service.QueryPerformanceService;
+import com.cisco.cx.observability.feature.monitoring.service.QueryPerformanceService;
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
 import org.springframework.context.annotation.Configuration;

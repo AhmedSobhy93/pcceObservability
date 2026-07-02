@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout/base :: head('System Health')}"></head>
+<body>
+<main th:replace="~{layout/base :: page('System Health', 'PCCE, CVP, Finesse, CUIC, and server health')}">
+    <section th:fragment="content" class="panel">
+        <a data-dashboard-view="system" th:href="@{/dashboard/index.html(view='system')}">Open System Health</a>
+        <div id="componentStatusFragment"
+             hx-get="/fragments/components/status-list"
+             hx-trigger="load, every 60s"
+             hx-swap="innerHTML">
+            <p class="empty-state">Loading component health...</p>
+        </div>
+        <script type="module" th:src="@{/js/feature/components/cx-system.js}"></script>
+    </section>
+</main>
+</body>
+</html>

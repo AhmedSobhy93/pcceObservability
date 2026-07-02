@@ -1,6 +1,6 @@
 package com.cisco.cx.observability.feature.reporting.domain;
 
-import com.cisco.cx.observability.model.ComponentStatus;
+import com.cisco.cx.observability.feature.components.domain.ComponentStatus;
 import java.math.BigDecimal;
 import java.util.List;
 
