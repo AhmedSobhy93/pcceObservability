@@ -27,15 +27,15 @@ import org.springframework.util.StringUtils;
 @Service
 public class PcceApiMonitoringService {
 
-    private final PcceProperties pcceProperties;
+    private final PcceApiProperties pcceApiProperties;
     private final SSLSocketFactory sslSocketFactory;
     private final HostnameVerifier hostnameVerifier;
 
     public PcceApiMonitoringService(
-            PcceProperties pcceProperties,
+            PcceApiProperties pcceApiProperties,
             SSLSocketFactory sslSocketFactory,
             HostnameVerifier hostnameVerifier) {
-        this.pcceProperties = pcceProperties;
+        this.pcceApiProperties = pcceApiProperties;
         this.sslSocketFactory = sslSocketFactory;
         this.hostnameVerifier = hostnameVerifier;
     }
@@ -73,7 +73,7 @@ public class PcceApiMonitoringService {
     }
 
     public List<ApiActionView> actions() {
-        PcceProperties.PcceApi api = pcceProperties.getPcceApi();
+        PcceProperties.PcceApi api = pcceApiProperties;
         if (api == null || api.getActions() == null) {
             return List.of();
         }
@@ -87,7 +87,7 @@ public class PcceApiMonitoringService {
     }
 
     public ApiActionResult execute(String id, String body, Map<String, String> pathParams, Map<String, String> queryParams) {
-        PcceProperties.PcceApi api = pcceProperties.getPcceApi();
+        PcceProperties.PcceApi api = pcceApiProperties;
         ApiAction action = mergedActions(api).stream()
                 .filter(candidate -> id.equalsIgnoreCase(candidate.getId()))
                 .findFirst()
@@ -138,7 +138,7 @@ public class PcceApiMonitoringService {
     }
 
     public List<ApiMonitorStatus> status() {
-        PcceProperties.PcceApi api = pcceProperties.getPcceApi();
+        PcceProperties.PcceApi api = pcceApiProperties;
         if (api == null || api.getMonitors() == null) {
             return List.of();
         }

@@ -22,3 +22,14 @@
 - Manual SIT checks: login, `/overview`, `/system`, `/project`, `/dashboard/index.html`, and `/fragments/components/status-list` under authorized and unauthorized users.
 - Known risks: static dashboard SPA remains large; project plan keeps inline server-bound JavaScript to avoid behavior drift.
 - Deferred UI improvements: split `/dashboard/js/dashboard.js`, move project inline JavaScript only after page-level regression checks, and add controller tests for fragment rendering.
+
+## Phase 10 - Code Quality and PCCE Properties Refactoring
+- Audit result: completed against the current modular structure; high-risk behavior changes were intentionally avoided.
+- Classes split: no large service/controller splits were performed; scoped configuration classes were extracted for reporting, performance, PCCE API, and CVP API.
+- Classes intentionally retained: `PcceProperties` remains as the compatibility facade; `ReportingService`, `FinesseIntegrationService`, `AgentSkillManagementService`, `ComponentStatusService`, `AlertNotificationService`, `AdminController`, and `ProjectPlanService` remain intact pending dedicated tests.
+- Configuration changes: existing `pcce.*` keys and environment variable names are preserved.
+- PCCE properties decision: split partially with compatibility facade.
+- Tests added/updated: added `PcceConfigurationBindingTest`; updated reporting, PCCE API, and CVP API service tests for scoped properties.
+- Build result: `mvn clean test` passed with 23 tests; Spring context starts in tests.
+- Known risks: large reporting and integration services remain; external Cisco behavior still requires SIT with AW/HDS/CVP/Finesse/CUIC.
+- Deferred work: datasource/topology/security property extraction, service responsibility splits, notification sender split, admin controller split, UI JS behavior split.

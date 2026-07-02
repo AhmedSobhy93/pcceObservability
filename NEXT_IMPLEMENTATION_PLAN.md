@@ -2,10 +2,11 @@
 
 ## A. Current Codebase Decision
 - Complete and accepted: backend feature package migration, test alignment, thin Thymeleaf wrapper migration, local HTMX/Alpine installation, read-only component status fragment pilot.
+- Phase 10 complete: reporting, performance, PCCE API, and CVP API settings now have scoped configuration-property beans while `PcceProperties` remains as the compatibility facade.
 - Functional but incomplete: dashboard SPA, project plan inline JavaScript, external Cisco API action UIs, alert configuration UX, server metrics readiness.
 - Intentionally deferred: major observability features, DB schema changes, new external integrations, automated remediation, destructive PCCE/CVP actions.
 - Requires SIT/UAT: live PCCE data accuracy, CVP Informix queries, Finesse live calls, role behavior, HTMX fragment access, Grafana iframe CSP.
-- Should remain unchanged for now: `PcceProperties` compatibility location and existing REST/JSON APIs.
+- Should remain unchanged for now: existing REST/JSON APIs, public route behavior, and the `PcceProperties` compatibility facade for high-risk consumers.
 - Technical debt and risk: large static dashboard runtime, limited UI automated tests, external system behavior depends on environment configuration.
 
 ## B. Delivery Roadmap
@@ -18,6 +19,8 @@
 | P0 | Reporting filter correctness | reporting | Business KPI trust | AW/HDS schema mapping | M | Reporting owner | Codex | CUIC report comparison |
 | P1 | Alert settings validation | notifications | Safer escalation | SMTP/SMS credentials | S | Ops owner | Codex | Test alert delivery |
 | P1 | Project plan polish | projectplan | Stakeholder adoption | App DB | S | PM owner | Codex | Edit/share/export checks |
+| P1 | Add tests before next service splits | reporting/integration/admin | Safer refactoring | Current Phase 10 audit | M | Backend owner | Codex | Unit + controller tests |
+| P2 | Spring Boot 3.5 alignment | build/platform | Align with repo engineering rule | Dependency compatibility check | M | Platform owner | Codex | Full regression test |
 
 ### Release 1.5 - Advanced Operations and Eleveo Visibility
 | Priority | Feature / Improvement | Existing Module | Business Value | Technical Dependency | Effort | Suggested Owner | AI Support | Validation |
@@ -50,22 +53,21 @@
 - Git rules: protect `main`; use feature branches; one human owner per feature; do not let two AI tools edit the same files simultaneously; every PR includes objective, acceptance criteria, changed files, tests, screenshots for UI, API/config impact, rollback notes, and risks; require `mvn clean test` and `git diff --check`.
 
 ## D. First Recommended Implementation Phase
-- Objective: split the large static dashboard runtime by page without changing endpoint behavior.
+- Objective: add focused regression tests for the largest high-risk services before any further responsibility splits.
 - Expected duration: 3-5 days.
-- Primary owner: frontend/platform owner.
-- Codex role: move page-specific functions into feature JS modules, preserve selectors/API calls, add smoke checks.
-- Claude review role: review coupling, CSP/CSRF, and acceptance criteria.
-- Modules likely affected: `static/dashboard/js/*`, `static/dashboard/index.html`, docs.
-- Dependencies: browser regression access and screenshots.
-- Acceptance criteria: no console errors; each dashboard tab renders; filters and refresh still work; `mvn clean test` and `git diff --check` pass.
-- Tests to add/update: controller route tests if templates change; lightweight JS/static path validation where practical.
-- SIT/UAT checks: overview, business, agents, calls, system, integrations, admin, project links.
-- Rollback approach: restore previous dashboard JS include order and files.
+- Primary owner: backend/platform owner.
+- Codex role: add tests around reporting query selection/filter behavior, PCCE/CVP API target/action construction, notification settings, and admin endpoints without changing behavior.
+- Claude review role: review test boundaries and confirm high-risk classes are protected before extraction.
+- Modules likely affected: `feature/reporting`, `feature/integration/pcceapi`, `feature/integration/cvpapi`, `feature/notifications`, `feature/usermgmt`, docs.
+- Dependencies: no live Cisco connectivity required; use mocks and binding tests.
+- Acceptance criteria: meaningful tests added; no endpoint or template changes; `mvn clean test` and `git diff --check` pass.
+- SIT/UAT checks: not required for pure test phase, but existing login and dashboard smoke checks remain recommended.
+- Rollback approach: remove the new tests only if they block valid current behavior and document the gap.
 
 Ready-to-paste Codex prompt:
 
 ```text
 Work as a senior Spring Boot/Thymeleaf frontend engineer. Read AGENTS.md first.
 
-Task: split the large static dashboard JavaScript by page without changing behavior. Preserve all DOM selectors, API URLs, request payloads, route behavior, CSS classes, and current dashboard views. Do not implement new features. Update docs with the exact files moved. Run mvn clean test and git diff --check. Stop after this phase.
+Task: add focused regression tests for the high-risk services identified in Phase 10 before any further refactoring. Cover reporting filter/query selection, PCCE/CVP API action target construction, notification settings behavior, and admin endpoint access where feasible. Do not change production behavior or UI. Update docs with tested coverage. Run mvn clean test and git diff --check. Stop after this phase.
 ```

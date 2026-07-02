@@ -30,15 +30,15 @@ import org.springframework.util.StringUtils;
 @Service
 public class CvpApiMonitoringService {
 
-    private final PcceProperties pcceProperties;
+    private final CvpApiProperties cvpApiProperties;
     private final SSLSocketFactory sslSocketFactory;
     private final HostnameVerifier hostnameVerifier;
 
     public CvpApiMonitoringService(
-            PcceProperties pcceProperties,
+            CvpApiProperties cvpApiProperties,
             SSLSocketFactory sslSocketFactory,
             HostnameVerifier hostnameVerifier) {
-        this.pcceProperties = pcceProperties;
+        this.cvpApiProperties = cvpApiProperties;
         this.sslSocketFactory = sslSocketFactory;
         this.hostnameVerifier = hostnameVerifier;
     }
@@ -66,7 +66,7 @@ public class CvpApiMonitoringService {
     }
 
     public List<ApiActionView> actions() {
-        PcceProperties.CvpApi api = pcceProperties.getCvpApi();
+        PcceProperties.CvpApi api = cvpApiProperties;
         if (api == null || api.getActions() == null) {
             return List.of();
         }
@@ -74,7 +74,7 @@ public class CvpApiMonitoringService {
     }
 
     public List<ApiMonitorStatus> status() {
-        PcceProperties.CvpApi api = pcceProperties.getCvpApi();
+        PcceProperties.CvpApi api = cvpApiProperties;
         if (api == null || api.getMonitors() == null) {
             return List.of();
         }
@@ -82,7 +82,7 @@ public class CvpApiMonitoringService {
     }
 
     public ApiActionResult execute(String id, String body, Map<String, String> pathParams, Map<String, String> queryParams) {
-        PcceProperties.CvpApi api = pcceProperties.getCvpApi();
+        PcceProperties.CvpApi api = cvpApiProperties;
         ApiAction action = mergedActions(api).stream()
                 .filter(candidate -> id.equalsIgnoreCase(candidate.getId()))
                 .findFirst()

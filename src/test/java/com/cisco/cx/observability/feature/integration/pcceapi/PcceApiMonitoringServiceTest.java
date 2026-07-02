@@ -5,8 +5,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.cisco.cx.observability.config.PcceProperties;
 import com.cisco.cx.observability.config.PcceProperties.ApiAction;
-import com.cisco.cx.observability.feature.integration.pcceapi.ApiActionView;
-import com.cisco.cx.observability.feature.integration.pcceapi.PcceApiMonitoringService;
 import java.util.List;
 import javax.net.ssl.HttpsURLConnection;
 import org.junit.jupiter.api.Test;
@@ -15,8 +13,8 @@ class PcceApiMonitoringServiceTest {
 
     @Test
     void actionsKeepBuiltInReadActionsEnabledWhenConfigOverridesThem() {
-        PcceProperties properties = new PcceProperties();
-        properties.getPcceApi().setActions(List.of(disabledAction(
+        PcceApiProperties properties = new PcceApiProperties();
+        properties.setActions(List.of(disabledAction(
                 "users.list",
                 "GET",
                 "/wrong/user/path")));
@@ -41,9 +39,9 @@ class PcceApiMonitoringServiceTest {
 
     @Test
     void executeRejectsActionWhenRequiredPathParamIsMissingBeforeNetworkCall() {
-        PcceProperties properties = new PcceProperties();
-        properties.getPcceApi().setEnabled(true);
-        properties.getPcceApi().setBaseUrl("pcce.example.local");
+        PcceApiProperties properties = new PcceApiProperties();
+        properties.setEnabled(true);
+        properties.setBaseUrl("pcce.example.local");
 
         PcceApiMonitoringService service = new PcceApiMonitoringService(
                 properties,
@@ -58,9 +56,9 @@ class PcceApiMonitoringServiceTest {
 
     @Test
     void executeRejectsDisabledMutatingActionBeforeNetworkCall() {
-        PcceProperties properties = new PcceProperties();
-        properties.getPcceApi().setEnabled(true);
-        properties.getPcceApi().setBaseUrl("pcce.example.local");
+        PcceApiProperties properties = new PcceApiProperties();
+        properties.setEnabled(true);
+        properties.setBaseUrl("pcce.example.local");
 
         PcceApiMonitoringService service = new PcceApiMonitoringService(
                 properties,

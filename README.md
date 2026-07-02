@@ -700,3 +700,12 @@ Exit criteria:
 - Local HTMX 2.0.4 and Alpine.js 3.14.8 vendor files were added under `static/js/vendor`.
 - `/system` has a read-only HTMX component health fragment pilot backed by the existing component service.
 - Handover and roadmap docs: `PROJECT_HANDOVER.md`, `REFACTORING_LOG.md`, `UI_ARCHITECTURE.md`, `NEXT_IMPLEMENTATION_PLAN.md`.
+
+## Phase 10 Code Quality and Properties Refactor
+
+- Added `CODE_QUALITY_AUDIT.md`, `PCCE_PROPERTIES_MIGRATION.md`, and `REFACTORING_DECISIONS.md`.
+- Introduced scoped property beans for `pcce.queries`, `pcce.performance`, `pcce.pcce-api`, and `pcce.cvp-api`.
+- Kept `PcceProperties` as a compatibility facade so existing deployments, env vars, and consumers remain compatible.
+- Updated reporting, PCCE API, and CVP API services to use the scoped properties where coverage already exists.
+- Added a configuration binding test proving existing property keys bind both the scoped beans and the legacy facade.
+- Validation: `mvn clean test` passes with 23 tests.

@@ -2,6 +2,7 @@ package com.cisco.cx.observability.feature.reporting.service;
 
 import com.cisco.cx.observability.config.PcceProperties;
 import com.cisco.cx.observability.feature.components.service.ComponentStatusService;
+import com.cisco.cx.observability.feature.reporting.PcceReportingProperties;
 import com.cisco.cx.observability.feature.reporting.domain.AgentStat;
 import com.cisco.cx.observability.feature.reporting.domain.AgentStatus;
 import com.cisco.cx.observability.feature.reporting.domain.CallFlowEvent;
@@ -13,6 +14,7 @@ import com.cisco.cx.observability.feature.reporting.domain.CvpIvrNodeMetric;
 import com.cisco.cx.observability.feature.reporting.domain.DispositionBreakdown;
 import com.cisco.cx.observability.feature.reporting.domain.DroppedCallMetric;
 import com.cisco.cx.observability.feature.monitoring.service.QueryPerformanceService;
+import com.cisco.cx.observability.platform.config.PerformanceProperties;
 import com.cisco.cx.observability.security.access.AccessControlService;
 import com.cisco.cx.observability.shared.dto.ReferenceOption;
 import java.math.BigDecimal;
@@ -43,7 +45,8 @@ public class ReportingService {
     private final JdbcTemplate hdsJdbcTemplate;
     private final JdbcTemplate awJdbcTemplate;
     private final JdbcTemplate cvpReportingJdbcTemplate;
-    private final PcceProperties pcceProperties;
+    private final PcceReportingProperties reportingProperties;
+    private final PerformanceProperties performanceProperties;
     private final ComponentStatusService componentStatusService;
     private final AccessControlService accessControlService;
     private final DispositionCodeService dispositionCodeService;
@@ -53,7 +56,8 @@ public class ReportingService {
             @Qualifier("awJdbcTemplate") JdbcTemplate awJdbcTemplate,
             @Qualifier("hdsJdbcTemplate") JdbcTemplate hdsJdbcTemplate,
             @Qualifier("cvpReportingJdbcTemplate") JdbcTemplate cvpReportingJdbcTemplate,
-            PcceProperties pcceProperties,
+            PcceReportingProperties reportingProperties,
+            PerformanceProperties performanceProperties,
             ComponentStatusService componentStatusService,
             AccessControlService accessControlService,
             DispositionCodeService dispositionCodeService,
@@ -61,7 +65,8 @@ public class ReportingService {
         this.awJdbcTemplate = awJdbcTemplate;
         this.hdsJdbcTemplate = hdsJdbcTemplate;
         this.cvpReportingJdbcTemplate = cvpReportingJdbcTemplate;
-        this.pcceProperties = pcceProperties;
+        this.reportingProperties = reportingProperties;
+        this.performanceProperties = performanceProperties;
         this.componentStatusService = componentStatusService;
         this.accessControlService = accessControlService;
         this.dispositionCodeService = dispositionCodeService;
@@ -73,14 +78,14 @@ public class ReportingService {
         String normalizedSkillGroup = blankToNull(skillGroup);
         boolean filtered = normalizedSkillGroup != null;
         List<CallMetric> intervalMetrics = timedQuery("hds.callMetrics", () -> hdsJdbcTemplate.query(
-                    pcceProperties.getQueries().getCallMetrics(),
+                    reportingProperties.getCallMetrics(),
                     this::mapCallMetric,
                     start(from),
                     exclusiveEnd(to),
                     normalizedSkillGroup,
                     normalizedSkillGroup,
                     normalizedSkillGroup));
-        if (!pcceProperties.getQueries().isCallMetricsTcdFallbackEnabled()
+        if (!reportingProperties.isCallMetricsTcdFallbackEnabled()
                 || intervalMetrics.stream().mapToLong(metric -> nullToZero(metric.callsOffered())).sum() > 0) {
             return intervalMetrics;
         }
@@ -88,7 +93,7 @@ public class ReportingService {
                 from, to, normalizedSkillGroup);
         try {
             List<CallMetric> fallbackMetrics = timedQuery("hds.callMetrics.tcdFallback", () -> hdsJdbcTemplate.query(
-                        pcceProperties.getQueries().getCallMetricsTcdFallback(),
+                        reportingProperties.getCallMetricsTcdFallback(),
                         this::mapCallMetric,
                         start(from),
                         exclusiveEnd(to),
@@ -99,7 +104,7 @@ public class ReportingService {
             if (filtered && enriched.stream().mapToLong(metric -> nullToZero(metric.callsOffered())).sum() == 0) {
                 log.warn("call_metrics_filtered_empty retrying_unfiltered=true from={} to={} skillGroup={}", from, to, normalizedSkillGroup);
                 List<CallMetric> unfiltered = timedQuery("hds.callMetrics.tcdFallback.unfiltered", () -> hdsJdbcTemplate.query(
-                        pcceProperties.getQueries().getCallMetricsTcdFallback(),
+                        reportingProperties.getCallMetricsTcdFallback(),
                         this::mapCallMetric,
                         start(from),
                         exclusiveEnd(to),
@@ -120,7 +125,7 @@ public class ReportingService {
         String normalizedAgentId = blankToNull(accessControlService.scopedAgentId(agentId));
         String normalizedTeam = blankToNull(accessControlService.scopedTeam(team));
         List<AgentStat> roster = timedQuery("aw.agentStats.roster", () -> awJdbcTemplate.query(
-                pcceProperties.getQueries().getAgentStats(),
+                reportingProperties.getAgentStats(),
                 this::mapAgentStat,
                 start(from),
                 normalizedAgentId,
@@ -129,7 +134,7 @@ public class ReportingService {
                 normalizedTeam,
                 normalizedTeam));
         List<AgentStat> tcdStats = timedQuery("hds.agentStats.tcd", () -> hdsJdbcTemplate.query(
-                pcceProperties.getQueries().getAgentStatsTcd(),
+                reportingProperties.getAgentStatsTcd(),
                 this::mapAgentStat,
                 start(from),
                 exclusiveEnd(to),
@@ -150,7 +155,7 @@ public class ReportingService {
         String normalizedCallType = blankToNull(callType);
         String normalizedSkillGroup = blankToNull(skillGroup);
         List<CallTypeMetric> metrics = timedQuery("hds.callTypeMetrics", () -> hdsJdbcTemplate.query(
-                pcceProperties.getQueries().getCallTypeMetrics(),
+                reportingProperties.getCallTypeMetrics(),
                 (rs, rowNum) -> new CallTypeMetric(
                         rs.getObject("date", LocalDate.class),
                         rs.getInt("hour"),
@@ -171,7 +176,7 @@ public class ReportingService {
             log.warn("call_type_metrics_filtered_empty retrying_unfiltered=true from={} to={} callType={} skillGroup={}",
                     from, to, normalizedCallType, normalizedSkillGroup);
             List<CallTypeMetric> unfiltered = timedQuery("hds.callTypeMetrics.unfiltered", () -> hdsJdbcTemplate.query(
-                    pcceProperties.getQueries().getCallTypeMetrics(),
+                    reportingProperties.getCallTypeMetrics(),
                     (rs, rowNum) -> new CallTypeMetric(
                             rs.getObject("date", LocalDate.class),
                             rs.getInt("hour"),
@@ -358,12 +363,12 @@ public class ReportingService {
 
     public List<DroppedCallMetric> droppedCalls(LocalDate from, LocalDate to, String skillGroup) {
         validateDateRange(from, to);
-        if (!pcceProperties.getQueries().isDroppedCallsEnabled()) {
+        if (!reportingProperties.isDroppedCallsEnabled()) {
             return List.of();
         }
         String normalizedSkillGroup = blankToNull(skillGroup);
         List<DroppedCallMetric> drops = timedQuery("hds.droppedCalls", () -> hdsJdbcTemplate.query(
-                    pcceProperties.getQueries().getDroppedCalls(),
+                    reportingProperties.getDroppedCalls(),
                     this::mapDroppedCallMetric,
                     start(from),
                     exclusiveEnd(to),
@@ -374,7 +379,7 @@ public class ReportingService {
         if (normalizedSkillGroup != null && enriched.isEmpty()) {
             log.warn("dropped_calls_filtered_empty retrying_unfiltered=true from={} to={} skillGroup={}", from, to, normalizedSkillGroup);
             List<DroppedCallMetric> unfiltered = timedQuery("hds.droppedCalls.unfiltered", () -> hdsJdbcTemplate.query(
-                    pcceProperties.getQueries().getDroppedCalls(),
+                    reportingProperties.getDroppedCalls(),
                     this::mapDroppedCallMetric,
                     start(from),
                     exclusiveEnd(to),
@@ -389,7 +394,7 @@ public class ReportingService {
     public List<DispositionBreakdown> dispositionBreakdown(LocalDate from, LocalDate to) {
         validateDateRange(from, to);
         return timedQuery("hds.dispositionBreakdown", () -> hdsJdbcTemplate.query(
-                    pcceProperties.getQueries().getDispositionBreakdown(),
+                    reportingProperties.getDispositionBreakdown(),
                     (rs, rowNum) -> {
                         int code = rs.getInt("disposition_code");
                         var reference = dispositionCodeService.find(code);
@@ -412,7 +417,7 @@ public class ReportingService {
         }
         try {
             return timedQuery("cvp.ivrContainment", () -> cvpReportingJdbcTemplate.query(
-                        pcceProperties.getQueries().getIvrContainment(),
+                        reportingProperties.getIvrContainment(),
                         (rs, rowNum) -> new IvrContainmentMetric(
                                 toLocalDate(rs.getObject("call_date")),
                                 toHour(rs.getObject("call_hour")),
@@ -872,7 +877,7 @@ public class ReportingService {
         try {
             T result = supplier.get();
             long elapsedMs = (System.nanoTime() - start) / 1_000_000;
-            if (elapsedMs >= pcceProperties.getPerformance().getSlowQueryWarningMs()) {
+            if (elapsedMs >= performanceProperties.getSlowQueryWarningMs()) {
                 log.warn("slow_query name={} elapsedMs={}", name, elapsedMs);
             } else {
                 log.info("query name={} elapsedMs={}", name, elapsedMs);

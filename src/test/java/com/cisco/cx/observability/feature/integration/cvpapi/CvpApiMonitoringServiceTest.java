@@ -5,7 +5,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.cisco.cx.observability.config.PcceProperties;
 import com.cisco.cx.observability.config.PcceProperties.ApiAction;
-import com.cisco.cx.observability.feature.integration.cvpapi.CvpApiMonitoringService;
 import com.cisco.cx.observability.feature.integration.pcceapi.ApiActionView;
 import java.util.List;
 import javax.net.ssl.HttpsURLConnection;
@@ -15,8 +14,8 @@ class CvpApiMonitoringServiceTest {
 
     @Test
     void actionsKeepBuiltInOperationsReadActionsEnabledWhenConfigOverridesThem() {
-        PcceProperties properties = new PcceProperties();
-        properties.getCvpApi().setActions(List.of(disabledAction(
+        CvpApiProperties properties = new CvpApiProperties();
+        properties.setActions(List.of(disabledAction(
                 "cvp.syslog.get",
                 "GET",
                 "/wrong/syslog/path")));
@@ -41,9 +40,9 @@ class CvpApiMonitoringServiceTest {
 
     @Test
     void executeRejectsActionWhenRequiredPathParamIsMissingBeforeNetworkCall() {
-        PcceProperties properties = new PcceProperties();
-        properties.getCvpApi().setEnabled(true);
-        properties.getCvpApi().setBaseUrl("cvp.example.local");
+        CvpApiProperties properties = new CvpApiProperties();
+        properties.setEnabled(true);
+        properties.setBaseUrl("cvp.example.local");
 
         CvpApiMonitoringService service = new CvpApiMonitoringService(
                 properties,
@@ -58,9 +57,9 @@ class CvpApiMonitoringServiceTest {
 
     @Test
     void executeRejectsDisabledMutatingActionBeforeNetworkCall() {
-        PcceProperties properties = new PcceProperties();
-        properties.getCvpApi().setEnabled(true);
-        properties.getCvpApi().setBaseUrl("cvp.example.local");
+        CvpApiProperties properties = new CvpApiProperties();
+        properties.setEnabled(true);
+        properties.setBaseUrl("cvp.example.local");
 
         CvpApiMonitoringService service = new CvpApiMonitoringService(
                 properties,
